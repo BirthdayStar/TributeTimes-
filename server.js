@@ -84,6 +84,7 @@ app.post('/api/anthropic/messages', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept-Encoding': 'identity',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
@@ -92,14 +93,26 @@ app.post('/api/anthropic/messages', async (req, res) => {
         max_tokens: Math.min(Number(max_tokens) || 1000, 5000),
         ...(safeTools?.length ? { tools: safeTools } : {}),
         messages: [{ role: 'user', content: prompt }]
-      })
+      }),
+      compress: false
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = {
+        error: {
+          message: `Anthropic returned a non-JSON response (${response.status})`,
+          detail: text.slice(0, 500)
+        }
+      };
+    }
     res.status(response.status).json(data);
   } catch (err) {
     console.error('Anthropic proxy error:', err);
-    res.status(500).json({ error: { message: 'Anthropic request failed' } });
+    res.status(500).json({ error: { message: `Anthropic request failed: ${err.message}` } });
   }
 });
 
@@ -451,8 +464,14 @@ Return ONLY valid JSON, no markdown:
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 5000, messages: [{ role: 'user', content: prompt }] })
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Encoding': 'identity',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 5000, messages: [{ role: 'user', content: prompt }] }),
+      compress: false
     });
     const data = await response.json();
     if (data.error) throw new Error(data.error.message);
