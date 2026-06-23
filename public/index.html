@@ -15,6 +15,7 @@
 }
 body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min-height:100vh;}
 
+/* ═══ FORM UI ═══ */
 #ui{max-width:780px;margin:0 auto;padding:24px 16px 60px;}
 .ui-header{text-align:center;padding:24px 0 20px;border-bottom:2px solid #c8b89a;margin-bottom:22px;}
 .ui-title{font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:2rem;color:#1a0e04;}
@@ -60,47 +61,182 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
 .act-btn{padding:9px 24px;background:transparent;border:1px solid #c8b89a;border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.62rem;letter-spacing:0.25em;color:var(--red);cursor:pointer;transition:all 0.18s;display:none;}
 .act-btn:hover{background:var(--red);border-color:var(--red);color:#fff;}
 
+/* ═══ NEWSPAPER OUTPUT ═══ */
 #star{
-  display:none;background:#fff;color:var(--ink);width:210mm;
-  margin:28px auto 60px;position:relative;
-  font-family:'Libre Baskerville',Georgia,serif;font-size:8pt;line-height:1.5;
-  box-shadow:0 8px 60px rgba(0,0,0,0.3);border:1px solid #aaa;
+  display:none;
+  background:#fff;
+  color:var(--ink);
+  width:210mm;
+  margin:28px auto 60px;
+  position:relative;
+  font-family:'Libre Baskerville',Georgia,serif;
+  font-size:8pt;
+  line-height:1.5;
+  box-shadow:0 8px 60px rgba(0,0,0,0.3);
+  border:1px solid #aaa;
 }
-.np-top-meta{display:flex;justify-content:space-between;padding:4px 8mm;border-bottom:1px solid var(--ink);font-family:'DM Sans',sans-serif;font-size:7pt;font-weight:500;color:var(--ink);}
-.np-masthead{text-align:center;padding:6px 8mm 4px;border-bottom:3px solid var(--ink);}
-.np-masthead-name{font-family:'Playfair Display',serif;font-weight:900;font-size:5rem;line-height:1;color:var(--ink);letter-spacing:-0.01em;}
-.np-masthead-rule{border:none;border-top:1px solid var(--ink);margin:3px 0;}
-.np-info-strip{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:2px solid var(--ink);}
-.np-info-box{padding:5px 8px;border-right:1px solid var(--ink);font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:6px;min-height:44px;}
+
+/* ── TOP META LINE ── */
+.np-top-meta{
+  display:flex;justify-content:space-between;
+  padding:4px 8mm;
+  border-bottom:1px solid var(--ink);
+  font-family:'DM Sans',sans-serif;
+  font-size:7pt;font-weight:500;
+  color:var(--ink);
+}
+
+/* ── MASTHEAD ── */
+.np-masthead{
+  text-align:center;
+  padding:6px 8mm 4px;
+  border-bottom:3px solid var(--ink);
+}
+.np-masthead-name{
+  font-family:'Playfair Display',serif;
+  font-weight:900;
+  font-size:5rem;
+  line-height:1;
+  color:var(--ink);
+  letter-spacing:-0.01em;
+}
+.np-masthead-rule{
+  border:none;
+  border-top:1px solid var(--ink);
+  margin:3px 0;
+}
+
+/* ── INFO STRIP (4 boxes) ── */
+.np-info-strip{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  border-bottom:2px solid var(--ink);
+}
+.np-info-box{
+  padding:5px 8px;
+  border-right:1px solid var(--ink);
+  font-family:'DM Sans',sans-serif;
+  font-size:7.5pt;
+  font-weight:600;
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:44px;
+}
 .np-info-box:last-child{border-right:none;}
 .np-info-box .wx-temp{font-size:1.3rem;font-weight:800;color:var(--ink);line-height:1;}
 .np-info-box .wx-detail{font-size:6.5pt;font-weight:400;color:var(--muted);line-height:1.3;}
 .np-info-box img{max-height:32px;max-width:60px;object-fit:contain;}
 .np-info-box-logo{justify-content:center;}
-.np-section-row{display:grid;grid-template-columns:2fr 1.5fr 1fr;border-bottom:1px solid var(--ink);}
-.np-section-label{padding:3px 8px;font-family:'DM Sans',sans-serif;font-size:9pt;font-weight:700;color:var(--ink);border-right:1px solid var(--ink);}
+.np-info-icon{font-size:1.2rem;}
+
+/* ── SECTION LABELS ROW ── */
+.np-section-row{
+  display:grid;
+  grid-template-columns:2fr 1.5fr 1fr;
+  border-bottom:1px solid var(--ink);
+}
+.np-section-label{
+  padding:3px 8px;
+  font-family:'DM Sans',sans-serif;
+  font-size:9pt;
+  font-weight:700;
+  color:var(--ink);
+  border-right:1px solid var(--ink);
+}
 .np-section-label:last-child{border-right:none;text-align:center;}
-.np-body{display:grid;grid-template-columns:1.8fr 1fr;border-bottom:1px solid var(--ink);min-height:160mm;}
+
+/* ── MAIN BODY ── */
+.np-body{
+  display:grid;
+  grid-template-columns:1.8fr 1fr;
+  border-bottom:1px solid var(--ink);
+  min-height:160mm;
+}
 .np-left{border-right:1px solid var(--ink);}
-.np-photo-wrap{position:relative;overflow:hidden;border-bottom:1px solid var(--ink);}
-.np-photo-img{width:100%;height:130mm;object-fit:cover;display:block;filter:grayscale(30%) contrast(1.05);}
-.np-photo-fallback{width:100%;height:130mm;background:#e8e4dc;display:flex;align-items:center;justify-content:center;font-size:4rem;}
-.np-photo-page-tag{position:absolute;bottom:12px;left:12px;background:var(--ink);color:#fff;font-family:'DM Sans',sans-serif;font-weight:800;font-size:8pt;padding:3px 8px;letter-spacing:0.05em;}
-.np-photo-quote{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.75);color:#fff;padding:8px 12px;font-family:'IM Fell English',serif;font-style:italic;font-size:8.5pt;line-height:1.4;}
+.np-right{padding:0;}
+
+/* Photo block */
+.np-photo-wrap{
+  position:relative;
+  overflow:hidden;
+  border-bottom:1px solid var(--ink);
+}
+.np-photo-img{
+  width:100%;
+  height:130mm;
+  object-fit:cover;
+  display:block;
+  filter:grayscale(30%) contrast(1.05);
+}
+.np-photo-fallback{
+  width:100%;height:130mm;
+  background:#e8e4dc;
+  display:flex;align-items:center;justify-content:center;
+  font-size:4rem;
+}
+.np-photo-page-tag{
+  position:absolute;bottom:12px;left:12px;
+  background:var(--ink);color:#fff;
+  font-family:'DM Sans',sans-serif;font-weight:800;
+  font-size:8pt;padding:3px 8px;
+  letter-spacing:0.05em;
+}
+.np-photo-quote{
+  position:absolute;bottom:0;left:0;right:0;
+  background:rgba(0,0,0,0.75);
+  color:#fff;
+  padding:8px 12px;
+  font-family:'IM Fell English',serif;
+  font-style:italic;
+  font-size:8.5pt;
+  line-height:1.4;
+}
 .np-photo-quote::before{content:'\201C';font-size:1.3rem;margin-right:3px;vertical-align:-4px;color:#f5c800;}
 .np-photo-quote::after{content:'\201D';font-size:1.3rem;margin-left:3px;vertical-align:-4px;color:#f5c800;}
-.np-left-bottom{display:grid;grid-template-columns:1fr 1fr;}
+
+/* Left bottom teasers */
+.np-left-bottom{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+}
 .np-teaser{padding:6px 8px;border-right:1px solid var(--rule);}
 .np-teaser:last-child{border-right:none;}
-.np-teaser-hed{font-family:'DM Sans',sans-serif;font-weight:700;font-size:8pt;color:var(--ink);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:2px;margin-bottom:3px;}
-.np-teaser-num{background:var(--ink);color:#fff;font-size:7pt;padding:1px 5px;font-weight:700;font-family:'DM Sans',sans-serif;}
+.np-teaser-hed{
+  font-family:'DM Sans',sans-serif;font-weight:700;
+  font-size:8pt;color:var(--ink);
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--ink);
+  padding-bottom:2px;margin-bottom:3px;
+}
+.np-teaser-num{
+  background:var(--ink);color:#fff;
+  font-size:7pt;padding:1px 5px;font-weight:700;
+  font-family:'DM Sans',sans-serif;
+}
 .np-teaser-copy{font-size:6.5pt;color:var(--muted);line-height:1.5;text-align:justify;}
+
+/* Right column */
 .np-right-top{padding:7px 8px;border-bottom:1px solid var(--ink);}
 .np-right-bottom{padding:7px 8px;}
-.np-r-hed{font-family:'Playfair Display',serif;font-weight:900;font-size:1rem;color:var(--ink);line-height:1.1;margin-bottom:2px;}
+
+.np-r-hed{
+  font-family:'Playfair Display',serif;font-weight:900;
+  font-size:1rem;color:var(--ink);line-height:1.1;
+  margin-bottom:2px;
+}
 .np-r-hed em{color:var(--ink);font-style:italic;}
+.np-r-tag{
+  display:inline-block;background:var(--ink);
+  color:#fff;font-family:'DM Sans',sans-serif;
+  font-weight:800;font-size:6.5pt;padding:1px 6px;
+  margin-left:4px;vertical-align:middle;letter-spacing:0.05em;
+}
 .np-r-copy{font-size:6.5pt;color:var(--muted);line-height:1.6;text-align:justify;margin-top:4px;}
 .np-r-rule{border:none;border-top:1px solid var(--rule);margin:6px 0;}
+
+/* Chart */
 .np-chart-title{font-family:'DM Sans',sans-serif;font-weight:700;font-size:8pt;color:var(--ink);margin-bottom:3px;}
 .np-chart-tbl{width:100%;border-collapse:collapse;margin-bottom:3px;}
 .np-chart-tbl tr{border-bottom:0.5px solid #e0e0e0;}
@@ -108,16 +244,44 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
 .np-chart-pos{font-weight:800;color:var(--ink);width:12px;font-size:7pt;}
 .np-chart-title-t{font-weight:600;font-size:6.5pt;}
 .np-chart-artist{font-style:italic;color:var(--muted);font-size:5.5pt;}
-.np-bottom{display:grid;grid-template-columns:2fr 1fr;border-top:2px solid var(--ink);min-height:28mm;}
-.np-bottom-left{display:grid;grid-template-columns:1fr 1fr;border-right:1px solid var(--ink);}
+
+/* ── BOTTOM STRIP ── */
+.np-bottom{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  border-top:2px solid var(--ink);
+  min-height:28mm;
+}
+.np-bottom-left{
+  display:grid;grid-template-columns:1fr 1fr;
+  border-right:1px solid var(--ink);
+}
 .np-bottom-story{padding:5px 7px;border-right:1px solid var(--rule);}
 .np-bottom-story:last-child{border-right:none;}
-.np-bottom-hed{font-family:'DM Sans',sans-serif;font-weight:700;font-size:7.5pt;color:var(--ink);border-bottom:1px solid var(--rule);padding-bottom:2px;margin-bottom:2px;}
+.np-bottom-hed{
+  font-family:'DM Sans',sans-serif;font-weight:700;
+  font-size:7.5pt;color:var(--ink);
+  border-bottom:1px solid var(--rule);
+  padding-bottom:2px;margin-bottom:2px;
+}
 .np-bottom-copy{font-size:6pt;color:var(--muted);line-height:1.5;text-align:justify;}
-.np-bottom-right{padding:6px 8px;display:flex;flex-direction:column;justify-content:center;}
+
+.np-bottom-right{
+  padding:6px 8px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.np-promo-price{
+  font-family:'DM Sans',sans-serif;font-weight:900;
+  font-size:1.6rem;color:var(--ink);line-height:1;
+  display:inline-block;background:#e8e4dc;
+  padding:2px 8px;margin-bottom:4px;
+}
+.np-promo-label{font-size:6pt;color:var(--muted);margin-bottom:2px;}
 .np-sig{font-family:'IM Fell English',serif;font-style:italic;font-size:6.5pt;color:var(--muted);line-height:1.5;border-top:0.5px solid var(--rule);padding-top:4px;margin-top:3px;}
 .np-sig-line{border-bottom:1px solid var(--ink);height:16px;margin-bottom:1px;}
 .np-sig-lbl{font-family:'DM Sans',sans-serif;font-size:5.5pt;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;}
+
+/* Prices */
 .np-prices{font-size:6pt;color:var(--muted);line-height:1.6;}
 .np-prices span{font-weight:700;color:var(--ink);}
 
@@ -229,6 +393,7 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
 <div id="star"></div>
 
 <script>
+// ── LOGOS ──
 function setupLogo(upId,prevId,rmId,phId){
   const up=document.getElementById(upId),prev=document.getElementById(prevId),
         rm=document.getElementById(rmId),ph=document.getElementById(phId);
@@ -243,6 +408,7 @@ function setupLogo(upId,prevId,rmId,phId){
 setupLogo('up-station','prev-station','rm-station','ph-station');
 setupLogo('up-sponsor','prev-sponsor','rm-sponsor','ph-sponsor');
 
+// ── DOB ──
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WDAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dd=document.getElementById('dd'),dm=document.getElementById('dm'),dy=document.getElementById('dy'),
@@ -266,6 +432,7 @@ dd.addEventListener('keydown',e=>{if(e.key==='/'||e.key==='-'){e.preventDefault(
 dm.addEventListener('keydown',e=>{if(e.key==='/'||e.key==='-'){e.preventDefault();dy.focus();}if(e.key==='Backspace'&&dm.value==='')dd.focus();});
 dy.addEventListener('keydown',e=>{if(e.key==='Backspace'&&dy.value==='')dm.focus();});
 
+// ── CURRENCY ──
 const CURR={
   'Philippines':{s:'₱',n:'Philippine pesos'},
   'New Zealand':{s:'NZ$',n:'New Zealand dollars'},
@@ -298,6 +465,7 @@ function getCurr(country,year){
   return{s:c.s,n:c.n};
 }
 
+// ── HELPERS ──
 function setStatus(h){document.getElementById('status').innerHTML=h;}
 function fmtDate(dt,country){
   const d=dt.getDate(),m=MONTHS[dt.getMonth()],y=dt.getFullYear();
@@ -307,8 +475,12 @@ function ord(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[
 function getAge(dob){const t=new Date();let a=t.getFullYear()-dob.getFullYear();const mo=t.getMonth()-dob.getMonth();if(mo<0||(mo===0&&t.getDate()<dob.getDate()))a--;return a;}
 function pad(n){return String(n).padStart(2,'0');}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function logoImg(prevId){const p=document.getElementById(prevId);return(p&&p.style.display!=='none'&&p.src)?p.src:null;}
+function logoImg(prevId){
+  const p=document.getElementById(prevId);
+  return(p&&p.style.display!=='none'&&p.src)?p.src:null;
+}
 
+// ── GENERATE ──
 async function generate(){
   const name=document.getElementById('f-name').value.trim();
   const country=document.getElementById('f-country').value;
@@ -346,11 +518,11 @@ COUNTRY: ${country}
 AGE TODAY: ${age}
 
 CRITICAL RULES:
-1. ALL content must be from ${country}'s perspective.
-2. MUSIC CHART: Use the OFFICIAL ${country} chart for ${dobStr}. Real songs.
+1. ALL content must be from ${country}'s perspective. This is not American. A listener in Philippines gets Philippine news. A listener in Canada gets Canadian news. Etc.
+2. MUSIC CHART: Use the OFFICIAL ${country} chart for ${dobStr}. Real songs actually in the charts in ${country} on that date.
 3. NEWS: Real events in ${country} and internationally on ${dobStr}.
-4. WEATHER: Realistic for ${country} geography and season. Celsius only.
-5. PRICES: In ${currency.n} (${currency.s}). Amount = digits and decimal only.
+4. WEATHER: Realistic for ${country} geography and season. Temperature in Celsius as a number only.
+5. PRICES: In ${currency.n} (${currency.s}). Amount field = digits and decimal only. No symbols.
 6. Write warmly — this is a treasured keepsake.
 
 Return ONLY valid JSON — no markdown, no backticks:
@@ -366,34 +538,53 @@ Return ONLY valid JSON — no markdown, no backticks:
   "local_story": "1-2 sentences.",
   "chart_title": "Official ${country} chart name",
   "music_chart": [
-    {"pos":1,"title":"Song","artist":"Artist"},{"pos":2,"title":"Song","artist":"Artist"},
-    {"pos":3,"title":"Song","artist":"Artist"},{"pos":4,"title":"Song","artist":"Artist"},
-    {"pos":5,"title":"Song","artist":"Artist"},{"pos":6,"title":"Song","artist":"Artist"},
-    {"pos":7,"title":"Song","artist":"Artist"},{"pos":8,"title":"Song","artist":"Artist"},
-    {"pos":9,"title":"Song","artist":"Artist"},{"pos":10,"title":"Song","artist":"Artist"}
+    {"pos":1,"title":"Song","artist":"Artist"},
+    {"pos":2,"title":"Song","artist":"Artist"},
+    {"pos":3,"title":"Song","artist":"Artist"},
+    {"pos":4,"title":"Song","artist":"Artist"},
+    {"pos":5,"title":"Song","artist":"Artist"},
+    {"pos":6,"title":"Song","artist":"Artist"},
+    {"pos":7,"title":"Song","artist":"Artist"},
+    {"pos":8,"title":"Song","artist":"Artist"},
+    {"pos":9,"title":"Song","artist":"Artist"},
+    {"pos":10,"title":"Song","artist":"Artist"}
   ],
   "prices": [
-    {"item":"Loaf of bread","amount":"0"},{"item":"Pint of milk","amount":"0"},
-    {"item":"Dozen eggs","amount":"0"},{"item":"Litre of petrol","amount":"0"},
-    {"item":"Cinema ticket","amount":"0"},{"item":"Daily newspaper","amount":"0"},
+    {"item":"Loaf of bread","amount":"0"},
+    {"item":"Pint of milk","amount":"0"},
+    {"item":"Dozen eggs","amount":"0"},
+    {"item":"Litre of petrol","amount":"0"},
+    {"item":"Cinema ticket","amount":"0"},
+    {"item":"Daily newspaper","amount":"0"},
     {"item":"Average house price","amount":"0"}
   ],
-  "weather": {"temp_c":"number only","conditions":"e.g. Hot and humid","forecast":"One sentence.","season":"e.g. Wet season"},
+  "weather": {
+    "temp_c": "number only e.g. 24",
+    "conditions": "e.g. Hot and humid",
+    "forecast": "One sentence next-day forecast.",
+    "season": "e.g. Wet season"
+  },
   "famous_people": [
     {"name":"Full Name","note":"what they are known for"},
-    {"name":"Full Name","note":"..."},{"name":"Full Name","note":"..."}
+    {"name":"Full Name","note":"..."},
+    {"name":"Full Name","note":"..."}
   ],
   "fun_fact": "1 warm nostalgic sentence about ${dobStr}.",
-  "image_search_query": "4-6 words for a historical photo of the main news event."
+  "image_search_query": "4-6 words to find a real historical photo of the main news event on ${dobStr} in ${country} or internationally. Not a birthday cake."
 }`;
 
   try{
-    const [contentResp,photoResp]=await Promise.all([
-      fetch('/api/anthropic/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:3000,messages:[{role:'user',content:prompt}]})}),
-      fetch('/api/anthropic/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],
-          messages:[{role:'user',content:`Find a historic news photo from ${country} around ${year} on Wikimedia Commons. Return ONLY JSON: {"url":"https://upload.wikimedia.org/...jpg","alt":"description"}`}]})})
+    const [contentResp, photoResp] = await Promise.all([
+      fetch('/api/anthropic/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:3000,messages:[{role:'user',content:prompt}]})
+      }),
+      fetch('/api/anthropic/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:`Find a historic news photograph from ${country} around ${year} on Wikimedia Commons. Return ONLY JSON: {"url":"https://upload.wikimedia.org/...jpg","alt":"description"}`}]})
+      })
     ]);
 
     const data=await contentResp.json();
@@ -403,14 +594,17 @@ Return ONLY valid JSON — no markdown, no backticks:
     if(!match)throw new Error('No JSON in response');
     const info=JSON.parse(match[0]);
 
+    // Photo
     let photoUrl=null,photoAlt=info.national_headline||'';
     try{
       const pd=await photoResp.json();
       const praw=(pd.content||[]).map(i=>i.text||'').join('');
       if(info.image_search_query){
-        const ir2=await fetch('/api/anthropic/messages',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],
-            messages:[{role:'user',content:`Find image URL on Wikimedia Commons for: "${info.image_search_query}". Return ONLY: {"url":"https://...jpg","alt":"description"}`}]})});
+        const ir2=await fetch('/api/anthropic/messages',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:`Find an image URL on Wikimedia Commons for: "${info.image_search_query}". Return ONLY: {"url":"https://...jpg","alt":"description"}`}]})
+        });
         const id2=await ir2.json();
         const iraw=(id2.content||[]).map(i=>i.text||'').join('');
         const im=iraw.match(/"url"\s*:\s*"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|gif|webp)[^"]*)"/i);
@@ -426,6 +620,7 @@ Return ONLY valid JSON — no markdown, no backticks:
     renderStar(info,{name,dob,formattedDate,dayOfWeek,year,country,station,dj,djMsg,currency,age,todayStr,photoUrl,photoAlt,firstName});
     setStatus('');
     ['btn-print','btn-new'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-block';});
+
   }catch(err){
     clearInterval(ticker);
     console.error(err);
@@ -434,9 +629,11 @@ Return ONLY valid JSON — no markdown, no backticks:
   if(genBtn)genBtn.disabled=false;
 }
 
+// ── RENDER ──
 function renderStar(info,ctx){
   const {name,dob,formattedDate,dayOfWeek,year,country,station,dj,djMsg,currency,age,todayStr,photoUrl,photoAlt,firstName}=ctx;
   const sym=currency.s;
+
   const wx=info.weather||{};
   const wIcon=(()=>{const c=(wx.conditions||'').toLowerCase();
     if(c.includes('thunder')||c.includes('storm'))return'⛈️';
@@ -447,25 +644,168 @@ function renderStar(info,ctx){
     if(c.includes('sun')||c.includes('clear')||c.includes('fine'))return'☀️';
     return'🌤️';})();
 
-  const chartRows=(info.music_chart||[]).map(t=>`<tr><td class="np-chart-pos">${t.pos}</td><td><div class="np-chart-title-t">${esc(t.title)}</div><div class="np-chart-artist">${esc(t.artist)}</div></td></tr>`).join('');
-  const priceList=(info.prices||[]).map(p=>{let raw=String(p.amount||'').replace(/[^0-9.]/g,'');return`<div><span>${esc(p.item)}:</span> <span><b>${raw?sym+raw:'—'}</b></span></div>`;}).join('');
+  const chartRows=(info.music_chart||[]).map(t=>`<tr>
+    <td class="np-chart-pos">${t.pos}</td>
+    <td><div class="np-chart-title-t">${esc(t.title)}</div><div class="np-chart-artist">${esc(t.artist)}</div></td>
+  </tr>`).join('');
+
+  const priceList=(info.prices||[]).map(p=>{
+    let raw=String(p.amount||'').replace(/[^0-9.]/g,'');
+    return `<div><span>${esc(p.item)}:</span> <span><b>${raw?sym+raw:'—'}</b></span></div>`;
+  }).join('');
+
   const stationLogoSrc=logoImg('prev-station');
   const sponsorLogoSrc=logoImg('prev-sponsor');
-  const stationLogoHTML=stationLogoSrc?`<img src="${stationLogoSrc}" alt="Station logo"/>`:`<div style="font-size:0.55rem;color:#999;text-align:center;font-style:italic;">${esc(station)}</div>`;
-  const sponsorLogoHTML=sponsorLogoSrc?`<img src="${sponsorLogoSrc}" alt="Sponsor logo" style="max-height:32px;max-width:80px;object-fit:contain;"/>`:`<div style="font-size:0.55rem;color:#999;text-align:center;font-style:italic;">Sponsor</div>`;
-  const photoHTML=photoUrl?`<img class="np-photo-img" src="${esc(photoUrl)}" alt="${esc(photoAlt)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="np-photo-fallback" style="display:none;">📰</div>`:`<div class="np-photo-fallback">📰</div>`;
+
+  const stationLogoHTML=stationLogoSrc
+    ?`<img src="${stationLogoSrc}" alt="Station logo"/>`
+    :`<div style="font-size:0.55rem;color:#999;text-align:center;font-style:italic;">${esc(station)}</div>`;
+
+  const sponsorLogoHTML=sponsorLogoSrc
+    ?`<img src="${sponsorLogoSrc}" alt="Sponsor logo" style="max-height:32px;max-width:80px;object-fit:contain;"/>`
+    :`<div style="font-size:0.55rem;color:#999;text-align:center;font-style:italic;">Sponsor</div>`;
+
+  const photoHTML=photoUrl
+    ?`<img class="np-photo-img" src="${esc(photoUrl)}" alt="${esc(photoAlt)}"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="np-photo-fallback" style="display:none;">📰</div>`
+    :`<div class="np-photo-fallback">📰</div>`;
+
   const famous=(info.famous_people||[]).map(f=>`<b>${esc(f.name)}</b> — ${esc(f.note)}`).join('<br/>');
 
   const html=`
+<!-- TOP META -->
 <div class="np-top-meta">
   <span>${esc(formattedDate)} / ${esc(dayOfWeek).toUpperCase()}</span>
   <span style="font-style:italic;">"All the news from the day you arrived"</span>
   <span>${esc(station)}</span>
 </div>
+
+<!-- MASTHEAD -->
 <div class="np-masthead">
   <hr class="np-masthead-rule"/>
   <div class="np-masthead-name">The Tribute Times</div>
   <hr class="np-masthead-rule"/>
 </div>
+
+<!-- INFO STRIP -->
 <div class="np-info-strip">
-  <div class="np-info-box"><span style="font-size:1.5rem;">${wIcon}</span><div><div class="wx-temp">${esc(wx.temp_c||'—')}°C</div><div class="wx-detail">${esc(wx.conditions||'')}<br/>${
+  <div class="np-info-box">
+    <span style="font-size:1.5rem;">${wIcon}</span>
+    <div>
+      <div class="wx-temp">${esc(wx.temp_c||'—')}°C</div>
+      <div class="wx-detail">${esc(wx.conditions||'')}<br/>${esc(wx.season||'')} · ${esc(country)}</div>
+    </div>
+  </div>
+  <div class="np-info-box" style="flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;">
+    <div style="font-weight:700;font-size:7.5pt;">🎵 ${esc(info.chart_title||'Top 10 Chart')}</div>
+    <div style="font-size:6pt;color:#555;">#1: <b>${esc((info.music_chart&&info.music_chart[0]&&info.music_chart[0].title)||'')}</b></div>
+    <div style="font-size:6pt;color:#888;">${esc((info.music_chart&&info.music_chart[0]&&info.music_chart[0].artist)||'')}</div>
+  </div>
+  <div class="np-info-box" style="flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;">
+    <div style="font-weight:700;font-size:7.5pt;margin-bottom:2px;">💰 Cost of Living ${year}</div>
+    <div class="np-prices">${priceList}</div>
+  </div>
+  <div class="np-info-box np-info-box-logo">
+    ${stationLogoHTML}
+  </div>
+</div>
+
+<!-- SECTION LABELS -->
+<div class="np-section-row">
+  <div class="np-section-label">🌍 World Headlines</div>
+  <div class="np-section-label">🏆 Sport Headlines</div>
+  <div class="np-section-label">Sponsors Logo<br/>${sponsorLogoHTML}</div>
+</div>
+
+<!-- MAIN BODY -->
+<div class="np-body">
+  <div class="np-left">
+    <div class="np-photo-wrap">
+      ${photoHTML}
+      <div class="np-photo-page-tag">⭐ BIRTHDAY EDITION</div>
+      <div class="np-photo-quote">${esc(info.national_headline||'')} — ${esc(country)}, ${year}</div>
+    </div>
+    <div style="background:var(--ink);color:#fff;text-align:center;padding:5px 8px;border-bottom:1px solid #ddd;">
+      <div style="font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:1.1rem;line-height:1.1;">${esc(name)}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:6.5pt;letter-spacing:0.3em;opacity:0.8;margin-top:1px;">BORN ${esc(formattedDate.toUpperCase())} · CELEBRATING ${ord(age)} BIRTHDAY</div>
+    </div>
+    <div class="np-left-bottom">
+      <div class="np-teaser">
+        <div class="np-teaser-hed">
+          <span>${esc(info.world_headline||'').substring(0,40)}${(info.world_headline||'').length>40?'…':''}</span>
+          <span class="np-teaser-num">P2</span>
+        </div>
+        <div class="np-teaser-copy">${esc(info.world_story||'')}</div>
+      </div>
+      <div class="np-teaser">
+        <div class="np-teaser-hed">
+          <span>${esc(info.sport_headline||'').substring(0,40)}${(info.sport_headline||'').length>40?'…':''}</span>
+          <span class="np-teaser-num">P6</span>
+        </div>
+        <div class="np-teaser-copy">${esc(info.sport_story||'')}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="np-right">
+    <div class="np-right-top">
+      <div class="np-r-hed"><em>${esc(info.national_headline||'')}</em></div>
+      <div class="np-r-copy">${esc(info.national_story||'')} ${esc(info.local_story||'')}</div>
+      <div class="np-r-rule"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:7.5pt;margin-bottom:3px;">⭐ Born on ${esc(formattedDate)}</div>
+      <div style="font-size:6pt;color:#555;line-height:1.5;">${famous}</div>
+      <div class="np-r-rule"></div>
+      <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:6.5pt;color:#777;line-height:1.5;">${esc(info.fun_fact||'')}</div>
+    </div>
+    <div class="np-right-bottom">
+      <div class="np-chart-title">🎵 ${esc(info.chart_title||'Top 10 Chart')} · ${year}</div>
+      <table class="np-chart-tbl">${chartRows}</table>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM STRIP -->
+<div class="np-bottom">
+  <div class="np-bottom-left">
+    <div class="np-bottom-story">
+      <div class="np-bottom-hed">${esc(info.local_headline||'')}</div>
+      <div class="np-bottom-copy">${esc(info.local_story||'')}</div>
+    </div>
+    <div class="np-bottom-story">
+      <div class="np-bottom-hed">Tomorrow's Forecast</div>
+      <div class="np-bottom-copy">${wIcon} ${esc(wx.forecast||'')}</div>
+    </div>
+  </div>
+  <div class="np-bottom-right">
+    <div class="np-sig">
+      <div class="np-sig-line"></div>
+      <div class="np-sig-lbl">Signed by ${esc(dj)}</div>
+      <div style="margin-top:4px;">${esc(djMsg)}</div>
+    </div>
+    <div style="margin-top:4px;text-align:center;font-family:'DM Sans',sans-serif;font-size:5.5pt;color:#bbb;letter-spacing:0.3em;">✦ FRAME ME · HANG ME · TREASURE ME ✦</div>
+  </div>
+</div>`;
+
+  const star=document.getElementById('star');
+  if(!star)return;
+  star.innerHTML=html;
+  star.style.display='block';
+  setTimeout(()=>star.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function resetForm(){
+  const star=document.getElementById('star');
+  if(star){star.innerHTML='';star.style.display='none';}
+  ['btn-print','btn-new'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  document.getElementById('f-name').value='';
+  document.getElementById('f-msg').value='';
+  dd.value='';dm.value='';dy.value='';
+  dobHint.textContent='';dobHint.className='dob-hint';
+  dobWrap.classList.remove('err');
+  setStatus('');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
