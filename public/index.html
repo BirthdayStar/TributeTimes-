@@ -479,6 +479,98 @@ function logoImg(prevId){
   const p=document.getElementById(prevId);
   return(p&&p.style.display!=='none'&&p.src)?p.src:null;
 }
+function wikiFallbackBirthdays(){
+  return [
+    {name:'Wikipedia archive',note:'Famous birthday records are temporarily unavailable for this date.'},
+    {name:'Historical record',note:'The newspaper can still be generated while the birthday archive is offline.'},
+    {name:'Archive note',note:'Try again later to refresh this section from Wikipedia.'}
+  ];
+}
+function normalizeWikiBirthday(item){
+  const page=item.pages&&item.pages[0];
+  const name=(page?.titles?.normalized||page?.title||'').replace(/_/g,' ').trim();
+  const text=String(item.text||page?.description||'').replace(/\s+/g,' ').trim();
+  const birthYear=item.year?`born ${item.year}`:'birth year listed by Wikipedia';
+  if(!name&&!text)return null;
+  let note=text;
+  if(name&&note.toLowerCase().startsWith(name.toLowerCase())){
+    note=note.slice(name.length).replace(/^[\s,;:-]+/,'').trim();
+  }
+  return {name:name||text.split(',')[0],note:`${birthYear}; ${note||page?.description||'notable Wikipedia birth record'}`};
+}
+async function fetchWikipediaBirthdays(dob){
+  const mm=pad(dob.getMonth()+1);
+  const dd=pad(dob.getDate());
+  try{
+    const res=await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/births/${mm}/${dd}`);
+    if(!res.ok)throw new Error(`Wikipedia returned ${res.status}`);
+    const data=await res.json();
+    const births=(data.births||[]).map(normalizeWikiBirthday).filter(Boolean).slice(0,3);
+    while(births.length<3)births.push(wikiFallbackBirthdays()[births.length]);
+    return births;
+  }catch(e){
+    console.warn('Wikipedia birthdays unavailable:',e);
+    return wikiFallbackBirthdays();
+  }
+}
+function imageUrlFromWikiPage(page){
+  return page?.originalimage?.source||page?.thumbnail?.source||null;
+}
+function scoreWikiImagePage(page, event, queryText){
+  const url=imageUrlFromWikiPage(page);
+  if(!url)return -1000;
+  const haystack=[
+    page.titles?.normalized,
+    page.title,
+    page.description,
+    page.extract,
+    event.text
+  ].filter(Boolean).join(' ').toLowerCase();
+  const words=String(queryText||'').toLowerCase().match(/[a-z0-9]{4,}/g)||[];
+  let score=0;
+  let matchedWords=0;
+  words.forEach(word=>{
+    if(haystack.includes(word)){
+      matchedWords++;
+      score+=4;
+    }
+  });
+  const title=String(page.titles?.normalized||page.title||'').toLowerCase();
+  if(queryText.toLowerCase().includes(title)&&title.length>5)score+=20;
+  if(/moon|apollo|landing|armstrong|aldrin/.test(haystack)&&/moon|apollo|landing|armstrong|aldrin/i.test(queryText))score+=25;
+  if(/\.(jpe?g)(\?|$)/i.test(url))score+=18;
+  else if(/\.(png|webp)(\?|$)/i.test(url))score+=5;
+  if(/svg/i.test(url))score-=30;
+  return matchedWords>=3?score:-1000;
+}
+async function fetchWikipediaEventPhoto(dob, info, country){
+  const mm=pad(dob.getMonth()+1);
+  const dd=pad(dob.getDate());
+  const year=dob.getFullYear();
+  const queryText=[year,country,info.national_headline,info.world_headline,info.image_search_query].filter(Boolean).join(' ');
+  try{
+    const res=await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${mm}/${dd}`);
+    if(!res.ok)throw new Error(`Wikipedia events returned ${res.status}`);
+    const data=await res.json();
+    const candidates=[];
+    (data.events||[]).filter(event=>event.year===year).forEach(event=>{
+      (event.pages||[]).forEach(page=>{
+        const url=imageUrlFromWikiPage(page);
+        if(!url)return;
+        candidates.push({
+          url,
+          alt:page.titles?.normalized||page.title||event.text||'Historical image',
+          score:scoreWikiImagePage(page,event,queryText)
+        });
+      });
+    });
+    candidates.sort((a,b)=>b.score-a.score);
+    return candidates[0]?.score>=35?candidates[0]:null;
+  }catch(e){
+    console.warn('Wikipedia event photo unavailable:',e);
+    return null;
+  }
+}
 
 // ── GENERATE ──
 async function generate(){
@@ -593,13 +685,15 @@ Return ONLY valid JSON — no markdown, no backticks:
     const match=raw.match(/\{[\s\S]*\}/);
     if(!match)throw new Error('No JSON in response');
     const info=JSON.parse(match[0]);
+    info.famous_people=await fetchWikipediaBirthdays(dob);
+    const wikiPhoto=await fetchWikipediaEventPhoto(dob,info,country);
 
     // Photo
-    let photoUrl=null,photoAlt=info.national_headline||'';
+    let photoUrl=wikiPhoto?.url||null,photoAlt=wikiPhoto?.alt||info.national_headline||'';
     try{
       const pd=await photoResp.json();
       const praw=(pd.content||[]).map(i=>i.text||'').join('');
-      if(info.image_search_query){
+      if(!photoUrl&&info.image_search_query){
         const ir2=await fetch('/api/anthropic/messages',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
@@ -665,11 +759,16 @@ function renderStar(info,ctx){
     ?`<img src="${sponsorLogoSrc}" alt="Sponsor logo" style="max-height:32px;max-width:80px;object-fit:contain;"/>`
     :`<div style="font-size:0.55rem;color:#999;text-align:center;font-style:italic;">Sponsor</div>`;
 
+  const photoFallback=(hidden=false)=>`<div class="np-photo-fallback" style="${hidden?'display:none;':''}flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:10mm 9mm 28mm;background:#f8f1df;color:#111;border-bottom:1px solid var(--ink);">
+    <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:7pt;letter-spacing:0.22em;text-transform:uppercase;color:#fff;background:#8b1010;padding:3px 7px;margin-bottom:7px;">Front Page Feature</div>
+    <div style="font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:1.55rem;line-height:1.05;color:#111;margin-bottom:7px;">${esc(info.national_headline||'A remarkable day in history')}</div>
+    <div style="font-size:8pt;line-height:1.55;color:#222;text-align:justify;columns:2;column-gap:14px;">${esc(`${info.national_story||''} ${info.local_story||''}`.trim()||'The archives are open and the front page is filled with stories from this memorable day.')}</div>
+  </div>`;
   const photoHTML=photoUrl
-    ?`<img class="np-photo-img" src="${esc(photoUrl)}" alt="${esc(photoAlt)}"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-      <div class="np-photo-fallback" style="display:none;">📰</div>`
-    :`<div class="np-photo-fallback">📰</div>`;
+    ?`<img class="np-photo-img" src="${esc(photoUrl)}" alt="${esc(photoAlt)}" referrerpolicy="no-referrer"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';this.parentElement.querySelectorAll('.np-photo-page-tag,.np-photo-quote').forEach(el=>el.style.display='none');">
+      ${photoFallback(true)}`
+    :photoFallback();
 
   const famous=(info.famous_people||[]).map(f=>`<b>${esc(f.name)}</b> — ${esc(f.note)}`).join('<br/>');
 
@@ -723,8 +822,8 @@ function renderStar(info,ctx){
   <div class="np-left">
     <div class="np-photo-wrap">
       ${photoHTML}
-      <div class="np-photo-page-tag">⭐ BIRTHDAY EDITION</div>
-      <div class="np-photo-quote">${esc(info.national_headline||'')} — ${esc(country)}, ${year}</div>
+      ${photoUrl?`<div class="np-photo-page-tag">⭐ BIRTHDAY EDITION</div>
+      <div class="np-photo-quote">${esc(info.national_headline||'')} — ${esc(country)}, ${year}</div>`:''}
     </div>
     <div style="background:var(--ink);color:#fff;text-align:center;padding:5px 8px;border-bottom:1px solid #ddd;">
       <div style="font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:1.1rem;line-height:1.1;">${esc(name)}</div>
@@ -753,7 +852,7 @@ function renderStar(info,ctx){
       <div class="np-r-hed"><em>${esc(info.national_headline||'')}</em></div>
       <div class="np-r-copy">${esc(info.national_story||'')} ${esc(info.local_story||'')}</div>
       <div class="np-r-rule"></div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:7.5pt;margin-bottom:3px;">⭐ Born on ${esc(formattedDate)}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:7.5pt;margin-bottom:3px;">⭐ Also born on ${esc(formattedDate.replace(/,?\s+\d{4}$/,''))}</div>
       <div style="font-size:6pt;color:#555;line-height:1.5;">${famous}</div>
       <div class="np-r-rule"></div>
       <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:6.5pt;color:#777;line-height:1.5;">${esc(info.fun_fact||'')}</div>
