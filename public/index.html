@@ -486,17 +486,31 @@ function wikiFallbackBirthdays(){
     {name:'Archive note',note:'Try again later to refresh this section from Wikipedia.'}
   ];
 }
+function cleanBirthdayDescription(description,fallbackText,name){
+  let detail=String(description||'').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  if(!detail){
+    detail=String(fallbackText||'').replace(/\s+/g,' ').trim();
+    if(name&&detail.toLowerCase().startsWith(name.toLowerCase())){
+      detail=detail.slice(name.length).replace(/^[\s,;:-]+/,'').trim();
+    }
+  }
+  detail=detail
+    .replace(/\s*\((?:born|died)[^)]+\)\s*/gi,' ')
+    .replace(/\b(?:who\s+)?(?:plays|portrays|played|portrayed|stars as|starred as)\b.*$/i,'')
+    .replace(/\bknown for (?:playing|portraying)\b.*$/i,'')
+    .replace(/^NZ\b/i,'New Zealand')
+    .replace(/\s+/g,' ')
+    .replace(/[\s,;:-]+$/,'')
+    .trim();
+  return detail||'notable person';
+}
 function normalizeWikiBirthday(item){
   const page=item.pages&&item.pages[0];
   const name=(page?.titles?.normalized||page?.title||'').replace(/_/g,' ').trim();
   const text=String(item.text||page?.description||'').replace(/\s+/g,' ').trim();
-  const birthYear=item.year?`born ${item.year}`:'birth year listed by Wikipedia';
   if(!name&&!text)return null;
-  let note=text;
-  if(name&&note.toLowerCase().startsWith(name.toLowerCase())){
-    note=note.slice(name.length).replace(/^[\s,;:-]+/,'').trim();
-  }
-  return {name:name||text.split(',')[0],note:`${birthYear}; ${note||page?.description||'notable Wikipedia birth record'}`};
+  const detail=cleanBirthdayDescription(page?.description,text,name);
+  return {name:name||text.split(',')[0],note:item.year?`${detail}, born ${item.year}`:detail};
 }
 async function fetchWikipediaBirthdays(dob){
   const mm=pad(dob.getMonth()+1);
