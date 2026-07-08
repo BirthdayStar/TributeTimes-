@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
@@ -37,6 +38,8 @@ app.use((req, res, next) => {
   return express.json({ limit: '10mb' })(req, res, next);
 });
 app.use(express.static(path.join(__dirname, 'public')));
+
+require('./tribute-times-server-update')(app);
 
 // ── AUTH MIDDLEWARE ──
 function authStation(req, res, next) {
@@ -305,198 +308,6 @@ app.delete('/api/station/djs/:id', authStation, async (req, res) => {
 });
 
 // ════════════════════════════════════════
-//  KEEPSAKE GENERATION
-// ════════════════════════════════════════
-
-app.post('/api/generate', authDJ, async (req, res) => {
-  const { occasion, listener_name, listener_dob, country, dj_message } = req.body;
-  if (!listener_name || !listener_dob || !country) return res.status(400).json({ error: 'Missing required fields' });
-
-  // Check keepsake limit
-  const { data: station } = await supabase.from('stations').select('*').eq('id', req.dj.station_id).single();
-  if (!station?.active) return res.status(403).json({ error: 'Station account inactive' });
-  if (station.subscription_status === 'trial' && new Date(station.trial_ends_at) < new Date())
-    return res.status(403).json({ error: 'Trial expired. Please subscribe to continue.' });
-
-  const tier = TIERS[station.tier];
-  if (station.keepsakes_this_month >= tier.keepsakes)
-    return res.status(403).json({ error: `Monthly limit of ${tier.keepsakes} keepsakes reached. Please upgrade your plan.` });
-
-  const dob = new Date(listener_dob + 'T12:00:00');
-  const year = dob.getFullYear();
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const formattedDate = `${dob.getDate()} ${months[dob.getMonth()]} ${year}`;
-  const dayOfWeek = days[dob.getDay()];
-  const age = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000));
-
-  const CURR = {
-    'New Zealand': { s: 'NZ$', n: 'New Zealand dollars' },
-    'Australia': { s: 'A$', n: 'Australian dollars' },
-    'United Kingdom': { s: '£', n: 'British pounds' },
-    'Ireland': { s: year >= 2002 ? '€' : '£', n: year >= 2002 ? 'euros' : 'Irish pounds' },
-    'Canada': { s: 'C$', n: 'Canadian dollars' },
-    'United States': { s: '$', n: 'US dollars' },
-    'South Africa': { s: 'R', n: 'South African rand' },
-    'Philippines': { s: '₱', n: 'Philippine pesos' },
-    'India': { s: '₹', n: 'Indian rupees' },
-    'Germany': { s: year >= 2002 ? '€' : 'DM', n: year >= 2002 ? 'euros' : 'Deutschmarks' },
-    'France': { s: year >= 2002 ? '€' : '₣', n: year >= 2002 ? 'euros' : 'French francs' },
-    'Japan': { s: '¥', n: 'Japanese yen' },
-    'Singapore': { s: 'S$', n: 'Singapore dollars' },
-    'Malaysia': { s: 'RM', n: 'Malaysian ringgit' },
-    'Nigeria': { s: '₦', n: 'Nigerian naira' },
-    'Kenya': { s: 'KSh', n: 'Kenyan shillings' },
-    'Brazil': { s: 'R$', n: 'Brazilian reais' },
-    'Jamaica': { s: 'J$', n: 'Jamaican dollars' },
-  };
-  const currency = CURR[country] || { s: '$', n: 'local currency' };
-
-  const occasionLabels = {
-    birthday: 'Birthday', anniversary: 'Anniversary', wedding: 'Wedding Day',
-    retirement: 'Retirement', graduation: 'Graduation', newbaby: 'New Arrival',
-    memorial: 'In Memoriam', custom: 'Special Edition'
-  };
-  const occasionLabel = occasionLabels[occasion] || 'Birthday';
-
-  const prompt = `You are a research journalist for "The Tribute Times" personalised keepsake newspaper.
-
-OCCASION: ${occasionLabel}
-LISTENER: ${listener_name}
-DATE: ${listener_dob} — ${dayOfWeek}, ${formattedDate}
-COUNTRY: ${country}
-AGE: ${age}
-
-CRITICAL RULES:
-1. ALL content from ${country}'s perspective. Not American unless country IS USA.
-2. MUSIC: Real ${country} chart songs from ${listener_dob}. Official chart name for ${country}.
-3. NEWS: Real events in ${country} and world on ${listener_dob}.
-4. WEATHER: Realistic for ${country} geography and season. Celsius temp as number only.
-5. PRICES: ${currency.n} (${currency.s}). Amount = digits/decimal only, NO symbols.
-6. HOROSCOPE: Based on birth date ${listener_dob}.
-7. DJ SCRIPT: Write a warm, engaging 30-second on-air script the DJ reads verbatim. Use the listener's name naturally. Reference specific facts from the content.
-8. Write warmly — this is a treasured keepsake and a great radio moment.
-
-Return ONLY valid JSON, no markdown:
-{
-  "national_headline": "Main ${country} news headline on ${listener_dob}",
-  "national_deck": "Short subheadline",
-  "national_story": "3 sentences flowing prose.",
-  "world_headline": "Biggest world headline on ${listener_dob}",
-  "world_story": "2 sentences.",
-  "sport_headline": "Sports story relevant to ${country}",
-  "sport_story": "2 sentences.",
-  "local_headline": "Human interest story from ${country}",
-  "local_story": "2 warm sentences.",
-  "chart_title": "Official ${country} singles chart name",
-  "number_one": "Song title — Artist (the actual #1 on that date)",
-  "music_chart": [
-    {"pos":1,"title":"Song","artist":"Artist"},
-    {"pos":2,"title":"Song","artist":"Artist"},
-    {"pos":3,"title":"Song","artist":"Artist"},
-    {"pos":4,"title":"Song","artist":"Artist"},
-    {"pos":5,"title":"Song","artist":"Artist"},
-    {"pos":6,"title":"Song","artist":"Artist"},
-    {"pos":7,"title":"Song","artist":"Artist"},
-    {"pos":8,"title":"Song","artist":"Artist"},
-    {"pos":9,"title":"Song","artist":"Artist"},
-    {"pos":10,"title":"Song","artist":"Artist"}
-  ],
-  "prices": [
-    {"item":"Loaf of bread","amount":"0"},
-    {"item":"Pint of milk","amount":"0"},
-    {"item":"Dozen eggs","amount":"0"},
-    {"item":"Litre of petrol","amount":"0"},
-    {"item":"Cinema ticket","amount":"0"},
-    {"item":"Daily newspaper","amount":"0"},
-    {"item":"Average house price","amount":"0"},
-    {"item":"Pint of beer","amount":"0"}
-  ],
-  "famous_people": [
-    {"name":"Full Name","note":"what known for, relevant to ${country} audience"},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."}
-  ],
-  "weather": {
-    "temp_c": "number only",
-    "conditions": "e.g. Cold southerly with showers",
-    "forecast": "One sentence next-day forecast.",
-    "season": "e.g. Mid-winter"
-  },
-  "cinema": [
-    {"title":"Film title","note":"1 sentence why notable or what it's about"},
-    {"title":"Film title","note":"..."},
-    {"title":"Film title","note":"..."}
-  ],
-  "number_one_book": {"title":"Bestselling book title","author":"Author","note":"1 sentence about the book"},
-  "science_tech": "1-2 sentences about a real science or tech breakthrough from ${year}.",
-  "horoscope": {
-    "sign": "Star sign for ${listener_dob}",
-    "sign_dates": "Date range e.g. 23 Jul – 22 Aug",
-    "reading": "2 sentences fun horoscope in 1970s newspaper style"
-  },
-  "vintage_ad": {
-    "product": "Real product or brand from ${country} in ${year}",
-    "slogan": "Period advertising slogan",
-    "copy": "2 sentences vintage ad copy"
-  },
-  "fun_fact": "2 warm nostalgic sentences about ${listener_dob}.",
-  "cartoon_emoji": "2-3 emojis for the era",
-  "now_vs_then": {
-    "item": "Average house price",
-    "then": "Price in ${year} with currency symbol",
-    "now": "Approximate current ${country} price with currency symbol",
-    "shock": "One punchy sentence comparing the two for the DJ to read on air"
-  },
-  "dj_script": "A warm engaging 30-second on-air script (about 75 words) the DJ reads verbatim when presenting this keepsake. Use ${listener_name}'s name. Reference the number one song, one news event, and one price. End with something warm about the keepsake being on its way.",
-  "conversation_starters": [
-    "Question or topic the DJ can use to have a live chat — references a specific fact",
-    "Another conversation starter",
-    "Another conversation starter",
-    "Another conversation starter",
-    "Another conversation starter"
-  ],
-  "image_search_query": "4-6 words to find a real historical photo of the main news event on ${listener_dob}"
-}`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept-Encoding': 'identity',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 5000, messages: [{ role: 'user', content: prompt }] }),
-      compress: false
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-    const text = data.content.map(b => b.text || '').join('');
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON in response');
-    const info = JSON.parse(match[0]);
-
-    // Save keepsake record
-    const { data: keepsake } = await supabase.from('keepsakes').insert({
-      station_id: req.dj.station_id, dj_id: req.dj.id, dj_name: req.dj.name,
-      occasion, listener_name, listener_dob, country, dj_message, content: info
-    }).select().single();
-
-    // Increment monthly counter
-    await supabase.from('stations').update({ keepsakes_this_month: (station.keepsakes_this_month || 0) + 1 }).eq('id', station.id);
-
-    res.json({ info, keepsake_id: keepsake.id, currency, formattedDate, dayOfWeek, year, age });
-  } catch (err) {
-    console.error('Generate error:', err);
-    res.status(500).json({ error: 'Generation failed: ' + err.message });
-  }
-});
-
-// ════════════════════════════════════════
 //  BILLING — STRIPE
 // ════════════════════════════════════════
 
@@ -678,6 +489,13 @@ function subscriptionActiveEmail(name, tier) {
     <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
+
+// 3-edition front-end form (radio / florist / public)
+app.get(['/radio', '/florist', '/public'], (req, res) => {
+  const edition = req.path.replace('/', '');
+  const template = fs.readFileSync(path.join(__dirname, 'public/form-template.html'), 'utf8');
+  res.send(template.replace('{{EDITION}}', edition));
+});
 
 // Catch-all
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));

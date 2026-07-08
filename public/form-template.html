@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>The Tribute Times — Create a Keepsake</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#1a1210;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height:100vh;
+  padding:20px;
+  color:#fff;
+}
+
+.header { text-align:center; padding:20px 0 28px; border-bottom:1px solid #333; margin-bottom:24px; }
+.header-title { font-size:2.2rem; font-weight:900; color:#fff; letter-spacing:-1px; }
+.header-sub { font-size:0.7rem; letter-spacing:4px; text-transform:uppercase; color:#888; margin-top:6px; }
+
+/* OCCASION GRID */
+.section-label { font-size:0.62rem; letter-spacing:3px; text-transform:uppercase; color:#666; margin-bottom:10px; }
+.occasion-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:6px; }
+.tile {
+  border-radius:4px; padding:14px 6px 12px;
+  text-align:center; cursor:pointer;
+  transition:all 0.18s; border:2px solid transparent;
+  user-select:none;
+}
+.tile:hover { transform:translateY(-2px); filter:brightness(1.15); }
+.tile.selected { border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,0.25); }
+.tile-icon { font-size:1.6rem; line-height:1; margin-bottom:6px; display:block; }
+.tile-label { font-size:0.58rem; line-height:1.3; color:#fff; text-transform:uppercase; font-weight:700; letter-spacing:0.3px; }
+
+/* FORM */
+.form-section {
+  display:none;
+  background:#fff;
+  border-radius:6px;
+  padding:24px;
+  margin-top:20px;
+  color:#111;
+}
+.form-section.visible { display:block; }
+.form-banner {
+  padding:14px 20px;
+  text-align:center;
+  border-radius:4px;
+  margin-bottom:20px;
+  font-size:1.4rem;
+  font-weight:900;
+  color:#fff;
+  letter-spacing:1px;
+}
+
+.field { margin-bottom:16px; }
+.field label {
+  display:block;
+  font-size:0.65rem;
+  font-weight:700;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:#888;
+  margin-bottom:6px;
+}
+.field input, .field select, .field textarea {
+  width:100%;
+  padding:10px 14px;
+  border:1px solid #ddd;
+  border-radius:4px;
+  font-size:0.95rem;
+  color:#111;
+  background:#fff;
+  outline:none;
+  transition:border-color 0.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color:#8b1010;
+}
+.field textarea { height:80px; resize:vertical; }
+
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+.generate-btn {
+  width:100%;
+  padding:16px;
+  background:#8b1010;
+  border:none;
+  border-radius:4px;
+  font-size:0.9rem;
+  font-weight:700;
+  letter-spacing:2px;
+  color:#fff;
+  cursor:pointer;
+  transition:all 0.2s;
+  text-transform:uppercase;
+  margin-top:8px;
+}
+.generate-btn:hover { background:#6b0a0a; transform:translateY(-1px); }
+.generate-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; }
+
+.error { color:#8b1010; font-size:0.8rem; margin-top:8px; text-align:center; }
+.loading { text-align:center; padding:20px; color:#888; font-size:0.85rem; }
+
+/* RESULT */
+.result-section { display:none; margin-top:20px; }
+.result-section.visible { display:block; }
+.result-actions {
+  display:flex; gap:10px; margin-bottom:12px;
+}
+.action-btn {
+  flex:1; padding:12px;
+  border:none; border-radius:4px;
+  font-size:0.8rem; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase;
+  cursor:pointer; transition:all 0.2s;
+}
+.print-btn { background:#fff; color:#111; }
+.new-btn { background:#333; color:#fff; }
+.print-btn:hover { background:#f0f0f0; }
+.new-btn:hover { background:#222; }
+
+#newspaper-frame {
+  width:100%;
+  border:none;
+  background:#fff;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.divider { height:1px; background:#333; margin:20px 0 18px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">The Tribute Times</div>
+  <div class="header-sub">Personalised Keepsake Newspaper</div>
+</div>
+
+<!-- STEP 1: OCCASION -->
+<div class="section-label">Step 1 — Choose the occasion</div>
+<div class="occasion-grid" id="occasion-grid">
+  <div class="tile" onclick="selectOccasion(this,'Birthday','Happy Birthday','#8b1010')" style="background:#8b1010;">
+    <span class="tile-icon">🎂</span><span class="tile-label">Happy<br/>Birthday</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Anniversary','Happy Anniversary','#8b1010')" style="background:#8b1010;">
+    <span class="tile-icon">💍</span><span class="tile-label">Happy<br/>Anniversary</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Golden Anniversary','#8a6a00')" style="background:#8a6a00;">
+    <span class="tile-icon">🥇</span><span class="tile-label">Golden<br/>Anniversary</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,\"Valentine's Day\",'I Love You','#9b1a2a')" style="background:#9b1a2a;">
+    <span class="tile-icon">❤️</span><span class="tile-label">I Love<br/>You</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'New Baby','Welcome to the World','#1a4a6a')" style="background:#1a4a6a;">
+    <span class="tile-icon">👶</span><span class="tile-label">New<br/>Baby</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,\"Mother's Day\",'Happy Mother\\'s Day','#8a2a3a')" style="background:#8a2a3a;">
+    <span class="tile-icon">🌸</span><span class="tile-label">Mother's<br/>Day</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,\"Father's Day\",'Happy Father\\'s Day','#1a2a5a')" style="background:#1a2a5a;">
+    <span class="tile-icon">👔</span><span class="tile-label">Father's<br/>Day</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Graduation','Congratulations Graduate','#1a4a2a')" style="background:#1a4a2a;">
+    <span class="tile-icon">🎓</span><span class="tile-label">Gradu-<br/>ation</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Retirement','Happy Retirement','#8a6a00')" style="background:#8a6a00;">
+    <span class="tile-icon">🏖️</span><span class="tile-label">Retire-<br/>ment</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Wedding Day','Wedding Day Special Edition','#8b1010')" style="background:#8b1010;">
+    <span class="tile-icon">💒</span><span class="tile-label">Wedding<br/>Day</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'In Loving Memory','In Loving Memory','#111')" style="background:#111;">
+    <span class="tile-icon">🕊️</span><span class="tile-label">In Loving<br/>Memory</span>
+  </div>
+  <div class="tile" onclick="selectOccasion(this,'Custom','A Special Edition','#2a2a3a')" style="background:#2a2a3a;">
+    <span class="tile-icon">⭐</span><span class="tile-label">Custom<br/>Edition</span>
+  </div>
+</div>
+
+<!-- STEP 2: FORM -->
+<div class="form-section" id="form-section">
+  <div class="form-banner" id="form-banner">Happy Birthday</div>
+
+  <div class="field">
+    <label>Recipient's Full Name</label>
+    <input type="text" id="recipientName" placeholder="e.g. Margaret Wilson" />
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label id="date-label">Date of Birth</label>
+      <input type="date" id="dateOfBirth" min="1920-01-01" />
+    </div>
+    <div class="field">
+      <label>Country</label>
+      <select id="country">
+        <option value="New Zealand">🇳🇿 New Zealand</option>
+        <option value="Australia">🇦🇺 Australia</option>
+        <option value="United Kingdom">🇬🇧 United Kingdom</option>
+        <option value="Ireland">🇮🇪 Ireland</option>
+        <option value="United States">🇺🇸 United States</option>
+        <option value="Philippines">🇵🇭 Philippines</option>
+        <option value="South Africa">🇿🇦 South Africa</option>
+        <option value="Canada">🇨🇦 Canada</option>
+        <option value="Singapore">🇸🇬 Singapore</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field" id="sender-field">
+    <label id="sender-label">Your Name / DJ Name</label>
+    <input type="text" id="senderName" placeholder="e.g. Big Dave" />
+  </div>
+
+  <div class="field" id="station-field" style="display:none;">
+    <label>Station Name</label>
+    <input type="text" id="stationName" placeholder="e.g. Classic Hits Radio 97.4 FM" />
+  </div>
+
+  <div class="field">
+    <label>Personal Message (optional)</label>
+    <textarea id="personalMessage" placeholder="A personal note to include on the keepsake..."></textarea>
+  </div>
+
+  <div class="error" id="error-msg"></div>
+
+  <button class="generate-btn" id="generate-btn" onclick="generateKeepsake()">
+    ★ &nbsp; Generate The Tribute Times &nbsp; ★
+  </button>
+</div>
+
+<!-- RESULT -->
+<div class="result-section" id="result-section">
+  <div class="result-actions">
+    <button class="action-btn print-btn" onclick="printKeepsake()">🖨 Print / Save PDF</button>
+    <button class="action-btn new-btn" onclick="startAgain()">↩ New Keepsake</button>
+  </div>
+  <div id="newspaper-container"></div>
+</div>
+
+<script>
+let selectedOccasion = null;
+let selectedBanner = null;
+let selectedBg = null;
+
+function selectOccasion(tile, occasion, banner, bg) {
+  document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
+  tile.classList.add('selected');
+  selectedOccasion = occasion;
+  selectedBanner = banner;
+  selectedBg = bg;
+
+  document.getElementById('form-banner').textContent = banner;
+  document.getElementById('form-banner').style.background = bg;
+
+  // Adjust date label
+  const dateLabels = {
+    'Anniversary': 'Wedding Date',
+    'Golden Anniversary': 'Wedding Date',
+    'Silver Anniversary': 'Wedding Date',
+    'Wedding Day': 'Wedding Date',
+    'Graduation': 'Graduation Date',
+    'Retirement': 'Last Day of Work',
+    'In Loving Memory': 'Date of Birth',
+    'New Baby': "Baby's Date of Birth",
+  };
+  document.getElementById('date-label').textContent = dateLabels[occasion] || 'Date of Birth';
+
+  // Show/hide station field
+  const isRadio = window.EDITION === 'radio';
+  document.getElementById('station-field').style.display = isRadio ? 'block' : 'none';
+  document.getElementById('sender-label').textContent = isRadio ? 'DJ / Presenter Name' : occasion === 'In Loving Memory' ? 'From (your name)' : 'From (your name)';
+
+  const form = document.getElementById('form-section');
+  form.classList.add('visible');
+  setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+async function generateKeepsake() {
+  const name = document.getElementById('recipientName').value.trim();
+  const dob = document.getElementById('dateOfBirth').value;
+  const country = document.getElementById('country').value;
+  const sender = document.getElementById('senderName').value.trim();
+  const station = document.getElementById('stationName').value.trim();
+  const message = document.getElementById('personalMessage').value.trim();
+  const errorEl = document.getElementById('error-msg');
+
+  errorEl.textContent = '';
+  if (!selectedOccasion) { errorEl.textContent = 'Please choose an occasion first.'; return; }
+  if (!name) { errorEl.textContent = 'Please enter the recipient\'s name.'; return; }
+  if (!dob) { errorEl.textContent = 'Please enter the date.'; return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = '★  Generating your keepsake...  ★';
+
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipientName: name,
+        dateOfBirth: dob,
+        country,
+        occasion: selectedOccasion,
+        senderName: sender || 'The Tribute Times',
+        stationName: station,
+        edition: window.EDITION || 'public',
+        personalMessage: message,
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Generation failed');
+
+    // Show newspaper
+    const container = document.getElementById('newspaper-container');
+    container.innerHTML = result.html;
+    document.getElementById('result-section').classList.add('visible');
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    errorEl.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '★  Generate The Tribute Times  ★';
+  }
+}
+
+function printKeepsake() {
+  window.print();
+}
+
+function startAgain() {
+  document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
+  document.getElementById('form-section').classList.remove('visible');
+  document.getElementById('result-section').classList.remove('visible');
+  document.getElementById('newspaper-container').innerHTML = '';
+  document.getElementById('recipientName').value = '';
+  document.getElementById('dateOfBirth').value = '';
+  document.getElementById('senderName').value = '';
+  document.getElementById('stationName').value = '';
+  document.getElementById('personalMessage').value = '';
+  document.getElementById('error-msg').textContent = '';
+  selectedOccasion = null;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Set edition from server (injected as template variable)
+window.EDITION = '{{EDITION}}'; // replaced by server with 'radio'|'florist'|'public'
+</script>
+</body>
+</html>
