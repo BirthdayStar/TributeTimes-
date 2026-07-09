@@ -20,6 +20,23 @@ const supabase = createClient(
 );
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const STATIC_ASSET_PATTERN = /\.(?:avif|css|gif|ico|jpe?g|js|json|map|png|svg|txt|webmanifest|webp|woff2?|ttf|otf|eot|xml)$/i;
+const CSP_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "img-src 'self' data: blob: https:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://api.anthropic.com https://*.supabase.co https://en.wikipedia.org https://upload.wikimedia.org",
+  "script-src 'self' 'unsafe-inline'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  "media-src 'self' data: https:"
+].join('; ');
 
 // ── PRICING ──
 const TIERS = {
@@ -32,12 +49,25 @@ const FRAMES_PRICE_NZD = 1.20;
 const FRAMES_GST = 0.15;
 const FRAMES_MIN_QTY = 100;
 
+app.disable('x-powered-by');
+app.set('trust proxy', true);
 app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/webhooks/stripe') return next();
   return express.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(PUBLIC_DIR));
 
 require('./tribute-times-server-update')(app);
 
@@ -445,6 +475,13 @@ function sanitizeStation(s) {
   return safe;
 }
 
+function isStaticAssetRequest(requestPath) {
+  return requestPath.startsWith('/icons/')
+    || requestPath.startsWith('/fonts/')
+    || requestPath.startsWith('/screenshots/')
+    || STATIC_ASSET_PATTERN.test(requestPath);
+}
+
 async function sendEmail({ to, subject, html }) {
   if (!process.env.RESEND_API_KEY) return;
   try {
@@ -497,8 +534,15 @@ app.get(['/radio', '/florist', '/public'], (req, res) => {
   res.send(template.replace('{{EDITION}}', edition));
 });
 
+app.use((req, res, next) => {
+  if ((req.method === 'GET' || req.method === 'HEAD') && isStaticAssetRequest(req.path)) {
+    return res.status(404).type('text/plain').send('Not found');
+  }
+  return next();
+});
+
 // Catch-all
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 
 app.listen(PORT, () => {
   console.log(`🗞️  The Tribute Times running on port ${PORT}`);
