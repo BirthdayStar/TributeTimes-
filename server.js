@@ -67,7 +67,7 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/webhooks/stripe') return next();
   return express.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express.static(PUBLIC_DIR));
+app.use(express.static(PUBLIC_DIR, { index: false }));
 
 require('./tribute-times-server-update')(app);
 
@@ -528,10 +528,14 @@ function subscriptionActiveEmail(name, tier) {
 }
 
 // 3-edition front-end form (radio / florist / public)
-app.get(['/radio', '/florist', '/public'], (req, res) => {
-  const edition = req.path.replace('/', '');
+function sendEditionTemplate(res, edition) {
   const template = fs.readFileSync(path.join(__dirname, 'public/form-template.html'), 'utf8');
   res.send(template.replace('{{EDITION}}', edition));
+}
+
+app.get(['/', '/radio', '/florist', '/public'], (req, res) => {
+  const edition = req.path === '/' ? 'radio' : req.path.replace('/', '');
+  sendEditionTemplate(res, edition);
 });
 
 app.use((req, res, next) => {
@@ -542,7 +546,7 @@ app.use((req, res, next) => {
 });
 
 // Catch-all
-app.get('*', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
+app.get('*', (req, res) => sendEditionTemplate(res, 'radio'));
 
 app.listen(PORT, () => {
   console.log(`🗞️  The Tribute Times running on port ${PORT}`);
