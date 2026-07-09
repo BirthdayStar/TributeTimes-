@@ -4,8 +4,11 @@
   "description": "The Birthday Tribune — Radio Keepsake Platform",
   "main": "server.js",
   "scripts": {
+    "build": "node scripts/build-check.js",
+    "lint": "node scripts/lint.js",
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "typecheck": "node scripts/typecheck.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

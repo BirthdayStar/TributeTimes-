@@ -1,0 +1,81 @@
+{
+  "id": "/?source=pwa",
+  "name": "The Tribute Times",
+  "short_name": "Tribute Times",
+  "description": "Create and print personalised keepsake newspapers from historic headlines, music charts, prices, weather, and birthday milestones.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "browser"
+  ],
+  "background_color": "#f4f0e8",
+  "theme_color": "#8b1010",
+  "orientation": "any",
+  "lang": "en-NZ",
+  "dir": "ltr",
+  "categories": [
+    "lifestyle",
+    "news",
+    "productivity"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The Tribute Times keepsake generator on mobile"
+    },
+    {
+      "src": "/screenshots/home-desktop.png",
+      "sizes": "1600x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The Tribute Times keepsake generator on desktop"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Radio Edition",
+      "short_name": "Radio",
+      "url": "/radio",
+      "description": "Open the radio keepsake form."
+    },
+    {
+      "name": "Florist Edition",
+      "short_name": "Florist",
+      "url": "/florist",
+      "description": "Open the florist keepsake form."
+    },
+    {
+      "name": "Public Edition",
+      "short_name": "Public",
+      "url": "/public",
+      "description": "Open the public keepsake form."
+    }
+  ]
+}

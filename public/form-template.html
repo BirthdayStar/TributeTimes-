@@ -2,8 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="description" content="Create personalised keepsake newspapers in radio, florist, or public editions and install The Tribute Times as an app."/>
+<meta name="theme-color" content="#8b1010"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Tribute Times"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; script-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self';"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml"/>
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png"/>
+<link rel="icon" href="/icons/favicon-16.png" sizes="16x16" type="image/png"/>
+<link rel="apple-touch-icon" href="/icons/icon-180.png"/>
+<link rel="stylesheet" href="/pwa.css"/>
 <title>The Tribute Times — Create a Keepsake</title>
+<script defer src="/pwa.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
@@ -101,6 +115,22 @@ body {
 
 .error { color:#8b1010; font-size:0.8rem; margin-top:8px; text-align:center; }
 .loading { text-align:center; padding:20px; color:#888; font-size:0.85rem; }
+.retry-btn {
+  width:100%;
+  margin-top:10px;
+  padding:12px 16px;
+  background:#fff;
+  color:#8b1010;
+  border:1px solid #8b1010;
+  border-radius:4px;
+  font-size:0.8rem;
+  font-weight:700;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  cursor:pointer;
+  display:none;
+}
+.retry-btn:hover { background:#8b1010; color:#fff; }
 
 /* RESULT */
 .result-section { display:none; margin-top:20px; }
@@ -129,6 +159,26 @@ body {
 }
 
 .divider { height:1px; background:#333; margin:20px 0 18px; }
+
+@media (max-width:960px) {
+  .occasion-grid { grid-template-columns:repeat(4,1fr); }
+}
+
+@media (max-width:720px) {
+  body { padding:16px; }
+  .occasion-grid { grid-template-columns:repeat(3,1fr); }
+  .field-row { grid-template-columns:1fr; }
+  .result-actions { flex-direction:column; }
+}
+
+@media (max-width:480px) {
+  .occasion-grid { grid-template-columns:repeat(2,1fr); }
+  .tile { padding:12px 6px 10px; }
+  .tile-icon { font-size:1.35rem; }
+  .tile-label { font-size:0.55rem; }
+  .form-section { padding:18px; }
+  .form-banner { font-size:1.1rem; }
+}
 </style>
 </head>
 <body>
@@ -224,10 +274,13 @@ body {
     <textarea id="personalMessage" placeholder="A personal note to include on the keepsake..."></textarea>
   </div>
 
-  <div class="error" id="error-msg"></div>
+  <div class="error" id="error-msg" role="alert" aria-live="assertive"></div>
 
   <button class="generate-btn" id="generate-btn" onclick="generateKeepsake()">
     ★ &nbsp; Generate The Tribute Times &nbsp; ★
+  </button>
+  <button class="retry-btn" id="retry-btn" type="button" onclick="generateKeepsake()">
+    Try Again
   </button>
 </div>
 
@@ -244,6 +297,23 @@ body {
 let selectedOccasion = null;
 let selectedBanner = null;
 let selectedBg = null;
+let retryPending = false;
+
+function setRetryVisible(visible) {
+  const retryBtn = document.getElementById('retry-btn');
+  retryBtn.style.display = visible ? 'block' : 'none';
+}
+
+function getGenerateErrorMessage(error) {
+  const message = error && error.message ? error.message : 'Generation failed.';
+  if (!navigator.onLine) {
+    return 'You are offline. Reconnect to the internet, then tap Try Again.';
+  }
+  if (/Failed to fetch|NetworkError|network|load failed/i.test(message)) {
+    return 'We could not reach the server. Check your connection, then tap Try Again.';
+  }
+  return 'Error: ' + message;
+}
 
 function selectOccasion(tile, occasion, banner, bg) {
   document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
@@ -288,9 +358,16 @@ async function generateKeepsake() {
   const errorEl = document.getElementById('error-msg');
 
   errorEl.textContent = '';
+  setRetryVisible(false);
   if (!selectedOccasion) { errorEl.textContent = 'Please choose an occasion first.'; return; }
   if (!name) { errorEl.textContent = 'Please enter the recipient\'s name.'; return; }
   if (!dob) { errorEl.textContent = 'Please enter the date.'; return; }
+  if (!navigator.onLine) {
+    retryPending = true;
+    errorEl.textContent = 'You are offline. Reconnect to the internet, then tap Try Again.';
+    setRetryVisible(true);
+    return;
+  }
 
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
@@ -318,11 +395,15 @@ async function generateKeepsake() {
     // Show newspaper
     const container = document.getElementById('newspaper-container');
     container.innerHTML = result.html;
+    retryPending = false;
+    setRetryVisible(false);
     document.getElementById('result-section').classList.add('visible');
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
 
   } catch (err) {
-    errorEl.textContent = 'Error: ' + err.message;
+    retryPending = true;
+    errorEl.textContent = getGenerateErrorMessage(err);
+    setRetryVisible(true);
   } finally {
     btn.disabled = false;
     btn.textContent = '★  Generate The Tribute Times  ★';
@@ -344,12 +425,27 @@ function startAgain() {
   document.getElementById('stationName').value = '';
   document.getElementById('personalMessage').value = '';
   document.getElementById('error-msg').textContent = '';
+  setRetryVisible(false);
+  retryPending = false;
   selectedOccasion = null;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Set edition from server (injected as template variable)
 window.EDITION = '{{EDITION}}'; // replaced by server with 'radio'|'florist'|'public'
+
+window.addEventListener('online', () => {
+  if (!retryPending) return;
+  document.getElementById('error-msg').textContent = 'Connection restored. Tap Try Again when you are ready.';
+  setRetryVisible(true);
+});
+
+window.addEventListener('offline', () => {
+  if (!document.getElementById('form-section').classList.contains('visible')) return;
+  retryPending = true;
+  document.getElementById('error-msg').textContent = 'You are offline. Reconnect to the internet, then tap Try Again.';
+  setRetryVisible(true);
+});
 </script>
 </body>
 </html>

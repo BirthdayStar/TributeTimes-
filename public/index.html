@@ -2,9 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="Create installable keepsake newspapers for radio listeners with historic headlines, music charts, prices, weather, and printable layouts."/>
+<meta name="theme-color" content="#8b1010"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Tribute Times"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.anthropic.com https://*.supabase.co https://en.wikipedia.org https://upload.wikimedia.org; script-src 'self' 'unsafe-inline'; manifest-src 'self'; worker-src 'self'; media-src 'self' data: https:;"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml"/>
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png"/>
+<link rel="icon" href="/icons/favicon-16.png" sizes="16x16" type="image/png"/>
+<link rel="apple-touch-icon" href="/icons/icon-180.png"/>
+<link rel="stylesheet" href="/pwa.css"/>
 <title>The Tribute Times — Radio Keepsake Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display+SC:wght@400;700;900&family=IM+Fell+English:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script defer src="/pwa.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -57,6 +71,21 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
 .gen-btn:hover{opacity:0.85;}
 .gen-btn:disabled{opacity:0.3;cursor:not-allowed;}
 .status{text-align:center;font-size:0.68rem;color:#8a7060;letter-spacing:0.15em;margin-top:12px;min-height:16px;}
+.retry-inline{
+  display:none;
+  margin:10px auto 0;
+  padding:9px 20px;
+  background:transparent;
+  border:1px solid #c8b89a;
+  border-radius:2px;
+  font-family:'Playfair Display SC',serif;
+  font-size:0.62rem;
+  letter-spacing:0.25em;
+  color:var(--red);
+  cursor:pointer;
+  transition:all 0.18s;
+}
+.retry-inline:hover{background:var(--red);border-color:var(--red);color:#fff;}
 .act-row{display:flex;gap:10px;justify-content:center;margin-top:16px;}
 .act-btn{padding:9px 24px;background:transparent;border:1px solid #c8b89a;border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.62rem;letter-spacing:0.25em;color:var(--red);cursor:pointer;transition:all 0.18s;display:none;}
 .act-btn:hover{background:var(--red);border-color:var(--red);color:#fff;}
@@ -382,7 +411,8 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
       </div>
     </div>
     <button class="gen-btn" id="gen-btn" onclick="generate()">⭐ &nbsp; Generate The Tribute Times &nbsp; ⭐</button>
-    <div class="status" id="status"></div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <button class="retry-inline" id="retry-generate" type="button" onclick="generate()">Try Again</button>
   </div>
   <div class="act-row">
     <button class="act-btn" id="btn-print" onclick="window.print()">🖨 &nbsp; Print / Save PDF</button>
@@ -467,6 +497,17 @@ function getCurr(country,year){
 
 // ── HELPERS ──
 function setStatus(h){document.getElementById('status').innerHTML=h;}
+function setRetryVisible(show){
+  const btn=document.getElementById('retry-generate');
+  if(!btn)return;
+  btn.style.display=show?'inline-block':'none';
+}
+function getGenerateErrorMessage(err){
+  const message=err&&err.message?err.message:'Generation failed.';
+  if(!navigator.onLine)return '⚠ You are offline. Reconnect to the internet, then tap Try Again.';
+  if(/Failed to fetch|NetworkError|network|load failed/i.test(message))return '⚠ We could not reach the server. Check your connection, then tap Try Again.';
+  return '⚠ Error: '+message;
+}
 function fmtDate(dt,country){
   const d=dt.getDate(),m=MONTHS[dt.getMonth()],y=dt.getFullYear();
   return country==='United States'?`${m} ${d}, ${y}`:`${d} ${m} ${y}`;
@@ -596,7 +637,9 @@ async function generate(){
   const dob=parseDob();
   if(!name){setStatus('⚠ Please enter the listener\'s name.');return;}
   if(!dob){dobWrap.classList.add('err');setStatus('⚠ Please enter a valid date of birth.');return;}
+  if(!navigator.onLine){setStatus('⚠ You are offline. Reconnect to the internet, then tap Try Again.');setRetryVisible(true);return;}
   dobWrap.classList.remove('err');
+  setRetryVisible(false);
 
   const year=dob.getFullYear();
   const dobStr=`${year}-${pad(dob.getMonth()+1)}-${pad(dob.getDate())}`;
@@ -727,11 +770,13 @@ Return ONLY valid JSON — no markdown, no backticks:
     clearInterval(ticker);
     renderStar(info,{name,dob,formattedDate,dayOfWeek,year,country,station,dj,djMsg,currency,age,todayStr,photoUrl,photoAlt,firstName});
     setStatus('');
+    setRetryVisible(false);
     ['btn-print','btn-new'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='inline-block';});
 
   }catch(err){
     clearInterval(ticker);
     console.error(err);
+    setRetryVisible(true);
     setStatus('⚠ Error: '+err.message);
   }
   if(genBtn)genBtn.disabled=false;
@@ -917,8 +962,24 @@ function resetForm(){
   dobHint.textContent='';dobHint.className='dob-hint';
   dobWrap.classList.remove('err');
   setStatus('');
+  setRetryVisible(false);
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
+window.addEventListener('online',()=>{
+  if(document.getElementById('retry-generate').style.display==='inline-block'){
+    setStatus('Connection restored. Tap Try Again when you are ready.');
+  }
+});
+
+window.addEventListener('offline',()=>{
+  const retryBtn=document.getElementById('retry-generate');
+  const genBtn=document.getElementById('gen-btn');
+  if((retryBtn&&retryBtn.style.display==='inline-block')||genBtn?.disabled){
+    setStatus('⚠ You are offline. Reconnect to the internet, then tap Try Again.');
+    setRetryVisible(true);
+  }
+});
 </script>
 </body>
 </html>

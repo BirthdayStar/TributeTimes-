@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>The Tribute Times - Offline</title>
+<meta name="theme-color" content="#8b1010"/>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:Georgia,'Times New Roman',serif;
+  background:
+    radial-gradient(circle at top,#f7f1e7 0,#f4f0e8 46%,#e9dfcf 100%);
+  color:#1f1712;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.offline-shell{
+  width:min(680px,100%);
+  background:rgba(255,255,255,0.82);
+  border:1px solid #d7c4ac;
+  box-shadow:0 20px 60px rgba(62,34,18,0.15);
+  border-radius:20px;
+  padding:28px;
+}
+.badge{
+  display:inline-block;
+  padding:8px 12px;
+  background:#8b1010;
+  color:#fffaf1;
+  border-radius:999px;
+  font:700 12px/1.2 system-ui,sans-serif;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+h1{
+  margin:16px 0 8px;
+  font-size:clamp(2rem,4vw,3rem);
+  line-height:1;
+}
+p{
+  margin:0 0 14px;
+  font:400 1rem/1.6 system-ui,sans-serif;
+  color:#4a3a30;
+}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.btn{
+  appearance:none;
+  border:none;
+  border-radius:999px;
+  padding:13px 18px;
+  background:#8b1010;
+  color:#fff;
+  font:700 .95rem/1 system-ui,sans-serif;
+  cursor:pointer;
+}
+.btn.secondary{
+  background:#efe6d8;
+  color:#4a3427;
+  border:1px solid #d3bca2;
+}
+.tips{
+  margin-top:20px;
+  padding-top:18px;
+  border-top:1px solid #e1d3c1;
+}
+.tips strong{display:block;margin-bottom:6px;font:700 .95rem/1.4 system-ui,sans-serif}
+ul{margin:0;padding-left:18px;color:#5a473a;font:400 .95rem/1.6 system-ui,sans-serif}
+</style>
+</head>
+<body>
+  <main class="offline-shell">
+    <span class="badge">Offline</span>
+    <h1>The Tribute Times</h1>
+    <p>You are offline right now, so we could not load a fresh page from the archive desk.</p>
+    <p>If you already opened parts of the app before, some screens may still work from cache. Keepsake generation needs a live connection because it uses secure server requests.</p>
+    <div class="actions">
+      <button class="btn" type="button" onclick="location.reload()">Try Again</button>
+      <a class="btn secondary" href="/" style="text-decoration:none">Go Home</a>
+    </div>
+    <div class="tips">
+      <strong>What still works best offline</strong>
+      <ul>
+        <li>Re-opening cached pages you visited earlier</li>
+        <li>Reading the install and offline status messages</li>
+        <li>Trying again as soon as your connection returns</li>
+      </ul>
+    </div>
+  </main>
+</body>
+</html>
