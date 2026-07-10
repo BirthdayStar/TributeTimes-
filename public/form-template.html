@@ -28,6 +28,17 @@ body {
   color:#fff;
 }
 
+body.result-mode .header,
+body.result-mode .section-label,
+body.result-mode .occasion-grid,
+body.result-mode .form-section {
+  display:none !important;
+}
+
+body.result-mode .result-section {
+  margin-top:0;
+}
+
 .header { text-align:center; padding:20px 0 28px; border-bottom:1px solid #333; margin-bottom:24px; }
 .header-title { font-size:2.2rem; font-weight:900; color:#fff; letter-spacing:-1px; }
 .header-sub { font-size:0.7rem; letter-spacing:4px; text-transform:uppercase; color:#888; margin-top:6px; }
@@ -179,6 +190,42 @@ body {
   .form-section { padding:18px; }
   .form-banner { font-size:1.1rem; }
 }
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    background:#fff !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  body > :not(#result-section) {
+    display:none !important;
+  }
+
+  #result-section {
+    display:block !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  .result-actions {
+    display:none !important;
+  }
+
+  #newspaper-container {
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  #newspaper-container > * {
+    margin:0 !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -299,6 +346,10 @@ let selectedBanner = null;
 let selectedBg = null;
 let retryPending = false;
 
+function setResultMode(active) {
+  document.body.classList.toggle('result-mode', active);
+}
+
 function setRetryVisible(visible) {
   const retryBtn = document.getElementById('retry-btn');
   retryBtn.style.display = visible ? 'block' : 'none';
@@ -397,6 +448,7 @@ async function generateKeepsake() {
     container.innerHTML = result.html;
     retryPending = false;
     setRetryVisible(false);
+    setResultMode(true);
     document.getElementById('result-section').classList.add('visible');
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
 
@@ -427,6 +479,7 @@ function startAgain() {
   document.getElementById('error-msg').textContent = '';
   setRetryVisible(false);
   retryPending = false;
+  setResultMode(false);
   selectedOccasion = null;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
