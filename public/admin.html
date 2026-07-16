@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#7c1717" />
+  <title>The Tribute Times — Admin Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ── */
+    :root {
+      --bg:        #f2ece2;
+      --surface:   #faf6ef;
+      --panel:     #ffffff;
+      --ink:       #1a1714;
+      --ink-2:     #3d3730;
+      --muted:     #6b6259;
+      --accent:    #7c1717;
+      --accent-h:  #9b2020;
+      --accent-2:  #b08a2e;
+      --green:     #1a6b3e;
+      --green-bg:  #ecfbf3;
+      --blue:      #1e4d8c;
+      --blue-bg:   #eef3ff;
+      --amber:     #92600a;
+      --amber-bg:  #fffaeb;
+      --line:      #ddd5c8;
+      --line-2:    #ece5db;
+      --radius:    16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(30,20,10,.07), 0 4px 12px rgba(30,20,10,.06);
+      --shadow:    0 4px 24px rgba(30,20,10,.10), 0 1px 4px rgba(30,20,10,.06);
+      --shadow-lg: 0 16px 48px rgba(30,20,10,.14);
+      --transition: 0.18s ease;
+    }
+
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── TOP NAV BAR (shown when logged in) ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 20px;
+      height: 56px;
+      background: var(--ink);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    }
+    body.logged-in .topbar { display: flex; }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: -0.01em;
+    }
+    .topbar-brand .badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-user {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,.65);
+    }
+    .topbar-user strong {
+      color: #fff;
+      font-weight: 600;
+    }
+    #logout-btn {
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,.25);
+      background: transparent;
+      color: rgba(255,255,255,.85);
+      border-radius: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+    #logout-btn:hover {
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      transform: none;
+    }
+
+    /* ── SHELL / HERO ── */
+    .shell {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+    .hero {
+      margin-bottom: 28px;
+    }
+    .hero-inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+    .brand .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a1714;
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .brand h1 {
+      margin: 0 0 6px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 52ch;
+    }
+
+    /* ── AUTH STAGE ── */
+    .auth-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: min(70vh, 680px);
+      padding: 12px 0;
+    }
+    body.logged-in .auth-stage { display: none; }
+    .auth-card {
+      width: min(100%, 480px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .auth-card-head {
+      padding: 24px 28px 18px;
+      border-bottom: 1px solid var(--line-2);
+    }
+    .auth-card-head h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .auth-card-head p {
+      margin: 6px 0 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .auth-card-body {
+      padding: 24px 28px 28px;
+    }
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .form-field input {
+      width: 100%;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--ink);
+      background: var(--surface);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    .form-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,23,23,.12);
+    }
+    .field-wrap { position: relative; }
+    .field-wrap input { padding-right: 52px; }
+    .pass-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background var(--transition);
+    }
+    .pass-toggle:hover { background: var(--line-2); transform: translateY(-50%); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: transform var(--transition), opacity var(--transition), box-shadow var(--transition);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary  { background: var(--accent);   color: #fff; box-shadow: 0 2px 8px rgba(124,23,23,.3); }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-dark     { background: var(--ink);       color: #fff; }
+    .btn-ghost    { background: transparent; border: 1.5px solid var(--line); color: var(--ink-2); }
+    .btn-ghost:hover { background: var(--line-2); }
+    .btn-soft     { background: var(--line-2);    color: var(--ink-2); }
+    .btn-soft:hover { background: var(--line); }
+    .btn-green    { background: var(--green);     color: #fff; box-shadow: 0 2px 8px rgba(26,107,62,.25); }
+    .btn-green:hover { background: #155e35; }
+    .btn-sm       { padding: 7px 13px; font-size: 0.8rem; border-radius: 8px; }
+    .btn-full     { width: 100%; justify-content: center; padding: 13px 18px; font-size: 0.95rem; }
+    .btn-login    { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(124,23,23,.35); }
+    .btn-login:hover { background: var(--accent-h); }
+
+    /* ── MESSAGES ── */
+    .msg {
+      font-size: 0.88rem;
+      min-height: 1.4em;
+      color: var(--muted);
+      margin-top: 10px;
+      border-radius: 8px;
+      padding: 0;
+      transition: color var(--transition);
+    }
+    .msg.error  { color: #b91c1c; }
+    .msg.ok     { color: var(--green); }
+    .hidden     { display: none !important; }
+
+    /* ── SECTION PANELS ── */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line-2);
+      background: rgba(250,246,239,.6);
+    }
+    .section-head h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-head-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .section-body { padding: 20px 22px; }
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--line-2);
+      margin: 20px 0;
+    }
+
+    /* ── METRIC CARDS ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .metric-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .metric-card.c-total::before   { background: var(--ink); }
+    .metric-card.c-pending::before { background: var(--amber); }
+    .metric-card.c-printed::before { background: var(--blue); }
+    .metric-card.c-posted::before  { background: var(--green); }
+    .metric-card.c-delivered::before { background: #7c3aed; }
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      font-size: 0.88rem;
+    }
+    .data-table thead th {
+      background: #f5f0e8;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 12px 14px;
+      text-align: left;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      border-bottom: 1px solid var(--line);
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid var(--line-2);
+      transition: background var(--transition);
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: #fdf8f2; }
+    .data-table td {
+      padding: 14px 14px;
+      vertical-align: top;
+    }
+    .data-table td.tc { vertical-align: middle; }
+
+    /* ── STATUS CELL ── */
+    .status-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 150px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: capitalize;
+      border: 1.5px solid transparent;
+    }
+    .status-pill::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-pill.pending   { background: #fffbeb; border-color: #fcd34d; color: #92600a; }
+    .status-pill.pending::before { background: #f59e0b; }
+    .status-pill.printed   { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+    .status-pill.printed::before { background: #3b82f6; }
+    .status-pill.posted    { background: #f0fdf4; border-color: #86efac; color: #166534; }
+    .status-pill.posted::before  { background: #22c55e; }
+    .status-pill.delivered { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
+    .status-pill.delivered::before { background: #8b5cf6; }
+    .status-pill.approved  { background: #f0fdf4; border-color: #86efac; color: #166534; }
+    .status-pill.approved::before { background: #22c55e; }
+    .status-pill.rejected  { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .status-pill.rejected::before { background: #ef4444; }
+
+    /* Status change widget */
+    .status-changer {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .status-select {
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      color: var(--ink);
+      background: var(--surface);
+      cursor: pointer;
+      outline: none;
+      flex: 1;
+      min-width: 0;
+      transition: border-color var(--transition);
+    }
+    .status-select:focus { border-color: var(--accent); }
+    .save-status-btn {
+      font: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 11px;
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--transition), transform var(--transition);
+      flex-shrink: 0;
+    }
+    .save-status-btn:hover { background: #333; transform: translateY(-1px); }
+
+    /* ── ACTION BUTTONS IN TABLE ── */
+    .action-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 130px;
+    }
+
+    /* ── ADDRESS CELL ── */
+    .addr {
+      white-space: pre-line;
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.4;
+      max-width: 180px;
+    }
+
+    /* ── FORM GRID ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .form-grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 14px;
+    }
+    .form-stack { display: flex; flex-direction: column; gap: 12px; }
+    .fld label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .fld input,
+    .fld select,
+    .fld textarea {
+      width: 100%;
+      font: inherit;
+      font-size: 0.88rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 11px;
+      color: var(--ink);
+      background: var(--surface);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .fld input:focus,
+    .fld select:focus,
+    .fld textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,23,23,.1);
+    }
+    .fld textarea { resize: vertical; min-height: 72px; }
+
+    /* Inline select in table */
+    .inline-select {
+      font: inherit;
+      font-size: 0.83rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: var(--surface);
+      color: var(--ink);
+      outline: none;
+      width: 100%;
+      cursor: pointer;
+    }
+    .inline-select:focus { border-color: var(--accent); }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .toolbar-left { display: flex; flex-direction: column; gap: 2px; }
+    .toolbar-title { font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
+    .toolbar-sub   { font-size: 0.78rem; color: var(--muted); }
+    .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── EMPTY STATE ── */
+    .empty-row td {
+      text-align: center;
+      padding: 32px 20px !important;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    /* ── ATTRIBUTION METRICS ── */
+    .attr-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .attr-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .attr-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 4px; }
+    .attr-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
+
+    /* ── ADD FORM TABS ── */
+    .add-tab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: var(--surface);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    .add-tab {
+      flex: 1;
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      transition: background var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
+      white-space: nowrap;
+    }
+    .add-tab:hover {
+      background: var(--line-2);
+      color: var(--ink-2);
+      transform: none;
+    }
+    .add-tab.active {
+      background: var(--panel);
+      color: var(--accent);
+      box-shadow: 0 1px 6px rgba(0,0,0,.1), 0 0 0 1px var(--line);
+    }
+    .add-tab-panel {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      background: var(--surface);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .add-tab-panel.active {
+      display: block;
+    }
+    .add-tab-panel.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .tab-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .tab-form-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1100px) {
+      .metrics-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .form-grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 860px) {
+      .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid-3 { grid-template-columns: 1fr 1fr; }
+      .attr-metrics { grid-template-columns: 1fr 1fr; }
+      .shell { padding: 16px 14px 48px; }
+      .section-body { padding: 16px; }
+    }
+    @media (max-width: 600px) {
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+      .form-grid-3 { grid-template-columns: 1fr; }
+      .form-grid-4 { grid-template-columns: 1fr; }
+      .attr-metrics { grid-template-columns: 1fr 1fr; }
+      .brand h1 { font-size: 1.85rem; }
+      .topbar { padding: 0 12px; }
+      .topbar-user { display: none; }
+      .section-head { padding: 14px 16px; flex-wrap: wrap; }
+    }
+    @media (max-width: 420px) {
+      .metrics-row { grid-template-columns: 1fr; }
+      .attr-metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky top nav — only visible when logged in -->
+  <nav class="topbar" id="topbar">
+    <div class="topbar-brand">
+      <span>The Tribute Times</span>
+      <span class="badge">Admin</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="admin-meta">Signed out</span>
+      <button id="logout-btn" type="button">Log out</button>
+    </div>
+  </nav>
+
+  <div class="shell">
+
+    <!-- Hero — visible only on login screen -->
+    <div class="hero" id="hero-block">
+      <div class="hero-inner">
+        <div class="brand">
+          <div class="eyebrow">⚙ Col's Admin Console</div>
+          <h1>Fulfilment Queue</h1>
+          <p>Manage printed orders, download PDFs, update dispatch status, curate famous birthdays, and track consultant attribution — all from one screen.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login form -->
+    <div class="auth-stage" id="auth-stage">
+      <div class="auth-card">
+        <div class="auth-card-head">
+          <h2>Admin Sign In</h2>
+          <p>Sign in with Col's admin credentials to access the fulfilment console.</p>
+        </div>
+        <div class="auth-card-body">
+          <div class="form-field">
+            <label for="admin-email">Email address</label>
+            <input id="admin-email" type="email" autocomplete="username" placeholder="admin@tributetimes.co.nz" />
+          </div>
+          <div class="form-field">
+            <label for="admin-password">Password</label>
+            <div class="field-wrap">
+              <input id="admin-password" type="password" autocomplete="current-password" placeholder="Enter password" />
+              <button class="pass-toggle" id="password-toggle" type="button" aria-pressed="false" aria-label="Show password">👁</button>
+            </div>
+          </div>
+          <button class="btn btn-login btn-full" id="login-btn" type="button">Sign in</button>
+          <div class="msg" id="login-message"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard — hidden until logged in -->
+    <div id="dashboard" class="hidden">
+
+      <!-- Metrics strip -->
+      <div class="metrics-row" id="summary-grid"></div>
+
+      <!-- ── FULFILMENT QUEUE ── -->
+      <div class="section">
+        <div class="section-head">
+          <h3>📬 Fulfilment Queue</h3>
+          <div class="section-head-right">
+            <button class="btn btn-soft btn-sm" id="refresh-btn" type="button">↻ Refresh queue</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="msg" id="queue-message"></div>
+          <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Address</th>
+                  <th>Tier</th>
+                  <th>Delivery</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="queue-body">
+                <tr class="empty-row"><td colspan="8">Sign in to load the queue.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROMO, REFERRALS & TERRITORIES ── -->
+      <div class="section">
+        <div class="section-head">
+          <h3>📊 Promo, Referrals &amp; Territories</h3>
+          <div class="section-head-right">
+            <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="section-body">
+
+          <!-- Attribution summary metrics -->
+          <div class="attr-metrics" id="attribution-summary-grid"></div>
+
+          <hr class="section-divider" />
+
+          <!-- ── TABBED ADD FORMS ── -->
+          <div class="add-tab-bar">
+            <button class="add-tab active" type="button" data-tab="consultant" id="tab-consultant">👤 Add Consultant</button>
+            <button class="add-tab" type="button" data-tab="promo" id="tab-promo">🏷 Add Promo Code</button>
+            <button class="add-tab" type="button" data-tab="territory" id="tab-territory">🗺 Add Territory</button>
+            <button class="add-tab" type="button" data-tab="station-manager" id="tab-station-manager">📻 Add Station Manager</button>
+            <button class="add-tab" type="button" data-tab="florist-partner" id="tab-florist-partner">🌸 Add Florist</button>
+          </div>
+
+          <!-- Tab: Add Consultant -->
+          <div class="add-tab-panel active" id="panel-consultant">
+            <div class="tab-form-grid">
+              <div class="fld">
+                <label for="consultant-name">Full Name</label>
+                <input id="consultant-name" type="text" placeholder="e.g. Sarah Jones" />
+              </div>
+              <div class="fld">
+                <label for="consultant-email">Email Address</label>
+                <input id="consultant-email" type="email" placeholder="sarah@example.com" />
+              </div>
+            </div>
+            <div class="tab-form-actions">
+              <button class="btn btn-primary" id="add-consultant-btn" type="button">+ Add Consultant</button>
+            </div>
+          </div>
+
+          <!-- Tab: Add Promo Code -->
+          <div class="add-tab-panel" id="panel-promo">
+            <div class="tab-form-grid">
+              <div class="fld">
+                <label for="promo-consultant">Consultant</label>
+                <select id="promo-consultant"><option value="">— select consultant —</option></select>
+              </div>
+              <div class="fld">
+                <label for="promo-code">Promo Code</label>
+                <input id="promo-code" type="text" placeholder="e.g. SARAH5" />
+              </div>
+              <div class="fld">
+                <label for="promo-limit">Monthly Free Demos</label>
+                <input id="promo-limit" type="number" min="0" value="5" />
+              </div>
+            </div>
+            <div class="tab-form-actions">
+              <button class="btn btn-primary" id="add-promo-btn" type="button">+ Add Promo Code</button>
+            </div>
+          </div>
+
+          <!-- Tab: Add Territory -->
+          <div class="add-tab-panel" id="panel-territory">
+            <div class="tab-form-grid">
+              <div class="fld">
+                <label for="territory-consultant">Consultant</label>
+                <select id="territory-consultant"><option value="">— select —</option></select>
+              </div>
+              <div class="fld">
+                <label for="territory-name">Territory Name</label>
+                <input id="territory-name" type="text" placeholder="e.g. North Auckland" />
+              </div>
+              <div class="fld">
+                <label for="territory-country">Country</label>
+                <input id="territory-country" type="text" value="New Zealand" />
+              </div>
+              <div class="fld">
+                <label for="territory-match-type">Match Type</label>
+                <select id="territory-match-type">
+                  <option value="exact">Exact</option>
+                  <option value="prefix">Prefix</option>
+                  <option value="range">Range</option>
+                </select>
+              </div>
+              <div class="fld">
+                <label for="territory-postcode-start">Postcode / Start</label>
+                <input id="territory-postcode-start" type="text" placeholder="1010" />
+              </div>
+              <div class="fld">
+                <label for="territory-postcode-end">End (Range only)</label>
+                <input id="territory-postcode-end" type="text" placeholder="1099" />
+              </div>
+              <div class="fld">
+                <label for="territory-priority">Priority</label>
+                <input id="territory-priority" type="number" value="100" />
+              </div>
+            </div>
+            <div class="tab-form-actions">
+              <button class="btn btn-primary" id="add-territory-btn" type="button">+ Add Territory</button>
+            </div>
+          </div>
+
+          <!-- Tab: Add Station Manager -->
+          <div class="add-tab-panel" id="panel-station-manager">
+            <div class="tab-form-grid">
+              <div class="fld">
+                <label for="station-name">Station Name</label>
+                <input id="station-name" type="text" placeholder="e.g. River FM" />
+              </div>
+              <div class="fld">
+                <label for="station-manager-email">Manager Email</label>
+                <input id="station-manager-email" type="email" placeholder="manager@riverfm.co.nz" />
+              </div>
+              <div class="fld">
+                <label for="station-temp-password">Temporary Password</label>
+                <input id="station-temp-password" type="text" placeholder="Enter temporary password" />
+              </div>
+              <div class="fld">
+                <label for="station-country">Country</label>
+                <input id="station-country" type="text" value="New Zealand" />
+              </div>
+              <div class="fld">
+                <label for="station-tier">Tier</label>
+                <select id="station-tier">
+                  <option value="community">Community</option>
+                  <option value="regional">Regional</option>
+                  <option value="city">City</option>
+                  <option value="national">National</option>
+                </select>
+              </div>
+            </div>
+            <div class="tab-form-actions">
+              <button class="btn btn-primary" id="add-station-manager-btn" type="button">+ Add Station Manager</button>
+            </div>
+          </div>
+
+          <!-- Tab: Add Florist Partner -->
+          <div class="add-tab-panel" id="panel-florist-partner">
+            <div class="tab-form-grid">
+              <div class="fld">
+                <label for="florist-partner-name">Florist Name</label>
+                <input id="florist-partner-name" type="text" placeholder="e.g. Blossom Florist" />
+              </div>
+              <div class="fld">
+                <label for="florist-partner-email">Email Address</label>
+                <input id="florist-partner-email" type="email" placeholder="hello@blossomflorist.co.nz" />
+              </div>
+              <div class="fld">
+                <label for="florist-temp-password">Temporary Password</label>
+                <input id="florist-temp-password" type="text" placeholder="Enter temporary password" />
+              </div>
+              <div class="fld">
+                <label for="florist-country">Country</label>
+                <input id="florist-country" type="text" value="New Zealand" />
+              </div>
+              <div class="fld">
+                <label for="florist-initial-credits">Initial Credits</label>
+                <input id="florist-initial-credits" type="number" min="0" value="30" />
+              </div>
+            </div>
+            <div class="tab-form-actions">
+              <button class="btn btn-primary" id="add-florist-partner-btn" type="button">+ Add Florist</button>
+            </div>
+          </div>
+
+          <div class="msg" id="attribution-message" style="margin-top:14px;"></div>
+
+          <hr class="section-divider" />
+
+          <!-- Attribution report table -->
+          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Consultant Attribution</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Consultant</th>
+                  <th>Free Demos This Month</th>
+                  <th>Paid Sales</th>
+                  <th>Paid Total</th>
+                </tr>
+              </thead>
+              <tbody id="attribution-report-body">
+                <tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;">Promo Codes</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Consultant</th>
+                  <th>Monthly Limit</th>
+                  <th>Used This Month</th>
+                </tr>
+              </thead>
+              <tbody id="promo-code-body">
+                <tr class="empty-row"><td colspan="4">No promo codes loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;">Postcode Territories</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Territory</th>
+                  <th>Consultant</th>
+                  <th>Country</th>
+                  <th>Match</th>
+                </tr>
+              </thead>
+              <tbody id="territory-body">
+                <tr class="empty-row"><td colspan="4">No territories loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── FAMOUS BIRTHDAYS ── -->
+      <div class="section">
+        <div class="section-head">
+          <h3>🎂 Famous Birthdays Curation</h3>
+          <div class="section-head-right">
+            <select id="birthday-status-filter" class="inline-select" style="width:130px;" aria-label="Birthday curation status">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button class="btn btn-soft btn-sm" id="refresh-birthdays-btn" type="button">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <p style="font-size:.83rem;color:var(--muted);margin:0 0 14px;">Review imported Wikipedia rows before they appear in the public birthdays API.</p>
+          <div class="msg" id="birthdays-message"></div>
+          <div class="table-wrap" style="margin-top:12px; max-height:70vh; overflow-y:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Person</th>
+                  <th>Date</th>
+                  <th>Country &amp; Priority</th>
+                  <th>Summary</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="birthdays-body">
+                <tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+  </div><!-- /shell -->
+
+  <script>
+    const STORAGE_KEY  = 'phase2AdminToken';
+    const PROFILE_KEY  = 'phase2AdminProfile';
+    const state = {
+      token:       localStorage.getItem(STORAGE_KEY) || '',
+      admin:       readStoredProfile(),
+      orders:      [],
+      summary:     null,
+      attribution: null,
+      birthdays:   [],
+    };
+
+    // DOM refs
+    const dashboard             = document.getElementById('dashboard');
+    const heroBlock             = document.getElementById('hero-block');
+    const loginMessage          = document.getElementById('login-message');
+    const queueMessage          = document.getElementById('queue-message');
+    const summaryGrid           = document.getElementById('summary-grid');
+    const queueBody             = document.getElementById('queue-body');
+    const adminMeta             = document.getElementById('admin-meta');
+    const attributionMessage    = document.getElementById('attribution-message');
+    const attributionSummaryGrid= document.getElementById('attribution-summary-grid');
+    const attributionReportBody = document.getElementById('attribution-report-body');
+    const promoCodeBody         = document.getElementById('promo-code-body');
+    const territoryBody         = document.getElementById('territory-body');
+    const birthdaysMessage      = document.getElementById('birthdays-message');
+    const birthdaysBody         = document.getElementById('birthdays-body');
+
+    // Wire events
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('refresh-btn').addEventListener('click', loadQueue);
+    document.getElementById('refresh-attribution-btn').addEventListener('click', loadAttribution);
+    document.getElementById('add-consultant-btn').addEventListener('click', addConsultant);
+    document.getElementById('add-promo-btn').addEventListener('click', addPromoCode);
+    document.getElementById('add-territory-btn').addEventListener('click', addTerritory);
+    document.getElementById('add-station-manager-btn').addEventListener('click', addStationManager);
+    document.getElementById('add-florist-partner-btn').addEventListener('click', addFloristPartner);
+    document.getElementById('refresh-birthdays-btn').addEventListener('click', loadBirthdays);
+    document.getElementById('birthday-status-filter').addEventListener('change', loadBirthdays);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('password-toggle').addEventListener('click', togglePasswordVisibility);
+    document.getElementById('admin-password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    // Tab switching for Add Consultant / Add Promo / Add Territory
+    document.querySelectorAll('.add-tab').forEach(btn => {
+      btn.addEventListener('click', () => switchAddTab(btn.dataset.tab));
+    });
+    // Initialise the first panel as visible
+    requestAnimationFrame(() => {
+      const first = document.querySelector('.add-tab-panel.active');
+      if (first) requestAnimationFrame(() => first.classList.add('visible'));
+    });
+
+    function switchAddTab(tabName) {
+      document.querySelectorAll('.add-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+      document.querySelectorAll('.add-tab-panel').forEach(panel => {
+        if (panel.id === `panel-${tabName}`) {
+          panel.classList.add('active');
+          requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('visible')));
+        } else {
+          panel.classList.remove('active', 'visible');
+        }
+      });
+    }
+
+    boot();
+
+    /* ── BOOT ── */
+    function boot() {
+      if (state.token) {
+        showDashboard();
+        loadMe().catch(() => logout());
+        loadQueue().catch(() => {});
+        loadAttribution().catch(() => {});
+        loadBirthdays().catch(() => {});
+      } else {
+        showLogin();
+      }
+    }
+
+    /* ── SHOW/HIDE ── */
+    function showLogin() {
+      document.body.classList.remove('logged-in');
+      document.getElementById('auth-stage').classList.remove('hidden');
+      heroBlock.classList.remove('hidden');
+      dashboard.classList.add('hidden');
+    }
+
+    function showDashboard() {
+      document.body.classList.add('logged-in');
+      document.getElementById('auth-stage').classList.add('hidden');
+      heroBlock.classList.add('hidden');
+      dashboard.classList.remove('hidden');
+      renderAdminMeta();
+    }
+
+    /* ── LOGIN ── */
+    async function login() {
+      setLoginMessage('Signing in…', false);
+      try {
+        const payload = {
+          email:    document.getElementById('admin-email').value.trim(),
+          password: document.getElementById('admin-password').value,
+        };
+        const response = await fetch('/api/admin/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Login failed.');
+
+        state.token = data.token;
+        state.admin = data.admin;
+        localStorage.setItem(STORAGE_KEY, data.token);
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(data.admin));
+        setLoginMessage('', false);
+        document.getElementById('admin-password').value = '';
+        syncPasswordToggle();
+        showDashboard();
+        await loadQueue();
+        await loadAttribution();
+        await loadBirthdays();
+      } catch (err) {
+        setLoginMessage(err.message, true);
+      }
+    }
+
+    async function loadMe() {
+      const r = await apiFetch('/api/admin/me');
+      if (!r.ok) throw new Error('Session expired.');
+      const data = await r.json();
+      state.admin = data;
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
+      renderAdminMeta();
+    }
+
+    /* ── QUEUE ── */
+    async function loadQueue() {
+      setMsg(queueMessage, 'Loading queue…', false);
+      setQueueBodyMsg('Loading printed orders…');
+      try {
+        const r    = await apiFetch('/api/admin/orders');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load queue.');
+        state.orders  = data.orders  || [];
+        state.summary = data.summary || {};
+        renderSummary();
+        renderQueue();
+        setMsg(queueMessage, state.orders.length ? '' : 'No printed orders are waiting right now.', false);
+      } catch (err) {
+        setQueueBodyMsg('Unable to load orders.');
+        setMsg(queueMessage, err.message, true);
+      }
+    }
+
+    function renderAdminMeta() {
+      const name = state.admin?.displayName || state.admin?.email || '';
+      adminMeta.innerHTML = `Signed in as <strong>${escapeHtml(name)}</strong>`;
+    }
+
+    function renderSummary() {
+      const s = state.summary || {};
+      const cards = [
+        { label: 'Total',     value: s.total     || 0, cls: 'c-total' },
+        { label: 'Pending',   value: s.pending   || 0, cls: 'c-pending' },
+        { label: 'Printed',   value: s.printed   || 0, cls: 'c-printed' },
+        { label: 'Posted',    value: s.posted    || 0, cls: 'c-posted' },
+        { label: 'Delivered', value: s.delivered || 0, cls: 'c-delivered' },
+      ];
+      summaryGrid.innerHTML = cards.map(c => `
+        <div class="metric-card ${c.cls}">
+          <div class="metric-label">${c.label}</div>
+          <div class="metric-value">${c.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderQueue() {
+      if (!state.orders.length) {
+        setQueueBodyMsg('No printed orders are waiting right now.');
+        return;
+      }
+      queueBody.innerHTML = state.orders.map(order => {
+        const opts = ['pending','printed','posted','delivered'].map(s =>
+          `<option value="${s}" ${order.queueStatus === s ? 'selected' : ''}>${s}</option>`
+        ).join('');
+        const selId  = `sel-${order.id}`;
+        return `
+          <tr>
+            <td>
+              <strong style="font-size:.9rem;">${escapeHtml(order.orderNumber)}</strong><br/>
+              <span style="font-size:.75rem;color:var(--muted);text-transform:capitalize;">${escapeHtml(order.sourcePortal)}</span>
+            </td>
+            <td>
+              <span style="font-weight:600;">${escapeHtml(order.customerName || '')}</span><br/>
+              <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(order.customerEmail || '')}</span>
+            </td>
+            <td><div class="addr">${escapeHtml(order.shippingAddress || 'Digital order')}</div></td>
+            <td style="white-space:nowrap;font-weight:500;">${escapeHtml(order.productTierLabel || order.productTier || '')}</td>
+            <td style="white-space:nowrap;font-size:.83rem;color:var(--muted);">${escapeHtml(order.deliveryOptionLabel || 'Standard')}</td>
+            <td>
+              <div class="status-cell">
+                <span class="status-pill ${escapeHtml(order.queueStatus)}" id="pill-${order.id}">${escapeHtml(order.queueStatus)}</span>
+                <div class="status-changer">
+                  <select class="status-select" id="${selId}" aria-label="Change status for ${escapeHtml(order.orderNumber)}"
+                    onchange="previewStatusPill('${order.id}', this.value)">
+                    ${opts}
+                  </select>
+                  <button class="save-status-btn" type="button"
+                    onclick="updateOrderStatus('${order.id}', document.getElementById('${selId}').value)">
+                    Save
+                  </button>
+                </div>
+              </div>
+            </td>
+            <td style="white-space:nowrap;font-size:.8rem;color:var(--muted);">${formatDate(order.createdAt)}</td>
+            <td>
+              <div class="action-cell">
+                <button class="btn btn-soft btn-sm" type="button"
+                  onclick="downloadPdf('${order.id}', '${escapeJs(order.orderNumber)}')">⬇ PDF</button>
+                <button class="btn btn-green btn-sm" type="button"
+                  onclick="markPosted('${order.id}')">✓ Posted</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* Live-preview the pill colour as user changes the dropdown */
+    function previewStatusPill(orderId, newStatus) {
+      const pill = document.getElementById(`pill-${orderId}`);
+      if (!pill) return;
+      pill.className = `status-pill ${newStatus}`;
+      pill.textContent = newStatus;
+    }
+
+    function setQueueBodyMsg(msg) {
+      queueBody.innerHTML = `<tr class="empty-row"><td colspan="8">${escapeHtml(msg)}</td></tr>`;
+    }
+
+    /* ── ATTRIBUTION ── */
+    async function loadAttribution() {
+      setMsg(attributionMessage, 'Loading attribution…', false);
+      try {
+        const r    = await apiFetch('/api/admin/attribution');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load attribution.');
+        state.attribution = data;
+        renderAttribution();
+        setMsg(attributionMessage, '', false);
+      } catch (err) {
+        setMsg(attributionMessage, err.message, true);
+      }
+    }
+
+    function renderAttribution() {
+      const data        = state.attribution || {};
+      const report      = data.report       || {};
+      const consultants = data.consultants  || [];
+      const promoCodes  = data.promoCodes   || [];
+      const territories = data.territories  || [];
+
+      attributionSummaryGrid.innerHTML = [
+        { label: 'Free Demos', value: report.freeDemosThisMonth || 0 },
+        { label: 'Paid Sales', value: report.paidSalesCount     || 0 },
+        { label: 'Paid Total', value: formatMoney(report.paidSalesTotalNzd || 0) },
+        { label: 'Unattributed', value: report.unattributedPaidSalesCount || 0 },
+      ].map(c => `
+        <div class="attr-card">
+          <div class="attr-label">${c.label}</div>
+          <div class="attr-value">${escapeHtml(String(c.value))}</div>
+        </div>
+      `).join('');
+
+      const consultantOpts = consultants.map(c =>
+        `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`
+      ).join('');
+      document.getElementById('promo-consultant').innerHTML    = consultantOpts || '<option value="">Add a consultant first</option>';
+      document.getElementById('territory-consultant').innerHTML = consultantOpts || '<option value="">Add a consultant first</option>';
+
+      attributionReportBody.innerHTML = (report.byConsultant || []).length
+        ? report.byConsultant.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.consultantName)}</strong></td>
+              <td>${escapeHtml(String(row.freeDemosThisMonth))}</td>
+              <td>${escapeHtml(String(row.paidSalesCount))}</td>
+              <td>${escapeHtml(formatMoney(row.paidSalesTotalNzd))}</td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="4">No consultants yet.</td></tr>';
+
+      promoCodeBody.innerHTML = promoCodes.length
+        ? promoCodes.map(code => `
+            <tr>
+              <td><strong>${escapeHtml(code.code)}</strong></td>
+              <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
+              <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
+              <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="4">No promo codes yet.</td></tr>';
+
+      territoryBody.innerHTML = territories.length
+        ? territories.map(t => `
+            <tr>
+              <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
+              <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
+              <td>${escapeHtml(t.country)}</td>
+              <td>${escapeHtml(formatTerritoryMatch(t))}</td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="4">No territories yet.</td></tr>';
+    }
+
+    /* ── ADD CONSULTANT ── */
+    async function addConsultant() {
+      setMsg(attributionMessage, 'Adding consultant…', false);
+      try {
+        const r = await apiFetch('/api/admin/consultants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:  document.getElementById('consultant-name').value,
+            email: document.getElementById('consultant-email').value,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to add consultant.');
+        document.getElementById('consultant-name').value  = '';
+        document.getElementById('consultant-email').value = '';
+        setMsg(attributionMessage, '✓ Consultant added.', false);
+        await loadAttribution();
+      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    }
+
+    /* ── ADD PROMO CODE ── */
+    async function addPromoCode() {
+      setMsg(attributionMessage, 'Adding promo code…', false);
+      try {
+        const r = await apiFetch('/api/admin/promo-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            consultantId:        document.getElementById('promo-consultant').value,
+            code:                document.getElementById('promo-code').value,
+            monthlyFreeDemoLimit: Number(document.getElementById('promo-limit').value || 5),
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to add promo code.');
+        document.getElementById('promo-code').value  = '';
+        document.getElementById('promo-limit').value = '5';
+        setMsg(attributionMessage, '✓ Promo code added.', false);
+        await loadAttribution();
+      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    }
+
+    /* ── ADD TERRITORY ── */
+    async function addTerritory() {
+      setMsg(attributionMessage, 'Adding territory…', false);
+      try {
+        const r = await apiFetch('/api/admin/postcode-territories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            consultantId:   document.getElementById('territory-consultant').value,
+            territoryName:  document.getElementById('territory-name').value,
+            country:        document.getElementById('territory-country').value,
+            matchType:      document.getElementById('territory-match-type').value,
+            postcodeStart:  document.getElementById('territory-postcode-start').value,
+            postcodeEnd:    document.getElementById('territory-postcode-end').value,
+            priority:       Number(document.getElementById('territory-priority').value || 100),
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to add territory.');
+        ['territory-name','territory-postcode-start','territory-postcode-end'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('territory-priority').value = '100';
+        setMsg(attributionMessage, '✓ Territory added.', false);
+        await loadAttribution();
+      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    }
+
+    /* ── ADD STATION MANAGER ── */
+    async function addStationManager() {
+      setMsg(attributionMessage, 'Adding station manager…', false);
+      try {
+        const r = await apiFetch('/api/admin/stations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:            document.getElementById('station-name').value,
+            email:           document.getElementById('station-manager-email').value,
+            password:        document.getElementById('station-temp-password').value,
+            country:         document.getElementById('station-country').value,
+            tier:            document.getElementById('station-tier').value,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to add station manager.');
+        ['station-name','station-manager-email','station-temp-password'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        setMsg(attributionMessage, '✓ Station manager account created.', false);
+      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    }
+
+    /* ── ADD FLORIST PARTNER ── */
+    async function addFloristPartner() {
+      setMsg(attributionMessage, 'Adding florist partner…', false);
+      try {
+        const r = await apiFetch('/api/admin/florists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:                   document.getElementById('florist-partner-name').value,
+            email:                  document.getElementById('florist-partner-email').value,
+            password:               document.getElementById('florist-temp-password').value,
+            country:                document.getElementById('florist-country').value,
+            initial_credit_balance: Number(document.getElementById('florist-initial-credits').value || 30),
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to add florist partner.');
+        ['florist-partner-name','florist-partner-email','florist-temp-password'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        setMsg(attributionMessage, '✓ Florist partner account created.', false);
+      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    }
+
+    /* ── FAMOUS BIRTHDAYS ── */
+    async function loadBirthdays() {
+      setMsg(birthdaysMessage, 'Loading famous birthdays…', false);
+      try {
+        const status = document.getElementById('birthday-status-filter').value;
+        const r = await apiFetch(`/api/admin/famous-birthdays?status=${encodeURIComponent(status)}&limit=50`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load famous birthdays.');
+        state.birthdays = data.birthdays || [];
+        renderBirthdays();
+        setMsg(birthdaysMessage, state.birthdays.length ? '' : 'No rows for this filter.', false);
+      } catch (err) { setMsg(birthdaysMessage, err.message, true); }
+    }
+
+    function renderBirthdays() {
+      birthdaysBody.innerHTML = state.birthdays.length
+        ? state.birthdays.map(b => `
+            <tr>
+              <td>
+                <input id="birthday-name-${b.id}" type="text" class="inline-select" value="${escapeAttr(b.fullName)}" style="width:100%;min-width:140px;" />
+                <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">${escapeHtml(b.wikipediaTitle || '')}</div>
+              </td>
+              <td style="white-space:nowrap;font-size:.83rem;color:var(--muted);">
+                ${escapeHtml(String(b.birthDay))}/${escapeHtml(String(b.birthMonth))}${b.birthYear ? `/${escapeHtml(String(b.birthYear))}` : ''}
+              </td>
+              <td>
+                <select id="birthday-country-${b.id}" class="inline-select" style="min-width:130px;">
+                  ${birthdayCountryOptions(b.mainPublicCountry)}
+                </select>
+                <div style="margin-top:6px;">
+                  <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Priority</label>
+                  <input id="birthday-priority-${b.id}" type="number" class="inline-select" value="${escapeAttr(String(b.displayPriority))}" style="margin-top:3px;width:80px;" />
+                </div>
+              </td>
+              <td>
+                <textarea id="birthday-summary-${b.id}" rows="3" class="inline-select" style="width:100%;min-width:180px;resize:vertical;">${escapeHtml(b.shortBio)}</textarea>
+                <div style="font-size:.72rem;color:var(--muted);margin-top:3px;">${escapeHtml((b.rawExtract || '').slice(0, 160))}</div>
+              </td>
+              <td class="tc">
+                <span class="status-pill ${escapeHtml(b.curationStatus)}">${escapeHtml(b.curationStatus)}</span>
+              </td>
+              <td class="tc">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:100px;">
+                  <button class="btn btn-soft btn-sm" type="button" onclick="saveBirthday('${b.id}')">💾 Save</button>
+                  <button class="btn btn-green btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'approved')">✓ Approve</button>
+                  <button class="btn btn-ghost btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'rejected')" style="color:#991b1b;border-color:#fca5a5;">✕ Reject</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="6">No famous birthday rows for this filter.</td></tr>';
+    }
+
+    function birthdayCountryOptions(selected) {
+      return ['New Zealand','Australia','Philippines','United Kingdom','Ireland','United States','South Africa','Canada','Singapore']
+        .map(c => `<option value="${escapeHtml(c)}" ${c === selected ? 'selected' : ''}>${escapeHtml(c)}</option>`)
+        .join('');
+    }
+
+    async function saveBirthday(id, status) {
+      setMsg(birthdaysMessage, 'Saving…', false);
+      try {
+        const payload = {
+          fullName:         document.getElementById(`birthday-name-${id}`).value,
+          mainPublicCountry:document.getElementById(`birthday-country-${id}`).value,
+          shortBio:         document.getElementById(`birthday-summary-${id}`).value,
+          displayPriority:  Number(document.getElementById(`birthday-priority-${id}`).value || 100),
+        };
+        if (status) payload.curationStatus = status;
+        const r    = await apiFetch(`/api/admin/famous-birthdays/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to save.');
+        setMsg(birthdaysMessage, status ? `✓ Birthday ${status}.` : '✓ Birthday saved.', false);
+        await loadBirthdays();
+      } catch (err) { setMsg(birthdaysMessage, err.message, true); }
+    }
+
+    function setBirthdayStatus(id, status) { return saveBirthday(id, status); }
+
+    /* ── ORDER STATUS ── */
+    async function updateOrderStatus(orderId, status) {
+      setMsg(queueMessage, 'Updating status…', false);
+      try {
+        const r = await apiFetch(`/api/admin/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to update status.');
+        setMsg(queueMessage, data.emailSent ? '✓ Status updated — dispatch email sent.' : '✓ Status updated.', false);
+        await loadQueue();
+      } catch (err) { setMsg(queueMessage, err.message, true); }
+    }
+
+    async function markPosted(orderId) { return updateOrderStatus(orderId, 'posted'); }
+
+    async function downloadPdf(orderId, orderNumber) {
+      setMsg(queueMessage, `Preparing PDF for ${orderNumber}…`, false);
+      try {
+        const r = await apiFetch(`/api/admin/orders/${orderId}/download-pdf`);
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.error || 'Unable to download PDF.');
+        }
+        // Read as ArrayBuffer and create blob with explicit MIME type
+        const arrayBuffer = await r.arrayBuffer();
+        const blob   = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url    = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href     = url;
+        anchor.download = `${orderNumber}.pdf`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        // Delay revoke so browser can finish reading the blob
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        setMsg(queueMessage, '✓ PDF download started.', false);
+      } catch (err) { setMsg(queueMessage, err.message, true); }
+    }
+
+    /* ── AUTH / LOGOUT ── */
+    async function apiFetch(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        headers: { ...(options.headers || {}), Authorization: `Bearer ${state.token}` },
+      });
+    }
+
+    function logout() {
+      state.token = ''; state.admin = null; state.orders = [];
+      state.summary = null; state.attribution = null; state.birthdays = [];
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PROFILE_KEY);
+      setQueueBodyMsg('Sign in to load the queue.');
+      summaryGrid.innerHTML = '';
+      attributionSummaryGrid.innerHTML = '';
+      attributionReportBody.innerHTML = '<tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>';
+      promoCodeBody.innerHTML  = '<tr class="empty-row"><td colspan="4">No promo codes loaded.</td></tr>';
+      territoryBody.innerHTML  = '<tr class="empty-row"><td colspan="4">No territories loaded.</td></tr>';
+      birthdaysBody.innerHTML  = '<tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>';
+      renderAdminMeta();
+      setMsg(loginMessage, '', false);
+      setMsg(queueMessage, '', false);
+      setMsg(attributionMessage, '', false);
+      setMsg(birthdaysMessage, '', false);
+      document.getElementById('admin-password').value = '';
+      syncPasswordToggle();
+      showLogin();
+    }
+
+    /* ── PASSWORD TOGGLE ── */
+    function togglePasswordVisibility() {
+      const input  = document.getElementById('admin-password');
+      const toggle = document.getElementById('password-toggle');
+      const hide   = input.type === 'password';
+      input.type   = hide ? 'text' : 'password';
+      toggle.textContent = hide ? '🙈' : '👁';
+      toggle.setAttribute('aria-pressed', String(hide));
+      toggle.setAttribute('aria-label',   hide ? 'Hide password' : 'Show password');
+    }
+    function syncPasswordToggle() {
+      const input  = document.getElementById('admin-password');
+      const toggle = document.getElementById('password-toggle');
+      toggle.textContent = input.type === 'password' ? '👁' : '🙈';
+    }
+
+    /* ── HELPERS ── */
+    function setMsg(el, text, isError) {
+      el.textContent = text;
+      el.classList.toggle('error', Boolean(isError));
+    }
+    function setLoginMessage(text, isError) { setMsg(loginMessage, text, isError); }
+
+    function formatDate(value) {
+      if (!value) return '';
+      return new Intl.DateTimeFormat('en-NZ', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    }
+    function formatMoney(value) {
+      return `NZ$${Number(value || 0).toFixed(2)}`;
+    }
+    function formatTerritoryMatch(t) {
+      if (t.match_type === 'range')  return `${t.postcode_start} – ${t.postcode_end}`;
+      if (t.match_type === 'prefix') return `${t.postcode_start}*`;
+      return t.postcode_start || '';
+    }
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function escapeAttr(v) { return escapeHtml(v).replace(/`/g,'&#96;'); }
+    function escapeJs(v)   { return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+    function readStoredProfile() {
+      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
+      catch { localStorage.removeItem(PROFILE_KEY); return null; }
+    }
+  </script>
+</body>
+</html>

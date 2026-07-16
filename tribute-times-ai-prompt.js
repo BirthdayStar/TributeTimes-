@@ -19,6 +19,9 @@ function buildPrompt(data) {
     countryCode,       // e.g. "NZ"
     occasion,          // e.g. "Birthday"
     bannerText,        // e.g. "Happy Birthday"
+    dateLabel,         // e.g. "Date of Birth" or "Wedding Date"
+    dateMeaning,       // e.g. "date of birth" or "wedding date"
+    dateIntro,         // e.g. "born on" or "married on"
     senderName,        // e.g. "Big Dave" (DJ name or florist name or personal sender)
     stationName,       // e.g. "Classic Hits Radio 97.4 FM" (radio only)
     edition,           // "radio" | "florist" | "public"
@@ -41,16 +44,21 @@ function buildPrompt(data) {
     ? `Popular Music of ${year}` 
     : `${country} Top 5 Singles`;
 
-  const prompt = `You are generating content for The Tribute Times — a personalised vintage newspaper keepsake for ${recipientName}, born on ${dateLong} in ${country}.
+  const prompt = `You are generating content for The Tribute Times — a personalised vintage newspaper keepsake for ${recipientName}, ${dateIntro || 'born on'} ${dateLong} in ${country}.
 
 OCCASION: ${occasion}
 EDITION: ${edition}
+DATE FIELD: ${dateLabel || 'Date of Birth'}
+DATE MEANING: ${dateMeaning || 'date of birth'}
+BANNER TEXT: ${bannerText}
 
 You must return a single valid JSON object. No preamble, no explanation, no markdown. Just the JSON.
 
 The newspaper shows events that happened on ${day}th ${monthName(month)} across ALL years of history — not just ${year}. This is "On This Day" content spanning centuries.
 
-The birth year ${year} is used ONLY for: music chart, prices, weather, market data, world in numbers, books and cinema.
+The year ${year} is used ONLY for: music chart, prices, weather, market data, world in numbers, books and cinema.
+${occasion === 'In Loving Memory' ? 'For In Loving Memory, the entered date is the person\'s date of birth, not date of death.' : ''}
+${occasion === 'Golden Anniversary' ? 'For Golden Anniversary, the entered date is the couple\'s wedding date. Content must reflect the day they got married. The banner text must be exactly "Fifty Golden Years Together."' : ''}
 
 ════════════════════════════════════════
 STRICT CONTENT RULES
@@ -73,10 +81,10 @@ ${country.toUpperCase()} NEWS — On This Day (any year):
 - If ${country} is a smaller nation, include regional/Commonwealth events that affected it
 
 SPORT — On This Day (any year):
-- 3 sport stories from different years, all on ${day}th ${monthName(month)}
-- MANDATORY: every sport story must include exact scoreline, both team names, key player name and stat, venue
+- 3-5 sport headline lines from different years, all on ${day}th ${monthName(month)}
+- Headlines only — no story text beneath them
+- Each headline should be one concise vintage newspaper-style line, ideally with scoreline or result detail
 - No vague descriptions — real results only
-- Lead sport story gets a box treatment
 - Prefer ${country} sport but include international if no local results found
 
 BUSINESS — On This Day (any year):
@@ -155,7 +163,7 @@ Write a warm personal message from ${senderName}${stationName ? ` at ${stationNa
 - Reference 2-3 specific things from the On This Day content
 - Warm, personal, radio-ready tone (for radio edition) or warm gift tone (florist/public)
 - 40-60 words maximum
-- End with "Happy ${occasion}" or appropriate closing
+- End with ${occasion === 'Golden Anniversary' ? '"Fifty Golden Years Together."' : occasion === 'In Loving Memory' ? 'an appropriate memorial closing' : `"Happy ${occasion}" or appropriate closing`}
 
 ════════════════════════════════════════
 RETURN THIS EXACT JSON STRUCTURE
@@ -187,7 +195,7 @@ RETURN THIS EXACT JSON STRUCTURE
       "year": 1981,
       "headline": "string — include scoreline e.g. All Blacks 23 · Springboks 22",
       "byline": "string — venue and location",
-      "body": "string — 40-60 words including scoreline teams key player stat",
+      "body": "",
       "boxed": true|false
     }
   ],

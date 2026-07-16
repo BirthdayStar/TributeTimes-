@@ -12,3 +12,6 @@ pnpm-debug.log*
 *.log
 
 .omx/
+
+# ── Scratch / test / one-off scripts ──
+scratch_*.js

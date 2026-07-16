@@ -1,4 +1,4 @@
-const VERSION = 'tt-pwa-v2-2026-07-09';
+const VERSION = 'tt-pwa-v3-2026-07-14';
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const IMAGE_CACHE = `${VERSION}-images`;
@@ -6,10 +6,6 @@ const PAGE_CACHE = `${VERSION}-pages`;
 const MAX_IMAGE_ENTRIES = 24;
 const MAX_PAGE_ENTRIES = 12;
 const PRECACHE_URLS = [
-  '/',
-  '/radio',
-  '/florist',
-  '/public',
   '/offline.html',
   '/manifest.webmanifest',
   '/pwa.css',
@@ -87,7 +83,8 @@ async function networkFirstPage(request) {
   const cache = await caches.open(PAGE_CACHE);
   try {
     const response = await fetch(request);
-    if (response && response.ok) {
+    const cacheControl = (response.headers.get('cache-control') || '').toLowerCase();
+    if (response && response.ok && !cacheControl.includes('no-store') && isCacheableResponse(request, response)) {
       await cache.put(request, response.clone());
       await trimCache(PAGE_CACHE, MAX_PAGE_ENTRIES);
     }
