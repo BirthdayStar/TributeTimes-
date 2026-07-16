@@ -530,7 +530,7 @@ function sendEditionTemplate(res, edition) {
 }
 
 app.get(['/', '/radio', '/florist', '/public'], (req, res) => {
-  const edition = req.path === '/' ? 'radio' : req.path.replace('/', '');
+  const edition = req.path === '/' ? 'public' : req.path.replace('/', '');
   sendEditionTemplate(res, edition);
 });
 
@@ -550,7 +550,7 @@ app.use((req, res, next) => {
 });
 
 // Catch-all
-app.get('*', (req, res) => sendEditionTemplate(res, 'radio'));
+app.get('*', (req, res) => sendEditionTemplate(res, 'public'));
 
 app.listen(PORT, () => {
   console.log(`🗞️  The Tribute Times running on port ${PORT}`);
