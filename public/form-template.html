@@ -17,15 +17,19 @@
 <link rel="apple-touch-icon" href="/icons/icon-180.png"/>
 <link rel="stylesheet" href="/pwa.css"/>
 <title>The Tribute Times — Create a Keepsake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script defer src="/pwa.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  background:#1a1210;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top right, #381212, #180d0b 60%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height:100vh;
-  padding:20px;
+  padding:28px 20px 60px;
   color:#fff;
+  -webkit-font-smoothing: antialiased;
 }
 
 body.result-mode .header,
@@ -39,79 +43,155 @@ body.result-mode .result-section {
   margin-top:0;
 }
 
-.header { text-align:center; padding:20px 0 28px; border-bottom:1px solid #333; margin-bottom:24px; }
-.header-title { font-size:2.2rem; font-weight:900; color:#fff; letter-spacing:-1px; }
-.header-sub { font-size:0.7rem; letter-spacing:4px; text-transform:uppercase; color:#888; margin-top:6px; }
+.header {
+  text-align:center;
+  padding:24px 0 32px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  margin-bottom:32px;
+}
+.header-title {
+  font-size:2.4rem;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:-0.03em;
+  line-height:1.1;
+}
+.header-sub {
+  font-size:0.72rem;
+  letter-spacing:5px;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.5);
+  margin-top:8px;
+  font-weight:600;
+}
 
 /* OCCASION GRID */
-.section-label { font-size:0.62rem; letter-spacing:3px; text-transform:uppercase; color:#666; margin-bottom:10px; }
-.occasion-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:6px; }
-.tile {
-  border-radius:4px; padding:14px 6px 12px;
-  text-align:center; cursor:pointer;
-  transition:all 0.18s; border:2px solid transparent;
-  user-select:none;
+.section-label {
+  font-size:0.75rem;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:rgba(255,255,255,0.4);
+  margin-bottom:12px;
+  font-weight:700;
 }
-.tile:hover { transform:translateY(-2px); filter:brightness(1.15); }
-.tile.selected { border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,0.25); }
-.tile-icon { font-size:1.6rem; line-height:1; margin-bottom:6px; display:block; }
-.tile-label { font-size:0.58rem; line-height:1.3; color:#fff; text-transform:uppercase; font-weight:700; letter-spacing:0.3px; }
+.occasion-grid {
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:10px;
+  margin-bottom:10px;
+}
+.tile {
+  border-radius:12px;
+  padding:18px 8px 16px;
+  text-align:center;
+  cursor:pointer;
+  transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border:1.5px solid transparent;
+  user-select:none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.tile:hover {
+  transform:translateY(-3px);
+  filter:brightness(1.15);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+.tile.selected {
+  border-color:#fff;
+  box-shadow:0 0 0 4px rgba(255,255,255,0.2);
+}
+.tile-icon {
+  font-size:1.8rem;
+  line-height:1;
+  margin-bottom:8px;
+  display:block;
+}
+.tile-label {
+  font-size:0.65rem;
+  line-height:1.4;
+  color:#fff;
+  text-transform:uppercase;
+  font-weight:700;
+  letter-spacing:0.5px;
+}
+body.radio-edition .radio-hidden { display:none !important; }
+body.radio-edition .public-only,
+body.florist-edition .public-only { display:none !important; }
+body.radio-edition:not(.radio-authenticated) #radio-auth-panel { display:block !important; }
+body.radio-edition:not(.radio-authenticated) #purchase-panel,
+body.radio-edition:not(.radio-authenticated) .section-label,
+body.radio-edition:not(.radio-authenticated) .occasion-grid,
+body.radio-edition:not(.radio-authenticated) .form-section { display:none !important; }
+body.radio-edition.radio-authenticated #radio-auth-panel { display:none !important; }
+body.radio-edition.radio-authenticated #radio-dashboard-panel { display:block !important; }
+body.florist-edition:not(.florist-authenticated) #florist-auth-panel { display:block !important; }
+body.florist-edition:not(.florist-authenticated) #purchase-panel,
+body.florist-edition:not(.florist-authenticated) .section-label,
+body.florist-edition:not(.florist-authenticated) .occasion-grid,
+body.florist-edition:not(.florist-authenticated) .form-section { display:none !important; }
+body.florist-edition.florist-authenticated #florist-auth-panel { display:none !important; }
+body.florist-edition.florist-authenticated #florist-credit-panel { display:block !important; }
 
 /* FORM */
 .form-section {
   display:none;
-  background:#fff;
-  border-radius:6px;
-  padding:24px;
-  margin-top:20px;
-  color:#111;
+  background:#ffffff;
+  border-radius:18px;
+  padding:28px;
+  margin-top:24px;
+  color:#1a1714;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 .form-section.visible { display:block; }
 .form-banner {
-  padding:14px 20px;
+  padding:16px 20px;
   text-align:center;
-  border-radius:4px;
-  margin-bottom:20px;
-  font-size:1.4rem;
-  font-weight:900;
+  border-radius:10px;
+  margin-bottom:24px;
+  font-size:1.3rem;
+  font-weight:800;
   color:#fff;
-  letter-spacing:1px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
 }
 
-.field { margin-bottom:16px; }
+.field { margin-bottom:20px; }
 .field label {
   display:block;
-  font-size:0.65rem;
+  font-size:0.72rem;
   font-weight:700;
-  letter-spacing:2px;
+  letter-spacing:1px;
   text-transform:uppercase;
-  color:#888;
-  margin-bottom:6px;
+  color:#6b6259;
+  margin-bottom:8px;
 }
 .field input, .field select, .field textarea {
   width:100%;
-  padding:10px 14px;
-  border:1px solid #ddd;
-  border-radius:4px;
+  padding:12px 16px;
+  border:1.5px solid #ddd5c8;
+  border-radius:10px;
   font-size:0.95rem;
-  color:#111;
-  background:#fff;
+  color:#1a1714;
+  background:#faf8f4;
   outline:none;
-  transition:border-color 0.2s;
+  font-family:inherit;
+  transition: border-color var(--transition, 0.2s), box-shadow var(--transition, 0.2s);
 }
 .field input:focus, .field select:focus, .field textarea:focus {
   border-color:#8b1010;
+  box-shadow: 0 0 0 3px rgba(139,16,16,0.1);
+  background:#fff;
 }
-.field textarea { height:80px; resize:vertical; }
+.field textarea { height:90px; resize:vertical; }
 
-.field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 
 .generate-btn {
   width:100%;
   padding:16px;
   background:#8b1010;
   border:none;
-  border-radius:4px;
+  border-radius:10px;
   font-size:0.9rem;
   font-weight:700;
   letter-spacing:2px;
@@ -119,76 +199,310 @@ body.result-mode .result-section {
   cursor:pointer;
   transition:all 0.2s;
   text-transform:uppercase;
-  margin-top:8px;
+  margin-top:10px;
+  box-shadow: 0 4px 12px rgba(139,16,16,0.3);
 }
-.generate-btn:hover { background:#6b0a0a; transform:translateY(-1px); }
-.generate-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; }
+.generate-btn:hover { background:#700d0d; transform:translateY(-1px); }
+.generate-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; box-shadow:none; }
 
-.error { color:#8b1010; font-size:0.8rem; margin-top:8px; text-align:center; }
+.error { color:#b91c1c; font-size:0.85rem; margin-top:12px; text-align:center; font-weight:600; }
 .loading { text-align:center; padding:20px; color:#888; font-size:0.85rem; }
 .retry-btn {
   width:100%;
-  margin-top:10px;
+  margin-top:12px;
   padding:12px 16px;
   background:#fff;
   color:#8b1010;
-  border:1px solid #8b1010;
-  border-radius:4px;
+  border:1.5px solid #8b1010;
+  border-radius:10px;
   font-size:0.8rem;
   font-weight:700;
   letter-spacing:1px;
   text-transform:uppercase;
   cursor:pointer;
   display:none;
+  transition:all 0.2s;
 }
 .retry-btn:hover { background:#8b1010; color:#fff; }
 
 /* RESULT */
-.result-section { display:none; margin-top:20px; }
+.result-section { display:none; margin-top:24px; }
 .result-section.visible { display:block; }
 .result-actions {
-  display:flex; gap:10px; margin-bottom:12px;
+  display:flex; gap:12px; margin-bottom:16px;
+}
+.result-actions.hidden {
+  display:none !important;
 }
 .action-btn {
-  flex:1; padding:12px;
-  border:none; border-radius:4px;
-  font-size:0.8rem; font-weight:700;
+  flex:1; padding:14px;
+  border:none; border-radius:10px;
+  font-size:0.85rem; font-weight:700;
   letter-spacing:1px; text-transform:uppercase;
   cursor:pointer; transition:all 0.2s;
+  font-family:inherit;
 }
-.print-btn { background:#fff; color:#111; }
-.new-btn { background:#333; color:#fff; }
-.print-btn:hover { background:#f0f0f0; }
-.new-btn:hover { background:#222; }
+.print-btn { background:#fff; color:#1a1714; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.secondary-btn { background:#8b1010; color:#fff; box-shadow: 0 4px 12px rgba(139,16,16,0.2); }
+.new-btn { background:#2d2824; color:#fff; }
+.print-btn:hover { background:#f5f0e8; transform:translateY(-1px); }
+.secondary-btn:hover { background:#700d0d; transform:translateY(-1px); }
+.new-btn:hover { background:#1e1a17; transform:translateY(-1px); }
+
+.purchase-panel {
+  display:none;
+  margin: 0 auto 20px;
+  max-width: 100%;
+  background:#ffffff;
+  border-radius:18px;
+  padding:24px;
+  color:#1a1714;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+#radio-auth-panel, #florist-auth-panel {
+  max-width: 560px;
+  width: 100%;
+}
+.purchase-panel.visible { display:block; }
+.purchase-eyebrow {
+  font-size:0.75rem;
+  font-weight:700;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:#8b1010;
+  margin-bottom:10px;
+}
+.purchase-title {
+  font-size:1.3rem;
+  font-weight:800;
+  margin-bottom:8px;
+  letter-spacing:-0.01em;
+}
+.purchase-copy {
+  color:#6b6259;
+  font-size:0.92rem;
+  line-height:1.55;
+  margin-bottom:20px;
+}
+.purchase-fields {
+  border-top:1.5px solid #ece5db;
+  padding-top:20px;
+  margin-bottom:20px;
+}
+.purchase-section-title {
+  font-size:0.75rem;
+  font-weight:800;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:#8b1010;
+  margin:4px 0 16px;
+}
+.tier-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-bottom:20px;
+}
+.tier-card {
+  border:1.5px solid #ddd5c8;
+  border-radius:12px;
+  padding:16px;
+  background:#faf8f4;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.tier-card:hover {
+  border-color:#8b1010;
+  transform:translateY(-2px);
+  background:#fff;
+}
+.tier-card.selected {
+  border-color:#8b1010;
+  box-shadow:0 0 0 3px rgba(139,16,16,0.12);
+  background:#fffcf9;
+}
+.tier-card.primary {
+  border-width:2px;
+}
+.tier-card.is-hidden {
+  display:none;
+}
+.tier-name {
+  display:block;
+  font-size:0.75rem;
+  font-weight:800;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.tier-price {
+  display:block;
+  font-size:1.4rem;
+  font-weight:800;
+  margin-bottom:8px;
+  color:#8b1010;
+}
+.tier-copy {
+  display:block;
+  font-size:0.8rem;
+  color:#6b6259;
+  line-height:1.45;
+}
+.delivery-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-bottom:20px;
+}
+.delivery-option {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1.5px solid #ddd5c8;
+  border-radius:10px;
+  padding:12px 14px;
+  background:#faf8f4;
+  font-size:0.85rem;
+  color:#1a1714;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.delivery-option:hover { background:#fff; border-color:#8b1010; }
+.delivery-option input {
+  width:auto;
+  accent-color:#8b1010;
+}
+.purchase-actions {
+  display:flex;
+  gap:12px;
+  margin-bottom:12px;
+}
+.pay-btn {
+  flex:1;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  background:#8b1010;
+  color:#fff;
+  font-size:0.85rem;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all 0.2s;
+  box-shadow: 0 4px 12px rgba(139,16,16,0.3);
+}
+.pay-btn:disabled {
+  background:#dcd7d2;
+  color:#a59c94;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+.pay-btn:hover:not(:disabled) {
+  background:#700d0d;
+}
+.purchase-note {
+  font-size:0.82rem;
+  color:#6b6259;
+  line-height:1.45;
+  margin-top:6px;
+}
+.radio-order-list {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+.radio-order-row {
+  border:1.5px solid #ddd5c8;
+  border-radius:10px;
+  background:#faf8f4;
+  padding:14px;
+  font-size:0.85rem;
+  line-height:1.5;
+  color:#3d3730;
+  box-shadow:0 1px 3px rgba(0,0,0,0.02);
+}
+.radio-order-row strong {
+  display:block;
+  color:#1a1714;
+  margin-bottom:4px;
+  font-size:0.9rem;
+}
+.result-status {
+  display:none;
+  margin-bottom:16px;
+  padding:14px 16px;
+  border-radius:10px;
+  background:#f5efe6;
+  color:#3d3730;
+  font-size:0.88rem;
+  line-height:1.5;
+  border-left:4px solid #8b1010;
+}
+.result-status.visible {
+  display:block;
+}
+.result-status.error {
+  background:#fff1f1;
+  color:#b91c1c;
+  border-left-color:#b91c1c;
+}
+.is-hidden {
+  display:none !important;
+}
+.sample-frame {
+  position:relative;
+}
+.sample-frame::after {
+  content:'SAMPLE';
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:5.5rem;
+  font-weight:900;
+  letter-spacing:8px;
+  color:rgba(139,16,16,0.16);
+  pointer-events:none;
+  transform:rotate(-24deg);
+  text-transform:uppercase;
+  z-index:3;
+}
 
 #newspaper-frame {
   width:100%;
   border:none;
   background:#fff;
-  border-radius:4px;
+  border-radius:12px;
   overflow:hidden;
 }
 
-.divider { height:1px; background:#333; margin:20px 0 18px; }
+.divider { height:1px; background:rgba(255,255,255,0.08); margin:24px 0; }
 
 @media (max-width:960px) {
   .occasion-grid { grid-template-columns:repeat(4,1fr); }
 }
 
 @media (max-width:720px) {
-  body { padding:16px; }
+  body { padding:20px 16px 40px; }
   .occasion-grid { grid-template-columns:repeat(3,1fr); }
-  .field-row { grid-template-columns:1fr; }
+  .field-row { grid-template-columns:1fr; gap:0; }
   .result-actions { flex-direction:column; }
+  .purchase-actions { flex-direction:column; }
+  .tier-grid { grid-template-columns:1fr; }
+  .delivery-grid { grid-template-columns:1fr; }
 }
 
 @media (max-width:480px) {
   .occasion-grid { grid-template-columns:repeat(2,1fr); }
-  .tile { padding:12px 6px 10px; }
-  .tile-icon { font-size:1.35rem; }
-  .tile-label { font-size:0.55rem; }
-  .form-section { padding:18px; }
-  .form-banner { font-size:1.1rem; }
+  .tile { padding:14px 6px 12px; }
+  .tile-icon { font-size:1.5rem; }
+  .tile-label { font-size:0.6rem; }
+  .form-section { padding:20px; }
+  .form-banner { font-size:1.15rem; }
 }
 
 @page {
@@ -217,6 +531,14 @@ body.result-mode .result-section {
     display:none !important;
   }
 
+  .purchase-panel {
+    display:none !important;
+  }
+
+  #result-section > :not(#newspaper-container) {
+    display:none !important;
+  }
+
   #newspaper-container {
     margin:0 !important;
     padding:0 !important;
@@ -235,16 +557,105 @@ body.result-mode .result-section {
   <div class="header-sub">Personalised Keepsake Newspaper</div>
 </div>
 
+<div class="purchase-panel is-hidden" id="radio-auth-panel">
+  <div class="purchase-eyebrow">DJ Portal</div>
+  <div class="purchase-title">Sign in to manage radio keepsakes</div>
+  <div class="purchase-copy">Radio keepsakes are physical only. Sign in with the DJ account to generate a keepsake, create Col's fulfilment order, and view the station dashboard.</div>
+  <div class="form-stack">
+    <div class="field">
+      <label>DJ Email</label>
+      <input type="email" id="radio-email" placeholder="email" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="radio-password" placeholder="password" autocomplete="current-password" />
+    </div>
+  </div>
+  <div class="purchase-actions">
+    <button class="pay-btn" id="radio-login-btn" type="button" onclick="loginRadio()">Sign In</button>
+    <button class="action-btn new-btn is-hidden" id="radio-logout-btn" type="button" onclick="logoutRadio()">Log Out</button>
+  </div>
+  <div class="purchase-note" id="radio-auth-note">Use the DJ account for this station.</div>
+</div>
+
+<div class="purchase-panel is-hidden" id="radio-dashboard-panel">
+  <div class="purchase-eyebrow">Radio Dashboard</div>
+  <div class="purchase-title" id="radio-dashboard-title">Station overview</div>
+  <div class="purchase-copy">A quick view of this month's radio keepsakes and the listener addresses Col needs to fulfil.</div>
+  <div class="field-row">
+    <div class="field">
+      <label>Generated This Month</label>
+      <input type="text" id="radio-this-month" readonly value="0" />
+    </div>
+    <div class="field">
+      <label>Listener Addresses Submitted</label>
+      <input type="text" id="radio-addresses" readonly value="0" />
+    </div>
+  </div>
+  <div class="field">
+    <label>Recent Orders</label>
+    <div id="radio-order-list" class="radio-order-list"></div>
+  </div>
+</div>
+
+<div class="purchase-panel is-hidden" id="florist-auth-panel">
+  <div class="purchase-eyebrow">Florist Portal</div>
+  <div class="purchase-title">Sign in to print in store</div>
+  <div class="form-stack">
+    <div class="field">
+      <label>Florist Email</label>
+      <input type="email" id="florist-email" placeholder="email" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="florist-password" placeholder="password" autocomplete="current-password" />
+    </div>
+  </div>
+  <div class="purchase-actions">
+    <button class="pay-btn" id="florist-login-btn" type="button" onclick="loginFlorist()">Sign In</button>
+    <button class="action-btn new-btn is-hidden" id="florist-logout-btn" type="button" onclick="logoutFlorist()">Log Out</button>
+  </div>
+  <div class="purchase-note" id="florist-auth-note">Use the florist account for this store.</div>
+</div>
+
+<div class="purchase-panel is-hidden" id="florist-credit-panel">
+  <div class="purchase-eyebrow">Credits</div>
+  <div class="purchase-title" id="florist-credit-title">Florist credits</div>
+  <div class="field-row">
+    <div class="field">
+      <label>Available Credits</label>
+      <input type="text" id="florist-credit-balance" readonly value="0" />
+    </div>
+    <div class="field">
+      <label>Low-Credit Warning</label>
+      <input type="text" id="florist-credit-threshold" readonly value="10" />
+    </div>
+  </div>
+  <div class="purchase-note">Standard packs: plain cream envelope.</div>
+  <div class="purchase-actions">
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',30)">Standard 30 - NZ$90</button>
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',60)">Standard 60 - NZ$192</button>
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',120)">Standard 120 - NZ$380</button>
+  </div>
+  <div class="purchase-note">Premium Floral packs: floral embossed envelope.</div>
+  <div class="purchase-actions">
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',30)">Premium Floral 30 - NZ$96</button>
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',60)">Premium Floral 60 - NZ$192</button>
+    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',120)">Premium Floral 120 - NZ$380</button>
+  </div>
+  <div class="purchase-note" id="florist-credit-note">Each printed florist keepsake uses 1 credit.</div>
+</div>
+
 <!-- STEP 1: OCCASION -->
-<div class="section-label">Step 1 — Choose the occasion</div>
-<div class="occasion-grid" id="occasion-grid">
+<div class="section-label radio-hidden">Step 1 — Choose the occasion</div>
+<div class="occasion-grid radio-hidden" id="occasion-grid">
   <div class="tile" onclick="selectOccasion(this,'Birthday','Happy Birthday','#8b1010')" style="background:#8b1010;">
     <span class="tile-icon">🎂</span><span class="tile-label">Happy<br/>Birthday</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,'Anniversary','Happy Anniversary','#8b1010')" style="background:#8b1010;">
     <span class="tile-icon">💍</span><span class="tile-label">Happy<br/>Anniversary</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Golden Anniversary','#8a6a00')" style="background:#8a6a00;">
+  <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Fifty Golden Years Together.','#8a6a00')" style="background:#8a6a00;">
     <span class="tile-icon">🥇</span><span class="tile-label">Golden<br/>Anniversary</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,\"Valentine's Day\",'I Love You','#9b1a2a')" style="background:#9b1a2a;">
@@ -281,7 +692,7 @@ body.result-mode .result-section {
   <div class="form-banner" id="form-banner">Happy Birthday</div>
 
   <div class="field">
-    <label>Recipient's Full Name</label>
+    <label id="recipient-name-label">Recipient's Full Name</label>
     <input type="text" id="recipientName" placeholder="e.g. Margaret Wilson" />
   </div>
 
@@ -316,9 +727,19 @@ body.result-mode .result-section {
     <input type="text" id="stationName" placeholder="e.g. Classic Hits Radio 97.4 FM" />
   </div>
 
+  <div class="field is-hidden" id="listener-postal-address-field">
+    <label>Listener Postal Address</label>
+    <textarea id="listenerPostalAddress" placeholder="Street, suburb, city, postcode"></textarea>
+  </div>
+
   <div class="field">
-    <label>Personal Message (optional)</label>
+    <label id="personal-message-label">Personal Message (optional)</label>
     <textarea id="personalMessage" placeholder="A personal note to include on the keepsake..."></textarea>
+  </div>
+
+  <div class="field public-only">
+    <label>Promo Code (optional)</label>
+    <input type="text" id="publicPromoCode" placeholder="Enter promo code for a free demo" />
   </div>
 
   <div class="error" id="error-msg" role="alert" aria-live="assertive"></div>
@@ -337,6 +758,113 @@ body.result-mode .result-section {
     <button class="action-btn print-btn" onclick="printKeepsake()">🖨 Print / Save PDF</button>
     <button class="action-btn new-btn" onclick="startAgain()">↩ New Keepsake</button>
   </div>
+  <div class="result-status" id="result-status"></div>
+  <div class="purchase-panel" id="purchase-panel">
+    <div class="purchase-eyebrow">Public Preview</div>
+    <div class="purchase-title">Choose your keepsake option</div>
+    <div class="purchase-copy" id="purchase-copy">Your public preview shows a SAMPLE watermark until payment. Select a product below to continue to secure checkout.</div>
+    <div class="tier-grid" id="tier-grid">
+      <div class="tier-card primary selected" data-tier="digital" onclick="selectProductTier('digital')">
+        <span class="tier-name">Digital</span>
+        <span class="tier-price">NZ$14.95</span>
+        <span class="tier-copy">Instant clean PDF access after payment.</span>
+      </div>
+      <div class="tier-card" data-tier="standard" onclick="selectProductTier('standard')">
+        <span class="tier-name">Standard</span>
+        <span class="tier-price">NZ$24.95</span>
+        <span class="tier-copy">Printed and posted in a plain cream envelope.</span>
+      </div>
+      <div class="tier-card" data-tier="premium" onclick="selectProductTier('premium')">
+        <span class="tier-name">Premium</span>
+        <span class="tier-price">NZ$34.95</span>
+        <span class="tier-copy">Printed, posted, floral envelope, and frame included.</span>
+      </div>
+    </div>
+    <div class="purchase-fields">
+      <div class="purchase-section-title">Checkout Details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Customer Name</label>
+          <input type="text" id="checkoutCustomerName" placeholder="Your full name" />
+        </div>
+        <div class="field">
+          <label>Customer Email</label>
+          <input type="email" id="checkoutCustomerEmail" placeholder="you@example.com" />
+        </div>
+      </div>
+      <div class="field" id="delivery-option-field">
+        <label>Delivery Speed</label>
+        <div class="delivery-grid">
+          <label class="delivery-option">
+            <input type="radio" name="deliveryOption" value="standard" checked />
+            <span>Standard Included</span>
+          </label>
+          <label class="delivery-option">
+            <input type="radio" name="deliveryOption" value="2day" />
+            <span>2 Day + NZ$5</span>
+          </label>
+          <label class="delivery-option">
+            <input type="radio" name="deliveryOption" value="overnight" />
+            <span>Overnight + NZ$12</span>
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Promo Code (optional)</label>
+        <input type="text" id="checkoutPromoCode" placeholder="Enter promo code if you have one" />
+      </div>
+      <div class="purchase-section-title" id="shipping-title">Shipping Details</div>
+      <div id="shipping-fields">
+        <div class="field">
+          <label>Shipping Name</label>
+          <input type="text" id="shippingName" placeholder="Name for delivery" />
+        </div>
+        <div class="field">
+          <label>Address Line 1</label>
+          <input type="text" id="shippingAddressLine1" placeholder="Street address" />
+        </div>
+        <div class="field">
+          <label>Address Line 2 (optional)</label>
+          <input type="text" id="shippingAddressLine2" placeholder="Apartment, suite, unit, building" />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>City / Town</label>
+            <input type="text" id="shippingCity" placeholder="City or town" />
+          </div>
+          <div class="field">
+            <label>Region / State (optional)</label>
+            <input type="text" id="shippingRegion" placeholder="Region or state" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Postcode</label>
+            <input type="text" id="shippingPostcode" placeholder="Postcode" />
+          </div>
+          <div class="field">
+            <label>Shipping Country</label>
+            <select id="shippingCountry">
+              <option value="New Zealand">New Zealand</option>
+              <option value="Australia">Australia</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="Ireland">Ireland</option>
+              <option value="United States">United States</option>
+              <option value="Philippines">Philippines</option>
+              <option value="South Africa">South Africa</option>
+              <option value="Canada">Canada</option>
+              <option value="Singapore">Singapore</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="purchase-actions">
+      <button class="pay-btn" id="pay-btn" type="button" onclick="proceedToPayment()">Continue to Payment</button>
+      <button class="action-btn new-btn" type="button" onclick="startAgain()">New Keepsake</button>
+    </div>
+    <div class="purchase-note" id="purchase-note">Selected option: Digital. Total today: NZ$14.95.</div>
+  </div>
   <div id="newspaper-container"></div>
 </div>
 
@@ -345,9 +873,697 @@ let selectedOccasion = null;
 let selectedBanner = null;
 let selectedBg = null;
 let retryPending = false;
+let selectedProductTier = 'digital';
+let latestGeneratedHtml = '';
+let latestGeneratedContent = null;
+let latestPublicKeepsakeId = null;
+let publicCleanAccessGranted = false;
+let publicCheckoutMode = 'preview';
+let checkoutBusy = false;
+let lastPublicOrder = null;
+let isRestoringPublicCheckout = false;
+let radioAuthToken = '';
+let radioProfile = null;
+let radioDashboard = null;
+let floristAuthToken = '';
+let floristProfile = null;
+
+const RADIO_STORAGE_KEY = 'tributeTimesRadioDjToken';
+const RADIO_PROFILE_KEY = 'tributeTimesRadioDjProfile';
+const FLORIST_STORAGE_KEY = 'tributeTimesFloristToken';
+const FLORIST_PROFILE_KEY = 'tributeTimesFloristProfile';
+
+const PUBLIC_PRODUCT_LABELS = {
+  digital: 'Digital',
+  standard: 'Standard',
+  premium: 'Premium',
+};
+
+const PUBLIC_PRODUCT_PRICES = {
+  digital: 14.95,
+  standard: 24.95,
+  premium: 34.95,
+};
+
+const DELIVERY_SURCHARGES = {
+  standard: 0,
+  '2day': 5,
+  overnight: 12,
+};
+
+const GENERATE_BUTTON_DEFAULT = 'â˜…  Generate The Tribute Times  â˜…';
+const GENERATE_BUTTON_LOADING = 'â˜…  Generating your keepsake...  â˜…';
 
 function setResultMode(active) {
   document.body.classList.toggle('result-mode', active);
+}
+
+function isPublicEdition() {
+  return window.EDITION === 'public';
+}
+
+function isRadioEdition() {
+  return window.EDITION === 'radio';
+}
+
+function isFloristEdition() {
+  return window.EDITION === 'florist';
+}
+
+function isRadioAuthenticated() {
+  return Boolean(radioAuthToken);
+}
+
+function isFloristAuthenticated() {
+  return Boolean(floristAuthToken);
+}
+
+function getRadioAuthHeaders() {
+  return radioAuthToken ? { Authorization: `Bearer ${radioAuthToken}` } : {};
+}
+
+function getFloristAuthHeaders() {
+  return floristAuthToken ? { Authorization: `Bearer ${floristAuthToken}` } : {};
+}
+
+function getResultActions() {
+  return document.querySelector('.result-actions');
+}
+
+function getPrimaryActionButton() {
+  return document.querySelector('.result-actions .print-btn');
+}
+
+function getRestartActionButton() {
+  return document.querySelector('.result-actions .new-btn');
+}
+
+function ensureSecondaryActionButton() {
+  let button = document.getElementById('secondary-action-btn');
+  if (button) return button;
+
+  const resultActions = getResultActions();
+  button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'secondary-action-btn';
+  button.className = 'action-btn secondary-btn is-hidden';
+  button.textContent = 'Order Printed Copy';
+  button.addEventListener('click', orderPrintedCopy);
+  resultActions.insertBefore(button, getRestartActionButton());
+  return button;
+}
+
+function setStatusMessage(message, isError) {
+  const status = document.getElementById('result-status');
+  if (!message) {
+    status.textContent = '';
+    status.classList.remove('visible', 'error');
+    return;
+  }
+
+  status.textContent = message;
+  status.classList.add('visible');
+  status.classList.toggle('error', Boolean(isError));
+}
+
+function getDeliveryOption() {
+  const selected = document.querySelector('input[name="deliveryOption"]:checked');
+  return selected ? selected.value : 'standard';
+}
+
+function needsShippingForTier(tier) {
+  return tier === 'standard' || tier === 'premium';
+}
+
+function getSelectedTotal() {
+  const base = PUBLIC_PRODUCT_PRICES[selectedProductTier] || PUBLIC_PRODUCT_PRICES.digital;
+  if (!needsShippingForTier(selectedProductTier)) {
+    return base;
+  }
+
+  return base + (DELIVERY_SURCHARGES[getDeliveryOption()] || 0);
+}
+
+function formatDeliveryLabel(value) {
+  if (value === '2day') return '2 Day';
+  if (value === 'overnight') return 'Overnight';
+  return 'Standard';
+}
+
+function isPaidPrintedPublicOrder() {
+  return Boolean(lastPublicOrder?.needsFulfilment);
+}
+
+function getPaidPublicSuccessMessage(order) {
+  if (order?.needsFulfilment) {
+    const tierLabel = PUBLIC_PRODUCT_LABELS[order.productTier] || 'Printed';
+    const deliveryLabel = formatDeliveryLabel(order.deliveryOption || 'standard');
+    const orderNumber = order.orderNumber ? ` Order ${order.orderNumber} is confirmed.` : '';
+    return `Payment complete.${orderNumber} Your ${tierLabel.toLowerCase()} printed keepsake is in the delivery queue. Delivery: ${deliveryLabel}. You can download the clean PDF here too.`;
+  }
+
+  return 'Payment complete. Your clean keepsake is ready. Use Download PDF to save it, or Order Printed Copy to place a separate printed order.';
+}
+
+function getPurchaseCopyText() {
+  if (publicCheckoutMode === 'printed-reorder') {
+    return 'This starts a separate new printed order. Your paid keepsake stays available for download.';
+  }
+
+  return 'Your public preview shows a SAMPLE watermark until payment. Select a product below to continue to secure checkout.';
+}
+
+function updatePurchaseNote(extraMessage) {
+  const note = document.getElementById('purchase-note');
+  if (extraMessage) {
+    note.textContent = extraMessage;
+    return;
+  }
+
+  const total = getSelectedTotal().toFixed(2);
+  const tierLabel = PUBLIC_PRODUCT_LABELS[selectedProductTier] || 'Digital';
+  const delivery = needsShippingForTier(selectedProductTier)
+    ? ` Delivery: ${formatDeliveryLabel(getDeliveryOption())}.`
+    : '';
+  note.textContent = `Selected option: ${tierLabel}. Total today: NZ$${total}.${delivery}`;
+}
+
+function updatePurchaseModeUi() {
+  const purchasePanel = document.getElementById('purchase-panel');
+  const purchaseCopy = document.getElementById('purchase-copy');
+  const purchaseEyebrow = document.querySelector('.purchase-eyebrow');
+  const purchaseTitle = document.querySelector('.purchase-title');
+  const payButton = document.getElementById('pay-btn');
+  const deliveryField = document.getElementById('delivery-option-field');
+  const shippingTitle = document.getElementById('shipping-title');
+  const shippingFields = document.getElementById('shipping-fields');
+  const resultActions = getResultActions();
+  const secondaryAction = ensureSecondaryActionButton();
+  const primaryAction = getPrimaryActionButton();
+  const restartAction = getRestartActionButton();
+  const digitalCard = document.querySelector('.tier-card[data-tier="digital"]');
+
+  purchaseCopy.textContent = getPurchaseCopyText();
+
+  if (isRadioEdition()) {
+    purchasePanel.classList.add('is-hidden');
+    resultActions.classList.remove('hidden');
+    secondaryAction.classList.add('is-hidden');
+    primaryAction.classList.add('is-hidden');
+    restartAction.textContent = 'New Keepsake';
+    updateRadioPortalUi();
+    return;
+  }
+
+  if (isFloristEdition()) {
+    purchasePanel.classList.add('is-hidden');
+    resultActions.classList.remove('hidden');
+    secondaryAction.classList.add('is-hidden');
+    primaryAction.classList.remove('is-hidden');
+    primaryAction.textContent = 'Print Keepsake';
+    restartAction.textContent = 'New Keepsake';
+    updateFloristPortalUi();
+    return;
+  }
+
+  if (!isPublicEdition()) {
+    purchasePanel.classList.remove('visible');
+    resultActions.classList.remove('hidden');
+    secondaryAction.classList.add('is-hidden');
+    primaryAction.textContent = 'Print / Save PDF';
+    restartAction.textContent = 'New Keepsake';
+    return;
+  }
+
+  if (isRestoringPublicCheckout) {
+    purchasePanel.classList.remove('visible');
+    resultActions.classList.add('hidden');
+    secondaryAction.classList.add('is-hidden');
+    return;
+  }
+
+  if (publicCheckoutMode === 'printed-reorder') {
+    purchaseEyebrow.textContent = 'Printed Copy Order';
+    purchaseTitle.textContent = 'Order a printed copy';
+    payButton.textContent = 'Continue to Printed Checkout';
+    digitalCard.classList.add('is-hidden');
+    if (selectedProductTier === 'digital') {
+      selectedProductTier = 'standard';
+    }
+  } else {
+    purchaseEyebrow.textContent = 'Public Preview';
+    purchaseTitle.textContent = 'Choose your keepsake option';
+    payButton.textContent = 'Continue to Payment';
+    digitalCard.classList.remove('is-hidden');
+  }
+
+  document.querySelectorAll('.tier-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.tier === selectedProductTier);
+  });
+
+  const showShipping = needsShippingForTier(selectedProductTier);
+  deliveryField.classList.toggle('is-hidden', !showShipping);
+  shippingTitle.classList.toggle('is-hidden', !showShipping);
+  shippingFields.classList.toggle('is-hidden', !showShipping);
+
+  if (publicCleanAccessGranted) {
+    const paidPrintedOrder = isPaidPrintedPublicOrder();
+    resultActions.classList.remove('hidden');
+    secondaryAction.classList.toggle('is-hidden', paidPrintedOrder || publicCheckoutMode === 'printed-reorder');
+    primaryAction.textContent = 'Download PDF';
+    restartAction.textContent = 'New Keepsake';
+    purchasePanel.classList.toggle('visible', publicCheckoutMode === 'printed-reorder');
+  } else {
+    resultActions.classList.add('hidden');
+    secondaryAction.classList.add('is-hidden');
+    primaryAction.textContent = 'Print / Save PDF';
+    restartAction.textContent = 'New Keepsake';
+    purchasePanel.classList.add('visible');
+  }
+
+  updatePurchaseNote();
+}
+
+function updateRadioPortalUi() {
+  const authPanel = document.getElementById('radio-auth-panel');
+  const dashboardPanel = document.getElementById('radio-dashboard-panel');
+  const loginBtn = document.getElementById('radio-login-btn');
+  const logoutBtn = document.getElementById('radio-logout-btn');
+  const authNote = document.getElementById('radio-auth-note');
+  const printAction = getPrimaryActionButton();
+  const resultActions = getResultActions();
+  const purchasePanel = document.getElementById('purchase-panel');
+  const postalField = document.getElementById('listener-postal-address-field');
+
+  if (!isRadioEdition()) {
+    document.body.classList.remove('radio-authenticated');
+    authPanel.classList.add('is-hidden');
+    dashboardPanel.classList.add('is-hidden');
+    postalField.classList.add('is-hidden');
+    return;
+  }
+
+  applyRadioFormMode();
+  document.body.classList.toggle('radio-authenticated', isRadioAuthenticated());
+  authPanel.classList.remove('is-hidden');
+  postalField.classList.remove('is-hidden');
+  purchasePanel.classList.add('is-hidden');
+  resultActions.classList.remove('hidden');
+  printAction.classList.add('is-hidden');
+
+  if (isRadioAuthenticated()) {
+    authPanel.classList.add('is-hidden');
+    loginBtn.classList.add('is-hidden');
+    logoutBtn.classList.remove('is-hidden');
+    dashboardPanel.classList.remove('is-hidden');
+    authNote.textContent = `Signed in as ${radioProfile?.name || radioProfile?.email || 'DJ account'}.`;
+  } else {
+    authPanel.classList.remove('is-hidden');
+    loginBtn.classList.remove('is-hidden');
+    logoutBtn.classList.add('is-hidden');
+    dashboardPanel.classList.add('is-hidden');
+    authNote.textContent = 'Use the DJ account for this station.';
+  }
+}
+
+function renderRadioDashboard(data) {
+  if (!isRadioEdition()) return;
+
+  radioDashboard = data || radioDashboard;
+  const dashboardPanel = document.getElementById('radio-dashboard-panel');
+  const thisMonth = document.getElementById('radio-this-month');
+  const addresses = document.getElementById('radio-addresses');
+  const orderList = document.getElementById('radio-order-list');
+  const title = document.getElementById('radio-dashboard-title');
+
+  if (!radioDashboard) {
+    dashboardPanel.classList.add('is-hidden');
+    return;
+  }
+
+  dashboardPanel.classList.remove('is-hidden');
+  title.textContent = radioDashboard.station?.name ? `${radioDashboard.station.name} overview` : 'Station overview';
+  thisMonth.value = String(radioDashboard.stats?.thisMonthKeepsakes || 0);
+  addresses.value = String(radioDashboard.stats?.listenerAddressesSubmitted || 0);
+
+  const recentOrders = Array.isArray(radioDashboard.recentOrders) ? radioDashboard.recentOrders : [];
+  orderList.innerHTML = recentOrders.length
+    ? recentOrders.map(order => {
+        const address = [order.shipping_address_line1, [order.shipping_city, order.shipping_postcode].filter(Boolean).join(' ')].filter(Boolean).join(' ');
+        const statusLabel = formatRadioDashboardStatus(order.queue_status);
+        return `
+          <div class="radio-order-row">
+            <strong>${escapeHtml(order.order_number || 'Order')}</strong>
+            <div>Status: ${escapeHtml(statusLabel)}</div>
+            <div>${escapeHtml(order.customer_name || 'Listener')}</div>
+            <div>${escapeHtml(address || 'Address not recorded')}</div>
+          </div>
+        `;
+      }).join('')
+    : '<div class="radio-order-row">No radio orders yet.</div>';
+}
+
+function loadRadioSessionFromStorage() {
+  try {
+    radioAuthToken = window.localStorage.getItem(RADIO_STORAGE_KEY) || '';
+    radioProfile = JSON.parse(window.localStorage.getItem(RADIO_PROFILE_KEY) || 'null');
+  } catch {
+    radioAuthToken = '';
+    radioProfile = null;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function titleCase(value) {
+  return String(value || '')
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function formatRadioDashboardStatus(status) {
+  const normalized = String(status || 'pending').toLowerCase();
+  if (normalized === 'posted') return 'Posted';
+  if (normalized === 'delivered') return 'Delivered';
+  return 'Pending';
+}
+
+function applyRadioFormMode() {
+  if (!isRadioEdition()) return;
+
+  selectedOccasion = 'Birthday';
+  selectedBanner = 'Happy Birthday';
+  selectedBg = '#8b1010';
+
+  document.getElementById('form-section').classList.add('visible');
+  document.getElementById('form-banner').textContent = selectedBanner;
+  document.getElementById('form-banner').style.background = selectedBg;
+  document.getElementById('recipient-name-label').textContent = 'Listener Name';
+  document.getElementById('recipientName').placeholder = 'e.g. Margaret Wilson';
+  document.getElementById('date-label').textContent = 'Date of Birth';
+  document.getElementById('sender-label').textContent = 'DJ / Presenter Name';
+  document.getElementById('personal-message-label').textContent = 'Personal Message from the DJ';
+  document.getElementById('personalMessage').placeholder = 'A personal note from the DJ to include on the keepsake...';
+  document.getElementById('station-field').style.display = 'block';
+  document.getElementById('listener-postal-address-field').style.display = 'block';
+}
+
+function applyFloristFormMode() {
+  if (!isFloristEdition()) return;
+
+  document.getElementById('recipient-name-label').textContent = 'Customer Name';
+  document.getElementById('recipientName').placeholder = 'e.g. Margaret Wilson';
+  document.getElementById('date-label').textContent = 'Date of Birth';
+  document.getElementById('personal-message-label').textContent = 'Personal Message from the Florist';
+  document.getElementById('personalMessage').placeholder = 'A personal note from the florist to include on the keepsake...';
+  document.getElementById('sender-field').style.display = 'none';
+  document.getElementById('station-field').style.display = 'none';
+  document.getElementById('listener-postal-address-field').style.display = 'none';
+}
+
+function renderFloristCredits() {
+  const balance = Number(floristProfile?.florist_credit_balance || 0);
+  const threshold = Number(floristProfile?.florist_low_credit_threshold || 10);
+  document.getElementById('florist-credit-title').textContent = floristProfile?.name
+    ? `${floristProfile.name} credits`
+    : 'Florist credits';
+  document.getElementById('florist-credit-balance').value = String(balance);
+  document.getElementById('florist-credit-threshold').value = String(threshold);
+  document.getElementById('florist-credit-note').textContent = balance <= threshold
+    ? `Low credits: ${balance} remaining. Buy another pack before printing more keepsakes.`
+    : 'Each printed florist keepsake uses 1 credit.';
+}
+
+function updateFloristPortalUi() {
+  const authPanel = document.getElementById('florist-auth-panel');
+  const creditPanel = document.getElementById('florist-credit-panel');
+  const loginBtn = document.getElementById('florist-login-btn');
+  const logoutBtn = document.getElementById('florist-logout-btn');
+  const authNote = document.getElementById('florist-auth-note');
+  const purchasePanel = document.getElementById('purchase-panel');
+
+  if (!isFloristEdition()) {
+    document.body.classList.remove('florist-authenticated');
+    authPanel.classList.add('is-hidden');
+    creditPanel.classList.add('is-hidden');
+    return;
+  }
+
+  applyFloristFormMode();
+  document.body.classList.toggle('florist-authenticated', isFloristAuthenticated());
+  authPanel.classList.remove('is-hidden');
+  purchasePanel.classList.add('is-hidden');
+
+  if (isFloristAuthenticated()) {
+    authPanel.classList.add('is-hidden');
+    loginBtn.classList.add('is-hidden');
+    logoutBtn.classList.remove('is-hidden');
+    creditPanel.classList.remove('is-hidden');
+    authNote.textContent = `Signed in as ${floristProfile?.name || floristProfile?.email || 'florist account'}.`;
+    renderFloristCredits();
+  } else {
+    authPanel.classList.remove('is-hidden');
+    loginBtn.classList.remove('is-hidden');
+    logoutBtn.classList.add('is-hidden');
+    creditPanel.classList.add('is-hidden');
+    authNote.textContent = 'Use the florist account for this store.';
+  }
+}
+
+function loadFloristSessionFromStorage() {
+  try {
+    floristAuthToken = window.localStorage.getItem(FLORIST_STORAGE_KEY) || '';
+    floristProfile = JSON.parse(window.localStorage.getItem(FLORIST_PROFILE_KEY) || 'null');
+  } catch {
+    floristAuthToken = '';
+    floristProfile = null;
+  }
+}
+
+function saveFloristSession(token, profile) {
+  floristAuthToken = token || '';
+  floristProfile = profile || null;
+  try {
+    if (floristAuthToken) {
+      window.localStorage.setItem(FLORIST_STORAGE_KEY, floristAuthToken);
+      window.localStorage.setItem(FLORIST_PROFILE_KEY, JSON.stringify(floristProfile));
+    } else {
+      window.localStorage.removeItem(FLORIST_STORAGE_KEY);
+      window.localStorage.removeItem(FLORIST_PROFILE_KEY);
+    }
+  } catch {
+    // Ignore storage errors in private browsing mode.
+  }
+}
+
+async function loginFlorist() {
+  const email = document.getElementById('florist-email').value.trim();
+  const password = document.getElementById('florist-password').value;
+  const note = document.getElementById('florist-auth-note');
+
+  if (!email || !password) {
+    note.textContent = 'Enter the florist email and password first.';
+    return;
+  }
+
+  note.textContent = 'Signing in...';
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to sign in.');
+    }
+    if (data.station?.account_type !== 'florist') {
+      throw new Error('This account is not set up as a florist account.');
+    }
+
+    saveFloristSession(data.token, data.station);
+    document.getElementById('florist-password').value = '';
+    updateFloristPortalUi();
+  } catch (error) {
+    note.textContent = error.message || 'Unable to sign in.';
+  }
+}
+
+async function refreshFloristProfile() {
+  if (!isFloristAuthenticated()) return;
+
+  try {
+    const response = await fetch('/api/station/me', {
+      headers: getFloristAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to refresh florist credits.');
+    }
+    saveFloristSession(floristAuthToken, data);
+    updateFloristPortalUi();
+  } catch (error) {
+    document.getElementById('florist-credit-note').textContent = error.message || 'Unable to refresh florist credits.';
+  }
+}
+
+function logoutFlorist() {
+  saveFloristSession('', null);
+  document.getElementById('florist-email').value = '';
+  document.getElementById('florist-password').value = '';
+  updateFloristPortalUi();
+}
+
+async function buyFloristPack(packType, packSize) {
+  const note = document.getElementById('florist-credit-note');
+  if (!isFloristAuthenticated()) {
+    note.textContent = 'Sign in before buying a florist credit pack.';
+    return;
+  }
+
+  const packLabel = packType === 'premiumFloral' ? 'Premium Floral' : 'Standard';
+  note.textContent = `Starting ${packLabel} ${packSize}-credit checkout...`;
+
+  try {
+    const response = await fetch('/api/florist/credits/checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getFloristAuthHeaders(),
+      },
+      body: JSON.stringify({ packType, packSize }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to start florist credit checkout.');
+    }
+    window.location.href = data.url;
+  } catch (error) {
+    note.textContent = error.message || 'Unable to start florist credit checkout.';
+  }
+}
+
+function saveRadioSession(token, profile) {
+  radioAuthToken = token || '';
+  radioProfile = profile || null;
+  try {
+    if (radioAuthToken) {
+      window.localStorage.setItem(RADIO_STORAGE_KEY, radioAuthToken);
+      window.localStorage.setItem(RADIO_PROFILE_KEY, JSON.stringify(radioProfile));
+    } else {
+      window.localStorage.removeItem(RADIO_STORAGE_KEY);
+      window.localStorage.removeItem(RADIO_PROFILE_KEY);
+    }
+  } catch {
+    // Ignore storage errors in private browsing mode.
+  }
+}
+
+async function loginRadio() {
+  const email = document.getElementById('radio-email').value.trim();
+  const password = document.getElementById('radio-password').value;
+  const note = document.getElementById('radio-auth-note');
+
+  if (!email || !password) {
+    note.textContent = 'Enter the DJ email and password first.';
+    return;
+  }
+
+  note.textContent = 'Signing in...';
+
+  try {
+    const response = await fetch('/api/auth/dj-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to sign in.');
+    }
+
+    saveRadioSession(data.token, data.dj);
+    document.getElementById('senderName').value = data.dj?.name || document.getElementById('senderName').value;
+    document.getElementById('stationName').value = data.dj?.station?.name || document.getElementById('stationName').value;
+    document.getElementById('radio-password').value = '';
+    note.textContent = `Signed in as ${data.dj?.name || data.dj?.email || 'DJ'}.`;
+    updateRadioPortalUi();
+    await loadRadioDashboard();
+  } catch (error) {
+    note.textContent = error.message || 'Unable to sign in.';
+  }
+}
+
+async function loadRadioDashboard() {
+  if (!isRadioAuthenticated()) {
+    updateRadioPortalUi();
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/dj/dashboard', {
+      headers: getRadioAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to load radio dashboard.');
+    }
+
+    renderRadioDashboard(data);
+    updateRadioPortalUi();
+  } catch (error) {
+    const note = document.getElementById('radio-auth-note');
+    note.textContent = error.message || 'Unable to load radio dashboard.';
+  }
+}
+
+function logoutRadio() {
+  saveRadioSession('', null);
+  radioDashboard = null;
+  document.getElementById('radio-email').value = '';
+  document.getElementById('radio-password').value = '';
+  renderRadioDashboard(null);
+  updateRadioPortalUi();
+}
+
+function setPublicPreviewState(active) {
+  if (!isPublicEdition()) return;
+  publicCleanAccessGranted = !active;
+  publicCheckoutMode = 'preview';
+  updatePurchaseModeUi();
+}
+
+function selectProductTier(tier) {
+  if (publicCheckoutMode === 'printed-reorder' && tier === 'digital') {
+    return;
+  }
+
+  selectedProductTier = tier;
+  document.querySelectorAll('.tier-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.tier === tier);
+  });
+  updatePurchaseModeUi();
+}
+
+function setCheckoutBusy(active, busyMessage) {
+  checkoutBusy = active;
+  const payButton = document.getElementById('pay-btn');
+  payButton.disabled = active;
+  if (active && busyMessage) {
+    updatePurchaseNote(busyMessage);
+  } else if (!active) {
+    updatePurchaseNote();
+  }
 }
 
 function setRetryVisible(visible) {
@@ -389,14 +1605,249 @@ function selectOccasion(tile, occasion, banner, bg) {
   };
   document.getElementById('date-label').textContent = dateLabels[occasion] || 'Date of Birth';
 
-  // Show/hide station field
-  const isRadio = window.EDITION === 'radio';
+  const isRadio = isRadioEdition();
+  const isFlorist = isFloristEdition();
+  document.getElementById('sender-field').style.display = isFlorist ? 'none' : 'block';
   document.getElementById('station-field').style.display = isRadio ? 'block' : 'none';
-  document.getElementById('sender-label').textContent = isRadio ? 'DJ / Presenter Name' : occasion === 'In Loving Memory' ? 'From (your name)' : 'From (your name)';
+  document.getElementById('listener-postal-address-field').style.display = isRadio ? 'block' : 'none';
+  document.getElementById('sender-label').textContent = isRadio ? 'DJ / Presenter Name' : 'From (your name)';
+  if (isFlorist) {
+    applyFloristFormMode();
+  }
 
   const form = document.getElementById('form-section');
   form.classList.add('visible');
   setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function buildCheckoutPayload() {
+  const recipientName = document.getElementById('recipientName').value.trim();
+  const dateOfBirth = document.getElementById('dateOfBirth').value;
+  const country = document.getElementById('country').value;
+  const customerName = document.getElementById('checkoutCustomerName').value.trim();
+  const customerEmail = document.getElementById('checkoutCustomerEmail').value.trim();
+  const senderName = document.getElementById('senderName').value.trim();
+  const stationName = document.getElementById('stationName').value.trim();
+  const personalMessage = document.getElementById('personalMessage').value.trim();
+  const promoCode = document.getElementById('checkoutPromoCode').value.trim()
+    || document.getElementById('publicPromoCode').value.trim();
+
+  if (!latestGeneratedHtml && !latestPublicKeepsakeId) {
+    throw new Error('Generate the keepsake preview before checkout.');
+  }
+  if (!customerName) {
+    throw new Error('Customer name is required.');
+  }
+  if (!customerEmail) {
+    throw new Error('Customer email is required.');
+  }
+  if (!recipientName) {
+    throw new Error('Recipient name is required.');
+  }
+  if (!dateOfBirth) {
+    throw new Error('Date is required.');
+  }
+
+  const payload = {
+    keepsakeId: latestPublicKeepsakeId,
+    productTier: selectedProductTier,
+    deliveryOption: needsShippingForTier(selectedProductTier) ? getDeliveryOption() : '',
+    promoCode,
+    customerName,
+    customerEmail,
+    recipientName,
+    dateOfBirth,
+    country,
+    occasion: selectedOccasion || 'Birthday',
+    senderName: senderName || 'The Tribute Times',
+    stationName,
+    personalMessage,
+    renderedHtml: latestGeneratedHtml,
+    generatedContent: latestGeneratedContent,
+  };
+
+  if (needsShippingForTier(selectedProductTier)) {
+    payload.shippingName = document.getElementById('shippingName').value.trim();
+    payload.shippingAddressLine1 = document.getElementById('shippingAddressLine1').value.trim();
+    payload.shippingAddressLine2 = document.getElementById('shippingAddressLine2').value.trim();
+    payload.shippingCity = document.getElementById('shippingCity').value.trim();
+    payload.shippingRegion = document.getElementById('shippingRegion').value.trim();
+    payload.shippingPostcode = document.getElementById('shippingPostcode').value.trim();
+    payload.shippingCountry = document.getElementById('shippingCountry').value;
+
+    if (!payload.shippingName || !payload.shippingAddressLine1 || !payload.shippingCity || !payload.shippingPostcode || !payload.shippingCountry) {
+      throw new Error('Printed orders need full shipping details before checkout.');
+    }
+  }
+
+  return payload;
+}
+
+function applyRenderedKeepsake(html, paidAccess) {
+  const container = document.getElementById('newspaper-container');
+  container.className = paidAccess ? '' : 'sample-frame';
+  container.innerHTML = html || '';
+}
+
+function populateCheckoutFieldsFromCurrentForm() {
+  const customerName = document.getElementById('checkoutCustomerName');
+  const shippingName = document.getElementById('shippingName');
+  const shippingCountry = document.getElementById('shippingCountry');
+  const country = document.getElementById('country').value;
+
+  if (!customerName.value.trim()) {
+    customerName.value = document.getElementById('senderName').value.trim();
+  }
+  if (!shippingName.value.trim()) {
+    shippingName.value = customerName.value.trim();
+  }
+  if (!shippingCountry.value) {
+    shippingCountry.value = country || 'New Zealand';
+  }
+}
+
+function populateFormFromOrder(order) {
+  if (!order) return;
+
+  if (order.occasion) {
+    selectedOccasion = order.occasion;
+  }
+  if (order.dateOfBirth) {
+    document.getElementById('dateOfBirth').value = order.dateOfBirth;
+  }
+  if (order.country) {
+    document.getElementById('country').value = order.country;
+    document.getElementById('shippingCountry').value = order.shippingCountry || order.country;
+  }
+  if (order.recipientName) {
+    document.getElementById('recipientName').value = order.recipientName;
+  }
+  if (order.senderName) {
+    document.getElementById('senderName').value = order.senderName;
+  }
+  if (order.stationName) {
+    document.getElementById('stationName').value = order.stationName;
+  }
+  if (order.listenerPostalAddress) {
+    document.getElementById('listenerPostalAddress').value = order.listenerPostalAddress;
+  } else if (order.shippingAddressLine1 && isRadioEdition()) {
+    document.getElementById('listenerPostalAddress').value = order.shippingAddressLine1;
+  }
+  if (order.personalMessage) {
+    document.getElementById('personalMessage').value = order.personalMessage;
+  }
+  if (order.customerName) {
+    document.getElementById('checkoutCustomerName').value = order.customerName;
+  }
+  if (order.customerEmail) {
+    document.getElementById('checkoutCustomerEmail').value = order.customerEmail;
+  }
+  if (order.shippingName) {
+    document.getElementById('shippingName').value = order.shippingName;
+  }
+  if (order.shippingAddressLine1) {
+    document.getElementById('shippingAddressLine1').value = order.shippingAddressLine1;
+  }
+  if (order.shippingAddressLine2) {
+    document.getElementById('shippingAddressLine2').value = order.shippingAddressLine2;
+  }
+  if (order.shippingCity) {
+    document.getElementById('shippingCity').value = order.shippingCity;
+  }
+  if (order.shippingRegion) {
+    document.getElementById('shippingRegion').value = order.shippingRegion;
+  }
+  if (order.shippingPostcode) {
+    document.getElementById('shippingPostcode').value = order.shippingPostcode;
+  }
+  if (order.shippingCountry) {
+    document.getElementById('shippingCountry').value = order.shippingCountry;
+  }
+}
+
+async function restorePublicOrderFromUrl() {
+  if (!isPublicEdition()) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const orderId = params.get('order');
+  const checkoutState = params.get('checkout');
+  if (!orderId) return;
+
+  try {
+    isRestoringPublicCheckout = true;
+    setResultMode(true);
+    document.getElementById('result-section').classList.add('visible');
+    updatePurchaseModeUi();
+    setStatusMessage('Restoring your keepsake...', false);
+    const response = await fetch(`/api/public/orders/${encodeURIComponent(orderId)}`);
+    const order = await response.json();
+    if (!response.ok) {
+      throw new Error(order.error || 'Unable to restore order.');
+    }
+
+    lastPublicOrder = order;
+    latestPublicKeepsakeId = order.keepsakeId;
+    latestGeneratedHtml = order.renderedHtml || latestGeneratedHtml;
+    populateFormFromOrder(order);
+    document.getElementById('form-section').classList.add('visible');
+    document.getElementById('result-section').classList.add('visible');
+    setResultMode(true);
+
+    if (checkoutState === 'success' && order.paymentStatus === 'paid') {
+      publicCleanAccessGranted = true;
+      publicCheckoutMode = 'preview';
+      selectedProductTier = order.productTier || 'digital';
+      applyRenderedKeepsake(order.renderedHtml, true);
+      isRestoringPublicCheckout = false;
+      updatePurchaseModeUi();
+      setStatusMessage(getPaidPublicSuccessMessage(order), false);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    publicCleanAccessGranted = false;
+    publicCheckoutMode = 'preview';
+    selectedProductTier = order.productTier || 'digital';
+    applyRenderedKeepsake(order.renderedHtml, false);
+    isRestoringPublicCheckout = false;
+    updatePurchaseModeUi();
+    setStatusMessage(
+      checkoutState === 'cancelled'
+        ? 'Checkout was cancelled. Your SAMPLE preview is still here, and you can try again any time.'
+        : 'Your SAMPLE preview is ready. Complete payment to unlock the clean keepsake.',
+      false
+    );
+  } catch (error) {
+    isRestoringPublicCheckout = false;
+    updatePurchaseModeUi();
+    setStatusMessage(error.message || 'Unable to restore your keepsake right now.', true);
+  }
+}
+
+async function proceedToPayment() {
+  if (checkoutBusy) return;
+
+  try {
+    const payload = buildCheckoutPayload();
+    setCheckoutBusy(true, 'Creating secure Stripe checkout...');
+
+    const response = await fetch('/api/public/checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Unable to create checkout session.');
+    }
+
+    updatePurchaseNote('Redirecting to Stripe checkout...');
+    window.location.href = result.url;
+  } catch (error) {
+    setCheckoutBusy(false);
+    updatePurchaseNote(error.message || 'Unable to start checkout.');
+  }
 }
 
 async function generateKeepsake() {
@@ -405,7 +1856,9 @@ async function generateKeepsake() {
   const country = document.getElementById('country').value;
   const sender = document.getElementById('senderName').value.trim();
   const station = document.getElementById('stationName').value.trim();
+  const listenerPostalAddress = document.getElementById('listenerPostalAddress').value.trim();
   const message = document.getElementById('personalMessage').value.trim();
+  const publicPromoCode = document.getElementById('publicPromoCode').value.trim();
   const errorEl = document.getElementById('error-msg');
 
   errorEl.textContent = '';
@@ -413,6 +1866,18 @@ async function generateKeepsake() {
   if (!selectedOccasion) { errorEl.textContent = 'Please choose an occasion first.'; return; }
   if (!name) { errorEl.textContent = 'Please enter the recipient\'s name.'; return; }
   if (!dob) { errorEl.textContent = 'Please enter the date.'; return; }
+  if (isRadioEdition() && !isRadioAuthenticated()) {
+    errorEl.textContent = 'Please sign in with the DJ account before generating a radio keepsake.';
+    return;
+  }
+  if (isFloristEdition() && !isFloristAuthenticated()) {
+    errorEl.textContent = 'Please sign in with the florist account before generating a florist keepsake.';
+    return;
+  }
+  if (isRadioEdition() && !listenerPostalAddress) {
+    errorEl.textContent = 'Please enter the listener postal address.';
+    return;
+  }
   if (!navigator.onLine) {
     retryPending = true;
     errorEl.textContent = 'You are offline. Reconnect to the internet, then tap Try Again.';
@@ -425,31 +1890,84 @@ async function generateKeepsake() {
   btn.textContent = '★  Generating your keepsake...  ★';
 
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (isFloristEdition()) {
+      Object.assign(headers, getFloristAuthHeaders());
+    }
     const response = await fetch('/api/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         recipientName: name,
         dateOfBirth: dob,
         country,
         occasion: selectedOccasion,
-        senderName: sender || 'The Tribute Times',
-        stationName: station,
+        senderName: isFloristEdition() ? (floristProfile?.name || 'The Tribute Times') : (sender || 'The Tribute Times'),
+        stationName: isFloristEdition() ? '' : station,
         edition: window.EDITION || 'public',
         personalMessage: message,
+        stationId: isFloristEdition() ? (floristProfile?.id || '') : (radioProfile?.station?.id || ''),
+        djId: radioProfile?.id || '',
+        listenerPostalAddress: isRadioEdition() ? listenerPostalAddress : '',
+        promoCode: isPublicEdition() ? publicPromoCode : '',
       })
     });
 
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Generation failed');
 
-    // Show newspaper
-    const container = document.getElementById('newspaper-container');
-    container.innerHTML = result.html;
+    latestGeneratedHtml = result.html;
+    latestGeneratedContent = result.content || null;
+    latestPublicKeepsakeId = result.publicKeepsake?.id || null;
+    lastPublicOrder = null;
+    if (result.publicKeepsake?.promoCode) {
+      document.getElementById('checkoutPromoCode').value = result.publicKeepsake.promoCode;
+    }
+    if (result.radioOrder) {
+      radioDashboard = radioDashboard || {};
+      radioDashboard.recentOrders = [
+        result.radioOrder,
+        ...(Array.isArray(radioDashboard.recentOrders) ? radioDashboard.recentOrders : []),
+      ].slice(0, 5);
+    }
+    if (result.floristKeepsake) {
+      floristProfile = {
+        ...(floristProfile || {}),
+        florist_credit_balance: result.floristKeepsake.creditBalance,
+        florist_low_credit_threshold: result.floristKeepsake.lowCreditThreshold,
+      };
+      saveFloristSession(floristAuthToken, floristProfile);
+    }
+    publicCheckoutMode = 'preview';
+    publicCleanAccessGranted = false;
+    applyRenderedKeepsake(result.html, !isPublicEdition());
     retryPending = false;
     setRetryVisible(false);
     setResultMode(true);
     document.getElementById('result-section').classList.add('visible');
+    populateCheckoutFieldsFromCurrentForm();
+    updatePurchaseModeUi();
+    updateRadioPortalUi();
+    if (isRadioEdition()) {
+      await loadRadioDashboard();
+      setStatusMessage(result.radioOrder
+        ? `Radio keepsake generated. Order ${result.radioOrder.orderNumber} is now in Col's fulfilment queue.`
+        : 'Radio keepsake generated.', false);
+    } else if (isFloristEdition()) {
+      updateFloristPortalUi();
+      const balance = result.floristKeepsake?.creditBalance;
+      const lowCredit = result.floristKeepsake?.lowCredit;
+      setStatusMessage(
+        lowCredit
+          ? `Clean florist keepsake ready to print. ${balance} credits remaining.`
+          : 'Clean florist keepsake ready to print in store.',
+        false
+      );
+    } else {
+      setStatusMessage(result.publicKeepsake?.promoCode
+        ? `Promo demo generated. ${result.publicKeepsake.freeDemosUsedThisMonth}/${result.publicKeepsake.freeDemoLimit} demos used this month for ${result.publicKeepsake.promoCode}.`
+        : '', false);
+    }
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
 
   } catch (err) {
@@ -463,29 +1981,129 @@ async function generateKeepsake() {
 }
 
 function printKeepsake() {
+  if (isRadioEdition()) {
+    updatePurchaseNote('Radio keepsakes are physical only. Col handles printing and posting.');
+    return;
+  }
+
+  if (isPublicEdition() && !publicCleanAccessGranted) {
+    updatePurchaseNote('Public preview cannot print or download the clean keepsake before payment.');
+    return;
+  }
+
+  if (isPublicEdition()) {
+    if (!lastPublicOrder || !lastPublicOrder.id) {
+      setStatusMessage('Paid order details are missing, so the clean PDF cannot be downloaded yet.', true);
+      return;
+    }
+
+    const downloadUrl = lastPublicOrder.downloadPdfUrl || `/api/public/orders/${lastPublicOrder.id}/download-pdf`;
+    setStatusMessage('Preparing your clean A4 PDF download...', false);
+    window.location.href = downloadUrl;
+    return;
+  }
   window.print();
 }
 
+function orderPrintedCopy() {
+  if (!isPublicEdition() || !publicCleanAccessGranted) {
+    return;
+  }
+
+  publicCheckoutMode = 'printed-reorder';
+  selectedProductTier = selectedProductTier === 'premium' ? 'premium' : 'standard';
+  populateCheckoutFieldsFromCurrentForm();
+  updatePurchaseModeUi();
+  updatePurchaseNote('This is a separate new printed order. Choose Standard or Premium, then continue to Stripe.');
+  document.getElementById('purchase-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function startAgain() {
+  const radioMode = isRadioEdition();
   document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
-  document.getElementById('form-section').classList.remove('visible');
+  document.querySelectorAll('.tier-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.tier === 'digital');
+  });
+  document.getElementById('form-section').classList.toggle('visible', radioMode);
   document.getElementById('result-section').classList.remove('visible');
   document.getElementById('newspaper-container').innerHTML = '';
+  document.getElementById('newspaper-container').className = '';
   document.getElementById('recipientName').value = '';
   document.getElementById('dateOfBirth').value = '';
   document.getElementById('senderName').value = '';
   document.getElementById('stationName').value = '';
+  document.getElementById('listenerPostalAddress').value = '';
   document.getElementById('personalMessage').value = '';
+  document.getElementById('publicPromoCode').value = '';
+  document.getElementById('checkoutCustomerName').value = '';
+  document.getElementById('checkoutCustomerEmail').value = '';
+  document.getElementById('checkoutPromoCode').value = '';
+  document.getElementById('shippingName').value = '';
+  document.getElementById('shippingAddressLine1').value = '';
+  document.getElementById('shippingAddressLine2').value = '';
+  document.getElementById('shippingCity').value = '';
+  document.getElementById('shippingRegion').value = '';
+  document.getElementById('shippingPostcode').value = '';
+  document.querySelector('input[name="deliveryOption"][value="standard"]').checked = true;
+  document.getElementById('shippingCountry').value = 'New Zealand';
   document.getElementById('error-msg').textContent = '';
   setRetryVisible(false);
   retryPending = false;
+  latestGeneratedHtml = '';
+  latestGeneratedContent = null;
+  latestPublicKeepsakeId = null;
+  selectedProductTier = 'digital';
+  selectedOccasion = radioMode ? 'Birthday' : null;
+  publicCleanAccessGranted = false;
+  publicCheckoutMode = 'preview';
+  checkoutBusy = false;
+  lastPublicOrder = null;
+  setStatusMessage('', false);
+  applyRadioFormMode();
+  applyFloristFormMode();
+  updatePurchaseModeUi();
+  updateRadioPortalUi();
+  updateFloristPortalUi();
   setResultMode(false);
-  selectedOccasion = null;
+  window.history.replaceState({}, document.title, window.location.pathname);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Set edition from server (injected as template variable)
-window.EDITION = '{{EDITION}}'; // replaced by server with 'radio'|'florist'|'public'
+window.EDITION = '{{EDITION}}';
+document.body.classList.toggle('radio-edition', isRadioEdition());
+document.body.classList.toggle('florist-edition', isFloristEdition());
+loadRadioSessionFromStorage();
+loadFloristSessionFromStorage();
+
+if (isRadioEdition()) {
+  applyRadioFormMode();
+  window.print = () => {
+    setStatusMessage('Radio keepsakes are physical only. Col handles printing and posting.', false);
+  };
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && String(event.key || '').toLowerCase() === 'p') {
+      event.preventDefault();
+      setStatusMessage('Radio keepsakes are physical only. Col handles printing and posting.', false);
+    }
+  });
+}
+
+if (isFloristEdition()) {
+  applyFloristFormMode();
+  const creditState = new URLSearchParams(window.location.search).get('credits');
+  if (creditState === 'success') {
+    refreshFloristProfile();
+    setStatusMessage('Florist credit purchase complete. Your balance has been refreshed.', false);
+  } else if (creditState === 'cancelled') {
+    setStatusMessage('Florist credit checkout was cancelled.', false);
+  }
+}
+
+document.addEventListener('change', event => {
+  if (event.target && event.target.name === 'deliveryOption') {
+    updatePurchaseNote();
+  }
+});
 
 window.addEventListener('online', () => {
   if (!retryPending) return;
@@ -499,6 +2117,27 @@ window.addEventListener('offline', () => {
   document.getElementById('error-msg').textContent = 'You are offline. Reconnect to the internet, then tap Try Again.';
   setRetryVisible(true);
 });
+
+ensureSecondaryActionButton();
+const initialPublicCheckoutParams = new URLSearchParams(window.location.search);
+isRestoringPublicCheckout = isPublicEdition()
+  && initialPublicCheckoutParams.has('order')
+  && initialPublicCheckoutParams.has('checkout');
+if (isRestoringPublicCheckout) {
+  setResultMode(true);
+  document.getElementById('result-section').classList.add('visible');
+  setStatusMessage('Restoring your keepsake...', false);
+}
+updatePurchaseModeUi();
+updateRadioPortalUi();
+updateFloristPortalUi();
+if (isRadioAuthenticated()) {
+  loadRadioDashboard();
+}
+if (isFloristAuthenticated()) {
+  refreshFloristProfile();
+}
+restorePublicOrderFromUrl();
 </script>
 </body>
 </html>

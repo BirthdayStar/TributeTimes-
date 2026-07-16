@@ -7,11 +7,17 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const multer = require('multer');
+const { registerAdminFulfilmentRoutes, authAdmin } = require('./src/phase2/admin-fulfilment');
 const { createClient } = require('@supabase/supabase-js');
 const Stripe = require('stripe');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const {
+  sendEmail,
+  buildStationWelcomeEmail,
+  buildFloristLowCreditEmail
+} = require('./src/phase2/email-service');
 
 // ── CLIENTS ──
 const supabase = createClient(
@@ -69,7 +75,8 @@ app.use((req, res, next) => {
 });
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
-require('./tribute-times-server-update')(app);
+require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
+registerAdminFulfilmentRoutes(app, { supabase, sendEmail });
 
 // ── AUTH MIDDLEWARE ──
 function authStation(req, res, next) {
@@ -201,13 +208,22 @@ app.post('/api/auth/login', async (req, res) => {
     const { data: station } = await supabase.from('stations').select('*').eq('email', email).single();
     if (!station) return res.status(401).json({ error: 'Invalid email or password' });
 
+    // Restrict florist accounts logging in here unless florist portal directly requests
+    const isFloristReq = req.body.portal === 'florist' || req.headers.referer?.includes('/florist');
+    if (!isFloristReq && station.account_type === 'florist') {
+      return res.status(403).json({ error: 'Florist partners must log in via the florist portal.' });
+    }
+    if (isFloristReq && station.account_type !== 'florist') {
+      return res.status(403).json({ error: 'Station managers must log in via the station portal.' });
+    }
+
     const valid = await bcrypt.compare(password, station.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
 
     await supabase.from('stations').update({ last_login: new Date().toISOString() }).eq('id', station.id);
 
     const token = jwt.sign(
-      { id: station.id, type: 'station', name: station.name, email: station.email, tier: station.tier },
+      { id: station.id, type: 'station', name: station.name, email: station.email, tier: station.tier, role: station.account_type },
       process.env.JWT_SECRET, { expiresIn: '30d' }
     );
     res.json({ token, station: sanitizeStation(station) });
@@ -482,27 +498,7 @@ function isStaticAssetRequest(requestPath) {
     || STATIC_ASSET_PATTERN.test(requestPath);
 }
 
-async function sendEmail({ to, subject, html }) {
-  if (!process.env.RESEND_API_KEY) return;
-  try {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-      body: JSON.stringify({ from: 'The Tribute Times <hello@tributetimes.co.nz>', to, subject, html })
-    });
-  } catch (e) { console.error('Email failed:', e.message); }
-}
 
-function welcomeEmail(name, tier) {
-  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Welcome to The Tribute Times</h1>
-    <p>Hi ${name},</p>
-    <p>Your <strong>${TIERS[tier]?.label}</strong> station account is ready. You have a 14-day free trial — no card required.</p>
-    <p>Log in at <a href="https://tributetimes.co.nz/login">tributetimes.co.nz</a> to set up your station branding, add your DJs, and start creating your first birthday keepsakes.</p>
-    <p>Questions? Reply to this email — we're here to help.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
-  </div>`;
-}
 
 function djWelcomeEmail(name, email, password) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -536,6 +532,14 @@ function sendEditionTemplate(res, edition) {
 app.get(['/', '/radio', '/florist', '/public'], (req, res) => {
   const edition = req.path === '/' ? 'radio' : req.path.replace('/', '');
   sendEditionTemplate(res, edition);
+});
+
+app.get(['/station', '/dashboard'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/station.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
 app.use((req, res, next) => {

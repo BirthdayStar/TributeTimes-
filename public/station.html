@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Station Manager Dashboard — The Tribute Times</title>
+  <link rel="stylesheet" href="/pwa.css" />
+  <style>
+    :root {
+      --bg: #131110;
+      --surface: #1c1917;
+      --panel: #262220;
+      --ink: #e7e5e4;
+      --muted: #a8a29e;
+      --accent: #d97706;
+      --accent-hover: #b45309;
+      --line: #2e2a28;
+    }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 8px;
+    }
+    .form-field {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-field label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .form-field input, .form-field select {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px;
+      border-radius: 6px;
+      font: inherit;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+    .btn-danger {
+      background: #991b1b;
+    }
+    .btn-danger:hover {
+      background: #7f1d1d;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .msg {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .msg.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .msg.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <nav class="topbar">
+    <h1>The Tribute Times — Station Dashboard</h1>
+    <button class="btn btn-danger hidden" id="logout-btn" onclick="logout()">Log Out</button>
+  </nav>
+
+  <div class="container">
+    <!-- Auth panel -->
+    <div class="card" id="auth-panel">
+      <h2>Manager Sign In</h2>
+      <div class="form-field">
+        <label for="login-email">Email Address</label>
+        <input type="email" id="login-email" placeholder="manager@example.com" />
+      </div>
+      <div class="form-field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" />
+      </div>
+      <button class="btn" onclick="login()">Sign In</button>
+      <div class="msg hidden" id="auth-msg"></div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="hidden" id="dashboard-panel">
+      <div class="card">
+        <h2>Welcome, <span id="station-title">Station</span></h2>
+        <div class="grid">
+          <div class="stat-card">
+            <div>Tier Plan</div>
+            <div class="stat-value" id="stat-tier" style="font-size: 1.4rem;">—</div>
+          </div>
+          <div class="stat-card">
+            <div>DJs Registered</div>
+            <div class="stat-value" id="stat-djs">—</div>
+          </div>
+          <div class="stat-card">
+            <div>Keepsakes Generated (Month)</div>
+            <div class="stat-value" id="stat-keepsakes">—</div>
+          </div>
+          <div class="stat-card">
+            <div>Subscription Status</div>
+            <div class="stat-value" id="stat-status" style="font-size: 1.4rem;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DJ Management -->
+      <div class="card">
+        <h2>DJs / Presenters</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Last Login</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="dj-list-body">
+              <tr>
+                <td colspan="5">Loading DJs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="margin-top: 24px;">Add New DJ</h3>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="form-field">
+            <label for="dj-name">DJ Name</label>
+            <input type="text" id="dj-name" placeholder="e.g. DJ Mike" />
+          </div>
+          <div class="form-field">
+            <label for="dj-email">Email Address</label>
+            <input type="email" id="dj-email" placeholder="mike@example.com" />
+          </div>
+          <div class="form-field">
+            <label for="dj-password">Temporary Password</label>
+            <input type="text" id="dj-password" placeholder="Temp password" />
+          </div>
+        </div>
+        <button class="btn" onclick="createDJ()">+ Add DJ</button>
+        <div class="msg hidden" id="dj-msg"></div>
+      </div>
+
+      <!-- Station Settings -->
+      <div class="card">
+        <h2>Station Settings</h2>
+        <div class="grid">
+          <div class="form-field">
+            <label for="settings-name">Station Name</label>
+            <input type="text" id="settings-name" />
+          </div>
+          <div class="form-field">
+            <label for="settings-country">Country</label>
+            <input type="text" id="settings-country" />
+          </div>
+          <div class="form-field">
+            <label for="settings-sponsor">Sponsor Name</label>
+            <input type="text" id="settings-sponsor" />
+          </div>
+        </div>
+        <button class="btn" onclick="saveSettings()">Save Settings</button>
+        <div class="msg hidden" id="settings-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'tributetimes_station_token';
+    let token = localStorage.getItem(STORAGE_KEY) || '';
+
+    if (token) {
+      showDashboard();
+    }
+
+    function showDashboard() {
+      document.getElementById('auth-panel').classList.add('hidden');
+      document.getElementById('dashboard-panel').classList.remove('hidden');
+      document.getElementById('logout-btn').classList.remove('hidden');
+      loadStats();
+      loadDJs();
+    }
+
+    async function login() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const msg = document.getElementById('auth-msg');
+      msg.classList.add('hidden');
+
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Login failed.');
+
+        token = data.token;
+        localStorage.setItem(STORAGE_KEY, token);
+        showDashboard();
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'msg error';
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const r = await fetch('/api/station/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error('Session expired');
+
+        document.getElementById('station-title').textContent = data.station.name;
+        document.getElementById('stat-tier').textContent = data.tier?.label || 'Custom';
+        document.getElementById('stat-djs').textContent = data.stats.djCount;
+        document.getElementById('stat-keepsakes').textContent = data.stats.thisMonth;
+        document.getElementById('stat-status').textContent = data.station.subscription_status || 'Active';
+
+        document.getElementById('settings-name').value = data.station.name || '';
+        document.getElementById('settings-country').value = data.station.country || '';
+        document.getElementById('settings-sponsor').value = data.station.sponsor_name || '';
+      } catch {
+        logout();
+      }
+    }
+
+    async function loadDJs() {
+      const tbody = document.getElementById('dj-list-body');
+      try {
+        const r = await fetch('/api/station/djs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await r.json();
+        tbody.innerHTML = data.length 
+          ? data.map(dj => `
+              <tr>
+                <td><strong>${escapeHtml(dj.name)}</strong></td>
+                <td>${escapeHtml(dj.email)}</td>
+                <td>${dj.last_login ? new Date(dj.last_login).toLocaleDateString() : 'Never'}</td>
+                <td><span style="color: ${dj.active ? '#10b981' : '#ef4444'}">${dj.active ? 'Active' : 'Inactive'}</span></td>
+                <td>
+                  ${dj.active ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" onclick="deactivateDJ('${dj.id}')">Deactivate</button>` : '—'}
+                </td>
+              </tr>
+            `).join('')
+          : '<tr><td colspan="5">No DJs registered yet.</td></tr>';
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="5">Error loading DJs.</td></tr>';
+      }
+    }
+
+    async function createDJ() {
+      const name = document.getElementById('dj-name').value;
+      const email = document.getElementById('dj-email').value;
+      const password = document.getElementById('dj-password').value;
+      const msg = document.getElementById('dj-msg');
+      msg.classList.add('hidden');
+
+      try {
+        const r = await fetch('/api/station/djs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to create DJ.');
+
+        document.getElementById('dj-name').value = '';
+        document.getElementById('dj-email').value = '';
+        document.getElementById('dj-password').value = '';
+        msg.textContent = '✓ DJ account created successfully.';
+        msg.className = 'msg success';
+        loadDJs();
+        loadStats();
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'msg error';
+      }
+    }
+
+    async function deactivateDJ(id) {
+      if (!confirm('Are you sure you want to deactivate this DJ?')) return;
+      try {
+        const r = await fetch(`/api/station/djs/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (r.ok) {
+          loadDJs();
+          loadStats();
+        }
+      } catch (err) {
+        alert('Failed to deactivate DJ');
+      }
+    }
+
+    async function saveSettings() {
+      const name = document.getElementById('settings-name').value;
+      const country = document.getElementById('settings-country').value;
+      const sponsor_name = document.getElementById('settings-sponsor').value;
+      const msg = document.getElementById('settings-msg');
+      msg.classList.add('hidden');
+
+      try {
+        const r = await fetch('/api/station/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ name, country, sponsor_name })
+        });
+        if (!r.ok) throw new Error('Failed to save settings');
+        msg.textContent = '✓ Settings saved.';
+        msg.className = 'msg success';
+        loadStats();
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'msg error';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>

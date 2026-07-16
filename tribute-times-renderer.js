@@ -6,11 +6,19 @@
 
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
 
+function titleCase(value) {
+  return String(value || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 function renderNewspaper(data, content, fonts) {
   const {
     recipientName, dateFormatted, dateLong, day, month, year,
     country, occasion, bannerText, senderName, stationName,
-    edition, currency, age
+    edition, currency, age, dateIntro
   } = data;
 
   const {
@@ -106,12 +114,9 @@ function renderNewspaper(data, content, fonts) {
     ${i < localNews.length - 1 ? '<div class="story-rule"></div>' : ''}`).join('');
 
   // ── SPORT ──
-  const sportHTML = sport.map((s, i) => `
+  const sportHTML = sport.slice(0, 5).map((s, i) => `
     <div class="right-box${s.boxed ? ' right-box-featured' : ''}">
-      <div class="right-box-hdr">${s.year} · ${getSportCategory(s.headline)}</div>
       <div class="hed-sm">${s.headline}</div>
-      <div class="byline">${s.byline}</div>
-      <div class="copy-sm">${s.body}</div>
     </div>`).join('');
 
   // ── BUSINESS ──
@@ -177,8 +182,8 @@ function renderNewspaper(data, content, fonts) {
       ${edition === 'public' ? `<div class="gift-ordered">Ordered at tributetimes.co.nz · © ${new Date().getFullYear()} The Tribute Times</div>` : ''}
     </div>`;
 
-  // ── ROMAN NUMERAL YEAR ──
-  const romanYear = toRoman(year);
+  // ── COMPACT ESTABLISHED LINE ──
+  const establishedLine = `Established 2026, ${monthName(month)}, ${country}`;
 
   // ── FULL HTML ──
   return `<!DOCTYPE html>
@@ -197,27 +202,11 @@ ${getStyles()}
 
 <!-- MASTHEAD -->
 <div class="mh">
-  <div class="mh-logo">
-    <div class="sp-label">Proudly Sponsored By</div>
-    <div class="logo-box">
-      <div class="logo-name" id="station-logo"><!-- STATION LOGO INJECTED HERE --></div>
-    </div>
-  </div>
   <div class="mh-centre">
     <div class="mh-pre">★ &nbsp; Your Day. Your Story. &nbsp; ★</div>
     <div class="mh-title">The Tribute Times</div>
+    <div class="mh-established-line">${establishedLine}</div>
     <div class="mh-rule-dbl">AI generated ${occasion.toLowerCase()} keepsake for commemorative purposes &nbsp;·&nbsp; © The Tribute Times</div>
-    <div class="mh-established">
-      <div class="est-label">Established</div>
-      <div class="est-year">${romanYear}</div>
-      <div class="est-sub">${monthAbbr(month)} · ${country}</div>
-    </div>
-  </div>
-  <div class="mh-logo">
-    <div class="sp-label">Proudly Sponsored By</div>
-    <div class="logo-box">
-      <div class="logo-name" id="sponsor-logo"><!-- SPONSOR LOGO INJECTED HERE --></div>
-    </div>
   </div>
 </div>
 
@@ -233,7 +222,7 @@ ${getStyles()}
   <div style="padding:5px 8px;text-align:center;">
     <div class="np-extra">✦ &nbsp; ${bannerText} &nbsp; ✦</div>
     <div class="np-name">${recipientName}</div>
-    <div class="np-sub">Born ${dateFormatted} &nbsp;·&nbsp; ${edition === 'radio' ? `With Love From ${stationName}` : edition === 'florist' ? `A Gift From ${senderName}` : `A Gift From ${senderName}`}</div>
+    <div class="np-sub">${titleCase(dateIntro || 'born on')} ${dateFormatted} &nbsp;·&nbsp; ${edition === 'radio' ? `With Love From ${stationName}` : edition === 'florist' ? `A Gift From ${senderName}` : `A Gift From ${senderName}`}</div>
   </div>
   <div style="border-left:1px solid #333;padding:3px;background:#fffdf5;align-self:stretch;display:flex;align-items:center;">
     ${astroPanel}
@@ -394,17 +383,6 @@ function getZodiacEmoji(animal) {
   return map[animal] || '🌟';
 }
 
-function getSportCategory(headline) {
-  const h = headline.toLowerCase();
-  if (h.includes('rugby') || h.includes('all blacks') || h.includes('springbok')) return 'Rugby';
-  if (h.includes('cricket') || h.includes('test match') || h.includes('odi')) return 'Cricket';
-  if (h.includes('football') || h.includes('soccer') || h.includes('cup')) return 'Football';
-  if (h.includes('boxing') || h.includes('pacquiao')) return 'Boxing';
-  if (h.includes('basketball') || h.includes('nba')) return 'Basketball';
-  if (h.includes('athletics') || h.includes('marathon')) return 'Athletics';
-  return 'Sport';
-}
-
 function monthName(month) {
   return ['January','February','March','April','May','June',
           'July','August','September','October','November','December'][month-1];
@@ -419,14 +397,6 @@ function ordinal(n) {
   const s = ['th','st','nd','rd'];
   const v = n % 100;
   return s[(v-20)%10]||s[v]||s[0];
-}
-
-function toRoman(num) {
-  const val = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
-  const rom = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
-  let result = '';
-  for(let i=0;i<val.length;i++) while(num>=val[i]){result+=rom[i];num-=val[i];}
-  return result;
 }
 
 function getFontFaces(fonts) {
@@ -486,6 +456,14 @@ body{background:#888;display:flex;flex-direction:column;align-items:center;paddi
   line-height:0.88;
   color:#111;
   letter-spacing:2px;
+}
+.mh-established-line{
+  font-family:'PR',sans-serif;
+  font-size:4.5pt;
+  line-height:1;
+  color:#777;
+  letter-spacing:0.6px;
+  margin-top:1px;
 }
 .mh-rule-dbl{
   border-top:3px double #111;
@@ -683,6 +661,26 @@ body{background:#888;display:flex;flex-direction:column;align-items:center;paddi
   letter-spacing:1px;text-transform:uppercase;
   padding:2px 4px;margin:-5px -5px 4px;
   text-align:center;
+}
+
+.r1-right .right-box{
+  border:none;
+  border-bottom:1px solid #111;
+  padding:0 0 5px;
+  margin-bottom:5px;
+}
+.r1-right .right-box:last-child{
+  border-bottom:none;
+}
+.r1-right .right-box-hdr,
+.r1-right .byline,
+.r1-right .copy-sm{
+  display:none;
+}
+.r1-right .hed-sm{
+  font-size:7.5pt;
+  line-height:1.18;
+  margin-bottom:0;
 }
 
 /* ── Lead story 2-col internal ── */

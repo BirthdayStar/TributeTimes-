@@ -272,6 +272,19 @@
 
   async function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((item) => item.unregister()));
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter((key) => key.startsWith('tt-pwa-')).map((key) => caches.delete(key)));
+        }
+      } catch (error) {
+        console.warn('Local service worker cleanup failed:', error);
+      }
+      return;
+    }
     if (!(window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
 
     try {
