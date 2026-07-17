@@ -8,6 +8,7 @@ const fs = require('fs');
 const cors = require('cors');
 const multer = require('multer');
 const { registerAdminFulfilmentRoutes, authAdmin } = require('./src/phase2/admin-fulfilment');
+const { registerPublicCheckoutRoutes } = require('./src/phase2/public-checkout');
 const { createClient } = require('@supabase/supabase-js');
 const Stripe = require('stripe');
 
@@ -77,6 +78,7 @@ app.use(express.static(PUBLIC_DIR, { index: false }));
 
 require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
 registerAdminFulfilmentRoutes(app, { supabase, sendEmail });
+registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail });
 
 // ── AUTH MIDDLEWARE ──
 function authStation(req, res, next) {
@@ -487,6 +489,7 @@ app.post('/api/billing/portal', authStation, async (req, res) => {
 // ════════════════════════════════════════
 
 function sanitizeStation(s) {
+  if (!s) return null;
   const { password_hash, stripe_customer_id, stripe_subscription_id, ...safe } = s;
   return safe;
 }
