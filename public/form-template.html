@@ -252,7 +252,8 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 .purchase-panel {
   display:none;
   margin: 0 auto 20px;
-  max-width: 100%;
+  max-width: 600px;
+  width: 100%;
   background:#ffffff;
   border-radius:18px;
   padding:24px;
@@ -487,13 +488,66 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 }
 
 @media (max-width:720px) {
-  body { padding:20px 16px 40px; }
+  body { padding:20px 12px 40px; }
   .occasion-grid { grid-template-columns:repeat(3,1fr); }
   .field-row { grid-template-columns:1fr; gap:0; }
   .result-actions { flex-direction:column; }
   .purchase-actions { flex-direction:column; }
-  .tier-grid { grid-template-columns:1fr; }
-  .delivery-grid { grid-template-columns:1fr; }
+  .purchase-panel { padding: 16px; }
+  .field { margin-bottom: 12px; }
+  
+  /* Horizontal scrolling swipe cards for packages on mobile */
+  .tier-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 12px !important;
+    padding: 4px 4px 12px 4px !important;
+    margin-bottom: 16px !important;
+    scrollbar-width: none !important;
+  }
+  .tier-grid::-webkit-scrollbar {
+    display: none !important;
+  }
+  .tier-card {
+    flex: 0 0 240px !important;
+    scroll-snap-align: start !important;
+    padding: 16px !important;
+    text-align: left !important;
+  }
+  .tier-name {
+    font-size: 0.75rem !important;
+    margin-bottom: 6px !important;
+  }
+  .tier-price {
+    font-size: 1.35rem !important;
+    margin-bottom: 8px !important;
+  }
+  .tier-copy {
+    font-size: 0.78rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Horizontal scrolling swipe items for delivery options on mobile */
+  .delivery-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 10px !important;
+    padding-bottom: 8px !important;
+    scrollbar-width: none !important;
+  }
+  .delivery-grid::-webkit-scrollbar {
+    display: none !important;
+  }
+  .delivery-option {
+    flex: 0 0 200px !important;
+    scroll-snap-align: start !important;
+    white-space: nowrap !important;
+    padding: 10px 14px !important;
+  }
 }
 
 @media (max-width:480px) {
