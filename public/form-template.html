@@ -711,16 +711,16 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Fifty Golden Years Together.','#8a6a00')" style="background:#8a6a00;">
     <span class="tile-icon">🥇</span><span class="tile-label">Golden<br/>Anniversary</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Valentine's Day\",'I Love You','#9b1a2a')" style="background:#9b1a2a;">
+  <div class="tile" onclick="selectOccasion(this,'Valentine\'s Day','I Love You','#9b1a2a')" style="background:#9b1a2a;">
     <span class="tile-icon">❤️</span><span class="tile-label">I Love<br/>You</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,'New Baby','Welcome to the World','#1a4a6a')" style="background:#1a4a6a;">
     <span class="tile-icon">👶</span><span class="tile-label">New<br/>Baby</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Mother's Day\",'Happy Mother\\'s Day','#8a2a3a')" style="background:#8a2a3a;">
+  <div class="tile" onclick="selectOccasion(this,'Mother\'s Day','Happy Mother\'s Day','#8a2a3a')" style="background:#8a2a3a;">
     <span class="tile-icon">🌸</span><span class="tile-label">Mother's<br/>Day</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Father's Day\",'Happy Father\\'s Day','#1a2a5a')" style="background:#1a2a5a;">
+  <div class="tile" onclick="selectOccasion(this,'Father\'s Day','Happy Father\'s Day','#1a2a5a')" style="background:#1a2a5a;">
     <span class="tile-icon">👔</span><span class="tile-label">Father's<br/>Day</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,'Graduation','Congratulations Graduate','#1a4a2a')" style="background:#1a4a2a;">
@@ -2193,6 +2193,8 @@ if (isFloristAuthenticated()) {
 }
 restorePublicOrderFromUrl();
 
+let lastViewportWidth = 0;
+
 function adjustNewspaperPreviewScale() {
   const container = document.getElementById('newspaper-container');
   if (!container) return;
@@ -2200,6 +2202,9 @@ function adjustNewspaperPreviewScale() {
   if (!star) return;
 
   const viewportWidth = window.innerWidth;
+  if (viewportWidth === lastViewportWidth) return;
+  lastViewportWidth = viewportWidth;
+
   const padding = 24; // 12px margin on each side of the mobile body
   const availableWidth = viewportWidth - padding;
   
