@@ -9,6 +9,7 @@ const cors = require('cors');
 const multer = require('multer');
 const { registerAdminFulfilmentRoutes, authAdmin } = require('./src/phase2/admin-fulfilment');
 const { registerPublicCheckoutRoutes } = require('./src/phase2/public-checkout');
+const { registerPdfRoutes } = require('./src/phase2/pdf-routes');
 const { createClient } = require('@supabase/supabase-js');
 const Stripe = require('stripe');
 
@@ -79,6 +80,7 @@ app.use(express.static(PUBLIC_DIR, { index: false }));
 require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
 registerAdminFulfilmentRoutes(app, { supabase, sendEmail });
 registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail });
+registerPdfRoutes(app, { supabase, authStation });
 
 // ── AUTH MIDDLEWARE ──
 function authStation(req, res, next) {
