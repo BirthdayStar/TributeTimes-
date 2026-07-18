@@ -463,6 +463,28 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   color:#b91c1c;
   border-left-color:#b91c1c;
 }
+.result-status.status-loading {
+  background:#ffffff !important;
+  border-left:none !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+  border-radius: 18px !important;
+  padding: 30px 24px !important;
+  max-width: 600px !important;
+  width: 100% !important;
+  margin: 20px auto !important;
+}
+.loader-spinner {
+  width:40px;
+  height:40px;
+  border:3.5px solid #ece5db;
+  border-top-color:#8b1010;
+  border-radius:50%;
+  animation:spinner-rotate 0.8s linear infinite;
+  margin:0 auto;
+}
+@keyframes spinner-rotate {
+  to { transform:rotate(360deg); }
+}
 .is-hidden {
   display:none !important;
 }
@@ -604,6 +626,11 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 </style>
 </head>
 <body>
+<script>
+  if (window.location.search.includes('order=') && window.location.search.includes('checkout=')) {
+    document.body.classList.add('result-mode');
+  }
+</script>
 
 <div class="header">
   <div class="header-title">The Tribute Times</div>
@@ -711,16 +738,16 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Fifty Golden Years Together.','#8a6a00')" style="background:#8a6a00;">
     <span class="tile-icon">🥇</span><span class="tile-label">Golden<br/>Anniversary</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Valentine's Day\",'I Love You','#9b1a2a')" style="background:#9b1a2a;">
+  <div class="tile" onclick="selectOccasion(this,'Valentine\'s Day','I Love You','#9b1a2a')" style="background:#9b1a2a;">
     <span class="tile-icon">❤️</span><span class="tile-label">I Love<br/>You</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,'New Baby','Welcome to the World','#1a4a6a')" style="background:#1a4a6a;">
     <span class="tile-icon">👶</span><span class="tile-label">New<br/>Baby</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Mother's Day\",'Happy Mother\\'s Day','#8a2a3a')" style="background:#8a2a3a;">
+  <div class="tile" onclick="selectOccasion(this,'Mother\'s Day','Happy Mother\'s Day','#8a2a3a')" style="background:#8a2a3a;">
     <span class="tile-icon">🌸</span><span class="tile-label">Mother's<br/>Day</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,\"Father's Day\",'Happy Father\\'s Day','#1a2a5a')" style="background:#1a2a5a;">
+  <div class="tile" onclick="selectOccasion(this,'Father\'s Day','Happy Father\'s Day','#1a2a5a')" style="background:#1a2a5a;">
     <span class="tile-icon">👔</span><span class="tile-label">Father's<br/>Day</span>
   </div>
   <div class="tile" onclick="selectOccasion(this,'Graduation','Congratulations Graduate','#1a4a2a')" style="background:#1a4a2a;">
@@ -1029,12 +1056,23 @@ function ensureSecondaryActionButton() {
 function setStatusMessage(message, isError) {
   const status = document.getElementById('result-status');
   if (!message) {
-    status.textContent = '';
-    status.classList.remove('visible', 'error');
+    status.innerHTML = '';
+    status.classList.remove('visible', 'error', 'status-loading');
     return;
   }
 
-  status.textContent = message;
+  if (message.includes('Restoring') || message.includes('Preparing')) {
+    status.classList.add('status-loading');
+    status.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; width:100%;">
+        <div class="loader-spinner"></div>
+        <div style="margin-top:14px; font-weight:800; font-family:'PB',sans-serif; text-transform:uppercase; letter-spacing:1px; color:#8b1010; font-size:0.85rem;">${message}</div>
+      </div>
+    `;
+  } else {
+    status.classList.remove('status-loading');
+    status.textContent = message;
+  }
   status.classList.add('visible');
   status.classList.toggle('error', Boolean(isError));
 }
@@ -2193,6 +2231,8 @@ if (isFloristAuthenticated()) {
 }
 restorePublicOrderFromUrl();
 
+let lastViewportWidth = 0;
+
 function adjustNewspaperPreviewScale() {
   const container = document.getElementById('newspaper-container');
   if (!container) return;
@@ -2200,6 +2240,9 @@ function adjustNewspaperPreviewScale() {
   if (!star) return;
 
   const viewportWidth = window.innerWidth;
+  if (viewportWidth === lastViewportWidth) return;
+  lastViewportWidth = viewportWidth;
+
   const padding = 24; // 12px margin on each side of the mobile body
   const availableWidth = viewportWidth - padding;
   
