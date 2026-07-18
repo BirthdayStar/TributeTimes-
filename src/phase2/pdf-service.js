@@ -72,7 +72,7 @@ async function fitNewspaperToSingleA4Page(page) {
     const rect = target.getBoundingClientRect();
     const availableWidth = width;
     const availableHeight = height;
-    const scale = Math.min(1, availableWidth / rect.width, availableHeight / rect.height);
+    const scaleY = rect.height > availableHeight ? (availableHeight / rect.height) : 1;
 
     const existing = document.getElementById('phase2-pdf-single-page-fit');
     if (existing) existing.remove();
@@ -104,9 +104,8 @@ async function fitNewspaperToSingleA4Page(page) {
         width: 210mm !important;
         max-width: none !important;
         box-shadow: none !important;
-        transform: none !important;
+        transform: scale(1, ${scaleY}) !important;
         transform-origin: top center !important;
-        zoom: ${scale} !important;
         margin: 0 auto !important;
       }
     `;
@@ -115,11 +114,13 @@ async function fitNewspaperToSingleA4Page(page) {
     wrap.style.width = `${width}px`;
     wrap.style.height = `${height}px`;
     wrap.style.overflow = 'hidden';
-    target.style.zoom = String(scale);
+    target.style.zoom = '1';
+    target.style.transform = `scale(1, ${scaleY})`;
+    target.style.transformOrigin = 'top center';
 
     const fittedRect = target.getBoundingClientRect();
     return {
-      scale,
+      scale: scaleY,
       before: { width: rect.width, height: rect.height },
       after: { width: fittedRect.width, height: fittedRect.height },
       page: { width, height },
