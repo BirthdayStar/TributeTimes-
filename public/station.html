@@ -106,6 +106,12 @@
     .btn-danger:hover {
       background: #7f1d1d;
     }
+    .btn-secondary {
+      background: #4b5563;
+    }
+    .btn-secondary:hover {
+      background: #374151;
+    }
     .table-wrap {
       overflow-x: auto;
     }
@@ -146,7 +152,10 @@
 
   <nav class="topbar">
     <h1>The Tribute Times — Station Dashboard</h1>
-    <button class="btn btn-danger hidden" id="logout-btn" onclick="logout()">Log Out</button>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-secondary hidden" id="change-password-btn" onclick="openUpdatePasswordModal()">Change Password</button>
+      <button class="btn btn-danger hidden" id="logout-btn" onclick="logout()">Log Out</button>
+    </div>
   </nav>
 
   <div class="container">
@@ -265,6 +274,7 @@
       document.getElementById('auth-panel').classList.add('hidden');
       document.getElementById('dashboard-panel').classList.remove('hidden');
       document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('change-password-btn').classList.remove('hidden');
       loadStats();
       loadDJs();
     }
@@ -422,6 +432,75 @@
     function escapeHtml(v) {
       return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
+
+    function openUpdatePasswordModal() {
+      document.getElementById('password-modal').style.display = 'flex';
+      document.getElementById('modal-old-password').value = '';
+      document.getElementById('modal-new-password').value = '';
+      document.getElementById('modal-password-error').style.display = 'none';
+      document.getElementById('modal-password-success').style.display = 'none';
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').style.display = 'none';
+    }
+
+    async function submitPasswordUpdate(event) {
+      event.preventDefault();
+      const oldPassword = document.getElementById('modal-old-password').value;
+      const newPassword = document.getElementById('modal-new-password').value;
+      const errorDiv = document.getElementById('modal-password-error');
+      const successDiv = document.getElementById('modal-password-success');
+      
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/auth/update-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update password.');
+        }
+        successDiv.style.display = 'block';
+        setTimeout(() => {
+          closePasswordModal();
+        }, 1500);
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.style.display = 'block';
+      }
+    }
   </script>
+
+  <!-- UPDATE PASSWORD MODAL -->
+  <div id="password-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; padding:20px;">
+    <div style="background:#ffffff; color:#1a1714; width:100%; max-width:400px; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid #e2e8f0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <h3 style="margin-bottom:16px; font-size:1.25rem; font-weight:700;">Change Password</h3>
+      <form onsubmit="submitPasswordUpdate(event)">
+        <div style="margin-bottom:12px; text-align:left;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">Current Password</label>
+          <input type="password" id="modal-old-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
+        </div>
+        <div style="margin-bottom:16px; text-align:left;">
+          <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">New Password</label>
+          <input type="password" id="modal-new-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
+        </div>
+        <div id="modal-password-error" style="color:#e53e3e; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;"></div>
+        <div id="modal-password-success" style="color:#38a169; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;">Password changed successfully!</div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" onclick="closePasswordModal()" style="padding:10px 16px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#4a5568; font-weight:600; cursor:pointer;">Cancel</button>
+          <button type="submit" style="padding:10px 16px; border:none; border-radius:6px; background:#8b1010; color:#fff; font-weight:600; cursor:pointer;">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>

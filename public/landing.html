@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="description" content="The Tribute Times — Create premium personalised commemorative keepsake newspapers for birthdays, anniversaries, and special milestones."/>
+<meta name="theme-color" content="#8b1010"/>
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml"/>
+<title>The Tribute Times — Personalised Keepsake Newspapers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: radial-gradient(circle at top right, #381212, #180d0b 60%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* HEADER */
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+  line-height: 1.15;
+}
+.brand-sub {
+  font-size: 0.72rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+/* HERO SECTION (SIZED DOWN) */
+.hero {
+  background: #ffffff;
+  color: #1a1714;
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 30px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero-tagline {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #8b1010;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 12px;
+}
+.hero-desc {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5d544c;
+  max-width: 550px;
+  margin-bottom: 20px;
+}
+
+/* MOCKUP IMAGE (SIZED DOWN) */
+.mockup-container {
+  width: 100%;
+  max-width: 320px;
+  margin: 5px auto 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border: 3px solid #fffdf5;
+  background: #fffdf5;
+}
+.mockup-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* CTA BUTTONS */
+.cta-button {
+  display: inline-block;
+  text-decoration: none;
+  background: #8b1010;
+  color: #fff;
+  padding: 14px 30px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 5px 15px rgba(139, 16, 16, 0.3);
+  transition: all 0.2s ease;
+}
+.cta-button:hover {
+  background: #700d0d;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(139, 16, 16, 0.4);
+}
+
+.hero-pricing {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #5d544c;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+/* KEEPSAKE COUNTER */
+.counter-placeholder {
+  margin: 5px auto 16px;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: #5d544c;
+  background: #faf8f4;
+  border: 1px dashed #d1c7bd;
+  padding: 6px 16px;
+  border-radius: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.counter-number {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-style: normal;
+  color: #8b1010;
+}
+
+/* PARTNERS SECTIONS */
+.secondary-title {
+  font-size: 0.75rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 30px;
+}
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 240px;
+}
+.card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.card-content h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.card-content .pitch-line {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #c8a020;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.card-content p {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 16px;
+}
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #8b1010;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 18px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(139, 16, 16, 0.2);
+}
+.card-btn:hover {
+  background: #700d0d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 16, 16, 0.3);
+}
+.card-login-link {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: color 0.2s;
+  padding-left: 2px;
+}
+.card-login-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* ENQUIRY SECTION */
+.enquiry-panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 600px;
+  margin: 10px auto 48px;
+}
+.enquiry-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+  color: #fff;
+  text-align: center;
+}
+.enquiry-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  margin-bottom: 18px;
+}
+.enquiry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.enquiry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.enquiry-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+}
+.enquiry-field select,
+.enquiry-field input,
+.enquiry-field textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  width: 100%;
+  outline: none;
+}
+.enquiry-field select option {
+  background: #180d0b;
+  color: #fff;
+}
+.enquiry-field select:focus,
+.enquiry-field input:focus,
+.enquiry-field textarea:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+.enquiry-btn {
+  background: #8b1010;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 6px;
+  box-shadow: 0 4px 12px rgba(139, 16, 16, 0.2);
+}
+.enquiry-btn:hover {
+  background: #700d0d;
+  box-shadow: 0 6px 16px rgba(139, 16, 16, 0.3);
+}
+.enquiry-msg {
+  font-size: 0.8rem;
+  margin-top: 6px;
+  text-align: center;
+  display: none;
+}
+.enquiry-msg.success { color: #38a169; }
+.enquiry-msg.error { color: #e53e3e; }
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 24px;
+  width: 100%;
+}
+.footer-text {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.6;
+}
+.footer-link {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: none;
+  margin-left: 12px;
+  transition: color 0.2s;
+}
+.footer-link:hover {
+  color: #fff;
+}
+
+/* RESPONSIVE LAYOUT */
+@media (max-width: 680px) {
+  body { padding: 24px 16px 60px; }
+  .brand-name { font-size: 2.1rem; }
+  .brand-sub { letter-spacing: 3px; font-size: 0.65rem; }
+  .hero { padding: 24px 16px; }
+  .hero-title { font-size: 1.6rem; }
+  .grid { grid-template-columns: 1fr; gap: 16px; }
+  .card { padding: 20px; min-height: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- BRAND HEADER -->
+  <header class="header">
+    <h1 class="brand-name">The Tribute Times</h1>
+    <div class="brand-sub">Personalised Vintage Newspaper Keepsakes</div>
+  </header>
+
+  <!-- CONSUMER HERO (SIZED DOWN) -->
+  <main class="hero">
+    <span class="hero-tagline">Personalised Gift Keepsakes</span>
+    <h2 class="hero-title">Give the Gift of History</h2>
+    <p class="hero-desc">Create a custom front-page newspaper detailing the top global events, local news, weather, cost of living, and charts from the exact day your recipient was born.</p>
+    
+    <!-- PRODUCT PREVIEW MOCKUP -->
+    <div class="mockup-container">
+      <img class="mockup-img" src="/keepsake_sample_preview.png" alt="The Tribute Times keepsake newspaper mockup" />
+    </div>
+
+    <!-- KEEPSAKE COUNTER PLACEHOLDER -->
+    <div class="counter-placeholder" id="keepsake-counter">
+      <span class="counter-number">12,483</span> keepsakes created and counting
+    </div>
+
+    <a href="/public" class="cta-button">Create Yours</a>
+    <div class="hero-pricing">From NZ$14.95</div>
+  </main>
+
+  <!-- PROFESSIONAL PORTALS -->
+  <section style="width: 100%;">
+    <h2 class="secondary-title">Partners & Portals</h2>
+    <div class="grid">
+      <!-- FOR FLORISTS -->
+      <div class="card">
+        <div class="card-content">
+          <h3>For Florists</h3>
+          <div class="pitch-line">Add ₱/$ profit to every bouquet — print keepsakes in-store</div>
+          <p>Generate, print, and package premium keepsake newspapers directly in your store for inclusion with your floral bouquets.</p>
+        </div>
+        <div class="card-actions">
+          <a href="mailto:hello@tributetimes.co.nz?subject=Florist%20Partner%20Enquiry" class="card-btn">Become a Partner</a>
+          <a href="/florist" class="card-login-link">Partner login</a>
+        </div>
+      </div>
+      <!-- FOR STATION MANAGERS -->
+      <div class="card">
+        <div class="card-content">
+          <h3>For Station Managers</h3>
+          <div class="pitch-line">Station-branded keepsakes for your listeners</div>
+          <p>Manage station-branded keepsake settings, add or manage your DJs, and view station dashboard.</p>
+        </div>
+        <div class="card-actions">
+          <a href="mailto:hello@tributetimes.co.nz?subject=Station%20Manager%20Enquiry" class="card-btn">Become a Partner</a>
+          <a href="/station" class="card-login-link">Partner login</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LISTENER INQUIRY TO STATION MANAGER -->
+  <section class="enquiry-panel">
+    <h3 class="enquiry-title">Contact a Station Manager</h3>
+    <p class="enquiry-desc">Select an active radio station manager from our network to send an inquiry directly to their inbox.</p>
+    <form class="enquiry-form" onsubmit="submitEnquiry(event)">
+      <div class="enquiry-field">
+        <label for="station-select">Select Station</label>
+        <select id="station-select" required>
+          <option value="">Loading radio stations...</option>
+        </select>
+      </div>
+      <div class="enquiry-field">
+        <label for="sender-name">Your Name</label>
+        <input type="text" id="sender-name" placeholder="John Doe" required />
+      </div>
+      <div class="enquiry-field">
+        <label for="sender-email">Your Email Address</label>
+        <input type="email" id="sender-email" placeholder="john@example.com" required />
+      </div>
+      <div class="enquiry-field">
+        <label for="enquiry-message">Your Message</label>
+        <textarea id="enquiry-message" rows="4" placeholder="Type your message to the station manager..." required></textarea>
+      </div>
+      <button type="submit" class="enquiry-btn" id="enquiry-submit-btn">Send Enquiry</button>
+      <div class="enquiry-msg" id="enquiry-response-msg"></div>
+    </form>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-text">
+      &copy; 2026 The Tribute Times. All rights reserved.
+      <br/>
+      Contact: <a href="mailto:hello@tributetimes.co.nz" class="footer-link">hello@tributetimes.co.nz</a>
+      <a href="/admin" class="footer-link">Admin Access</a>
+    </p>
+  </footer>
+</div>
+
+<script>
+// Fetch active radio stations to populate the dropdown
+async function loadStationsDropdown() {
+  const select = document.getElementById('station-select');
+  try {
+    const response = await fetch('/api/public/stations');
+    if (!response.ok) throw new Error('Failed to load stations');
+    const stations = await response.json();
+    
+    select.innerHTML = '<option value="">-- Choose a Radio Station --</option>';
+    if (stations.length === 0) {
+      select.innerHTML = '<option value="">No active station managers found</option>';
+      return;
+    }
+    
+    stations.forEach(station => {
+      const option = document.createElement('option');
+      option.value = station.id;
+      option.textContent = station.name;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error(err);
+    select.innerHTML = '<option value="">Error loading station managers</option>';
+  }
+}
+
+// Handle sending enquiry
+async function submitEnquiry(event) {
+  event.preventDefault();
+  const submitBtn = document.getElementById('enquiry-submit-btn');
+  const responseMsg = document.getElementById('enquiry-response-msg');
+  
+  const stationId = document.getElementById('station-select').value;
+  const senderName = document.getElementById('sender-name').value.trim();
+  const senderEmail = document.getElementById('sender-email').value.trim();
+  const message = document.getElementById('enquiry-message').value.trim();
+
+  responseMsg.style.display = 'none';
+  responseMsg.className = 'enquiry-msg';
+
+  if (!stationId) {
+    responseMsg.textContent = 'Please select a radio station.';
+    responseMsg.className = 'enquiry-msg error';
+    responseMsg.style.display = 'block';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+
+  try {
+    const response = await fetch('/api/public/stations/inquiry', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ stationId, senderName, senderEmail, message })
+    });
+    
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send inquiry.');
+
+    responseMsg.textContent = '✓ Your inquiry has been sent to the station manager!';
+    responseMsg.className = 'enquiry-msg success';
+    responseMsg.style.display = 'block';
+
+    // Clear form
+    document.getElementById('sender-name').value = '';
+    document.getElementById('sender-email').value = '';
+    document.getElementById('enquiry-message').value = '';
+    document.getElementById('station-select').value = '';
+  } catch (err) {
+    responseMsg.textContent = err.message;
+    responseMsg.className = 'enquiry-msg error';
+    responseMsg.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send Enquiry';
+  }
+}
+
+// Initialise page dropdown
+window.addEventListener('DOMContentLoaded', loadStationsDropdown);
+</script>
+
+</body>
+</html>

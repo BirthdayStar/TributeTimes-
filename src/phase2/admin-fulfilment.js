@@ -77,6 +77,41 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
     });
   });
 
+  app.post('/api/admin/auth/update-password', authAdmin, async (req, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: 'Old password and new password are required.' });
+      }
+
+      const { data: admin } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('id', req.admin.id)
+        .single();
+
+      if (!admin) {
+        return res.status(404).json({ error: 'Admin account not found.' });
+      }
+
+      const valid = await bcrypt.compare(oldPassword, admin.password_hash);
+      if (!valid) {
+        return res.status(400).json({ error: 'Incorrect current password.' });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, 10);
+      await supabase
+        .from('admins')
+        .update({ password_hash: newHash })
+        .eq('id', admin.id);
+
+      return res.json({ message: 'Password updated successfully.' });
+    } catch (error) {
+      console.error('Admin password update error:', error);
+      return res.status(500).json({ error: 'Unable to update password.' });
+    }
+  });
+
   app.get('/api/admin/orders', authAdmin, async (req, res) => {
     try {
       const orders = await loadFulfilmentOrders(supabase);
