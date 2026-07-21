@@ -165,6 +165,92 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
     }
   });
 
+  app.post('/api/admin/stations', authAdmin, async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const password = String(req.body?.password || '');
+      const country = String(req.body?.country || 'New Zealand').trim();
+      const tier = String(req.body?.tier || 'community').trim();
+
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const { data: station, error } = await supabase
+        .from('stations')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          tier,
+          account_type: 'radio',
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return res.status(409).json({ error: 'Email address already registered.' });
+        }
+        throw error;
+      }
+
+      return res.json({ station });
+    } catch (error) {
+      console.error('Admin create station error:', error);
+      return res.status(500).json({ error: 'Unable to add station manager.' });
+    }
+  });
+
+  app.post('/api/admin/florists', authAdmin, async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const password = String(req.body?.password || '');
+      const country = String(req.body?.country || 'New Zealand').trim();
+      const initialCredit = Number(req.body?.initial_credit_balance || 30);
+
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const { data: florist, error } = await supabase
+        .from('stations')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          account_type: 'florist',
+          florist_credit_balance: initialCredit,
+          florist_low_credit_threshold: 10,
+          florist_credit_updated_at: new Date().toISOString(),
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return res.status(409).json({ error: 'Email address already registered.' });
+        }
+        throw error;
+      }
+
+      return res.json({ florist });
+    } catch (error) {
+      console.error('Admin create florist error:', error);
+      return res.status(500).json({ error: 'Unable to add florist partner.' });
+    }
+  });
+
   app.get('/api/admin/famous-birthdays', authAdmin, async (req, res) => {
     try {
       const rows = await loadFamousBirthdaysForAdmin(supabase, req.query || {});

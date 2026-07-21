@@ -5,135 +5,209 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Station Manager Dashboard — The Tribute Times</title>
   <link rel="stylesheet" href="/pwa.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #131110;
-      --surface: #1c1917;
-      --panel: #262220;
-      --ink: #e7e5e4;
-      --muted: #a8a29e;
-      --accent: #d97706;
-      --accent-hover: #b45309;
-      --line: #2e2a28;
+      --bg: #120a09;
+      --surface: #ffffff;
+      --panel: #faf8f4;
+      --ink: #1a1714;
+      --muted: #6b6259;
+      --accent: #8b1010;
+      --accent-hover: #700d0d;
+      --line: #ddd5c8;
     }
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: system-ui, -apple-system, sans-serif;
+    html, body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top right, #381212, #180d0b 60%) !important;
+      background-attachment: fixed !important;
+      color: #f3eee8;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       margin: 0;
       padding: 0;
     }
     .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--line);
-      padding: 14px 24px;
+      background: rgba(30, 15, 15, 0.7);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 18px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .topbar h1 {
       margin: 0;
-      font-size: 1.2rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
       font-weight: 700;
-      color: var(--ink);
+      color: #ffffff;
     }
     .container {
-      max-width: 1000px;
-      margin: 30px auto;
+      max-width: 900px;
+      margin: 40px auto;
       padding: 0 20px;
     }
     .card {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 24px;
+      background: #ffffff;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      padding: 32px;
       margin-bottom: 24px;
+      color: #1a1714;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    #auth-panel {
+      max-width: 560px;
+      margin: 20px auto;
+    }
+    .purchase-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #8b1010;
+      margin-bottom: 10px;
+    }
+    .purchase-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #1a1714;
+      letter-spacing: -0.01em;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    .purchase-copy {
+      color: #6b6259;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #1a1714;
+      margin-top: 0;
+      margin-bottom: 20px;
     }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
+      gap: 20px;
       margin-bottom: 24px;
     }
     .stat-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
+      background: #faf8f4;
+      border: 1.5px solid #ddd5c8;
+      border-radius: 12px;
+      padding: 20px;
       text-align: center;
+      color: #1a1714;
     }
     .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--accent);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #8b1010;
       margin-top: 8px;
     }
     .form-field {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
     .form-field label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #6b6259;
+      letter-spacing: 1px;
     }
     .form-field input, .form-field select {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      color: var(--ink);
-      padding: 10px;
-      border-radius: 6px;
+      background: #faf8f4;
+      border: 1.5px solid #ddd5c8;
+      color: #1a1714;
+      padding: 12px;
+      border-radius: 10px;
       font: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s;
     }
-    .btn {
-      background: var(--accent);
-      color: #fff;
+    .form-field input:focus, .form-field select:focus {
+      border-color: #8b1010;
+      background: #ffffff;
+    }
+    .btn, .pay-btn {
+      background: #8b1010;
+      color: #ffffff;
       border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-weight: 600;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       cursor: pointer;
       font: inherit;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(139, 16, 16, 0.3);
     }
-    .btn:hover {
-      background: var(--accent-hover);
+    .btn:hover, .pay-btn:hover {
+      background: #700d0d;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(139, 16, 16, 0.4);
     }
     .btn-danger {
       background: #991b1b;
+      box-shadow: 0 4px 12px rgba(153, 27, 27, 0.2);
     }
     .btn-danger:hover {
       background: #7f1d1d;
+      box-shadow: 0 6px 16px rgba(153, 27, 27, 0.3);
     }
     .btn-secondary {
       background: #4b5563;
+      box-shadow: 0 4px 12px rgba(75, 85, 99, 0.2);
     }
     .btn-secondary:hover {
       background: #374151;
+      box-shadow: 0 6px 16px rgba(75, 85, 99, 0.3);
     }
     .table-wrap {
       overflow-x: auto;
+      border-radius: 10px;
+      border: 1.5px solid #ddd5c8;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 12px;
+      color: #1a1714;
     }
     th, td {
       text-align: left;
-      padding: 12px;
-      border-bottom: 1px solid var(--line);
+      padding: 14px;
+      border-bottom: 1px solid #eee8e0;
+      font-size: 0.88rem;
     }
     th {
-      color: var(--muted);
-      font-weight: 600;
+      background: #faf8f4;
+      color: #8b1010;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      border-bottom: 1.5px solid #ddd5c8;
     }
     .msg {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 0.9rem;
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
     }
     .msg.error {
       background: rgba(239, 68, 68, 0.1);
@@ -160,17 +234,21 @@
 
   <div class="container">
     <!-- Auth panel -->
-    <div class="card" id="auth-panel">
-      <h2>Manager Sign In</h2>
-      <div class="form-field">
-        <label for="login-email">Email Address</label>
-        <input type="email" id="login-email" placeholder="manager@example.com" />
+    <div class="card purchase-panel" id="auth-panel">
+      <div class="purchase-eyebrow">Station Manager Portal</div>
+      <h2 class="purchase-title">Manager Sign In</h2>
+      <div class="purchase-copy">Sign in to manage station settings, brand customization, and your DJ team.</div>
+      <div class="form-stack">
+        <div class="form-field">
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" placeholder="manager@example.com" />
+        </div>
+        <div class="form-field">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" />
+        </div>
       </div>
-      <div class="form-field">
-        <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="••••••••" />
-      </div>
-      <button class="btn" onclick="login()">Sign In</button>
+      <button class="btn pay-btn" style="width:100%; margin-top:8px;" onclick="login()">Sign In</button>
       <div class="msg hidden" id="auth-msg"></div>
     </div>
 
