@@ -77,6 +77,41 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
     });
   });
 
+  app.post('/api/admin/auth/update-password', authAdmin, async (req, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ error: 'Old password and new password are required.' });
+      }
+
+      const { data: admin } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('id', req.admin.id)
+        .single();
+
+      if (!admin) {
+        return res.status(404).json({ error: 'Admin account not found.' });
+      }
+
+      const valid = await bcrypt.compare(oldPassword, admin.password_hash);
+      if (!valid) {
+        return res.status(400).json({ error: 'Incorrect current password.' });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, 10);
+      await supabase
+        .from('admins')
+        .update({ password_hash: newHash })
+        .eq('id', admin.id);
+
+      return res.json({ message: 'Password updated successfully.' });
+    } catch (error) {
+      console.error('Admin password update error:', error);
+      return res.status(500).json({ error: 'Unable to update password.' });
+    }
+  });
+
   app.get('/api/admin/orders', authAdmin, async (req, res) => {
     try {
       const orders = await loadFulfilmentOrders(supabase);
@@ -127,6 +162,92 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
     } catch (error) {
       console.error('Admin territory create error:', error);
       return res.status(400).json({ error: error.message || 'Unable to create postcode territory.' });
+    }
+  });
+
+  app.post('/api/admin/stations', authAdmin, async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const password = String(req.body?.password || '');
+      const country = String(req.body?.country || 'New Zealand').trim();
+      const tier = String(req.body?.tier || 'community').trim();
+
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const { data: station, error } = await supabase
+        .from('stations')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          tier,
+          account_type: 'radio',
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return res.status(409).json({ error: 'Email address already registered.' });
+        }
+        throw error;
+      }
+
+      return res.json({ station });
+    } catch (error) {
+      console.error('Admin create station error:', error);
+      return res.status(500).json({ error: 'Unable to add station manager.' });
+    }
+  });
+
+  app.post('/api/admin/florists', authAdmin, async (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const email = String(req.body?.email || '').trim().toLowerCase();
+      const password = String(req.body?.password || '');
+      const country = String(req.body?.country || 'New Zealand').trim();
+      const initialCredit = Number(req.body?.initial_credit_balance || 30);
+
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const { data: florist, error } = await supabase
+        .from('stations')
+        .insert({
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          account_type: 'florist',
+          florist_credit_balance: initialCredit,
+          florist_low_credit_threshold: 10,
+          florist_credit_updated_at: new Date().toISOString(),
+          active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          return res.status(409).json({ error: 'Email address already registered.' });
+        }
+        throw error;
+      }
+
+      return res.json({ florist });
+    } catch (error) {
+      console.error('Admin create florist error:', error);
+      return res.status(500).json({ error: 'Unable to add florist partner.' });
     }
   });
 

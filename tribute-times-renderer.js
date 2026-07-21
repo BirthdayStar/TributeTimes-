@@ -1,7 +1,7 @@
 // ============================================================
-// THE TRIBUTE TIMES — HTML RENDERER
+// THE TRIBUTE TIMES — HTML RENDERER (A4 PRINT-LOCKED V2)
 // Takes the AI JSON output and builds the complete newspaper HTML
-// Version 1.0 — July 2026
+// Version 2.0 — July 2026
 // ============================================================
 
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
@@ -14,11 +14,29 @@ function titleCase(value) {
     .join(' ');
 }
 
+function getVintageHoroscope(signName) {
+  const horoscopes = {
+    Aries: "The stars align to grant you immense energy and pioneering spirit. Your natural leadership will shine in professional endeavors. Avoid rash decisions in financial matters; patience yields the greatest rewards. In personal relationships, a warm gesture from an old friend brings unexpected joy. Keep your focus on long-term goals.",
+    Taurus: "A period of stability and grounded growth awaits you. Trust your instincts when navigating complex career choices. Financial prudence today ensures prosperous returns tomorrow. A pleasant surprise in your domestic sphere will warm your heart. Take time to appreciate the quiet beauties of life.",
+    Gemini: "Your intellectual curiosity is heightened under the current celestial influence. New avenues of learning and communication open up. Strive for clarity in your interactions to avoid minor misunderstandings. A spontaneous conversation may spark an exciting new project. Balance your busy mind with rest.",
+    Cancer: "Sensitivities are heightened, guiding you toward deep emotional insights. Nurture your home environment, as it remains your ultimate sanctuary. An old creative pursuit calls for your attention; do not hesitate to revisit it. Warmth in family circles brings comfort. Trust the natural flow of events.",
+    Leo: "Your innate radiance and courage take center stage. Professional recognition is well within reach if you stay true to your vision. Be generous with your warmth, but ensure your personal boundaries remain intact. A joyous social gathering will highlight your weekend. Lead with your heart.",
+    Virgo: "Meticulous planning and attention to detail bring excellent results. Your analytical mind resolves a long-standing challenge at work. Remember to balance productivity with self-care to avoid burnout. A thoughtful letter or message from afar brings pleasant news. Trust in your unique skills.",
+    Libra: "Harmonious energies surround you, promoting balance in all areas of life. Creative endeavors are highly favored; let your artistic expression flow freely. A key relationship benefits from open, heartfelt communication. Seek beauty in your surroundings. A financial decision requires careful weighing.",
+    Scorpio: "Intense focus and determination unlock new paths of transformation. Your passion guides you toward resolving a major personal goal. Trust your inner wisdom when faced with career transitions. A deep connection with a close confidant is strengthened. Embrace the changes coming your way.",
+    Sagittarius: "An adventurous spirit prompts you to explore new horizons, either in mind or travel. Optimism opens doors that previously seemed closed. Stay focused on your core values amidst busy schedules. A warm encounter brings laughter and joy. Keep looking forward with confidence.",
+    Capricorn: "Patience and hard work lay the foundation for long-term success. Your professional dedication is noted by peers. Practical financial choices serve you well under current transits. A quiet evening spent with loved ones brings deep contentment. Your strength is your steady anchor.",
+    Aquarius: "Innovative thoughts and unique perspectives set you apart. Collaboration on a shared community goal brings deep satisfaction. Stay receptive to unconventional ideas that come your way. A surprise encounter sparks inspiration. Keep nurturing your independent spirit.",
+    Pisces: "Intuition and artistic vision guide your steps through this period. A gentle, compassionate approach resolves a complex family matter. Trust your dreams, as they hold keys to your creative growth. A serene moment near water brings clarity and peace. Let your heart lead."
+  };
+  return horoscopes[signName] || "The celestial transits indicate a year of remarkable personal growth, steady progress, and rewarding achievements. Trust your inner compass and embrace the opportunities that lay ahead.";
+}
+
 function renderNewspaper(data, content, fonts) {
   const {
     recipientName, dateFormatted, dateLong, day, month, year,
     country, occasion, bannerText, senderName, stationName,
-    edition, currency, age, dateIntro
+    edition, currency, age
   } = data;
 
   const {
@@ -28,711 +46,302 @@ function renderNewspaper(data, content, fonts) {
     astro, message
   } = content;
 
-  const { chomsky, poppinsB, poppinsR, dejaVu, dejaVuB, dejaVuI } = fonts;
+  // Calculate days old dynamically
+  const dobDate = new Date(year, month - 1, day);
+  const today = new Date();
+  const diffMs = today.getTime() - dobDate.getTime();
+  const daysOldVal = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const daysOldStr = `You are ${daysOldVal.toLocaleString()} days old today`;
 
-  // ── MOON SVG ──
-  const moonSVG = renderMoonSVG(astro.moonPhase.name);
-
-  // ── STAR MAP SVG ──
-  const starMapSVG = `<svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="16" cy="16" r="14" fill="#0d1b2a" stroke="#111" stroke-width="1.5"/>
-    <line x1="8" y1="10" x2="14" y2="14" stroke="#c8a020" stroke-width="0.8" opacity="0.8"/>
-    <line x1="14" y1="14" x2="20" y2="11" stroke="#c8a020" stroke-width="0.8" opacity="0.8"/>
-    <line x1="20" y1="11" x2="24" y2="16" stroke="#c8a020" stroke-width="0.8" opacity="0.8"/>
-    <line x1="14" y1="14" x2="16" y2="20" stroke="#c8a020" stroke-width="0.8" opacity="0.8"/>
-    <line x1="16" y1="20" x2="22" y2="23" stroke="#c8a020" stroke-width="0.8" opacity="0.8"/>
-    <circle cx="8" cy="10" r="1.2" fill="#fff"/>
-    <circle cx="14" cy="14" r="1.5" fill="#fff"/>
-    <circle cx="20" cy="11" r="1" fill="#fff"/>
-    <circle cx="24" cy="16" r="1" fill="#fff"/>
-    <circle cx="16" cy="20" r="1.2" fill="#fff"/>
-    <circle cx="5" cy="18" r="0.5" fill="#aaa"/>
-    <circle cx="26" cy="8" r="0.5" fill="#aaa"/>
-  </svg>`;
-
-  // ── ASTRO PANEL ──
-  const astroPanel = `
-    <div style="border:1px solid #111;padding:4px;background:#fffdf5;width:130px;">
-      <div style="font-family:'PB',sans-serif;font-size:5pt;letter-spacing:1.5px;text-transform:uppercase;text-align:center;border-bottom:1px solid #111;border-top:1px solid #111;padding:1.5px 0;margin-bottom:4px;">Born Under These Signs</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;">
-        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:3px 1px;border:0.5px solid #ddd;background:#fff;">
-          <div style="font-size:0.9rem;line-height:1;margin-bottom:2px;">${astro.starSign.symbol}</div>
-          <div style="font-family:'PB',sans-serif;font-size:4pt;color:#111;line-height:1.2;">${astro.starSign.name}</div>
-          <div style="font-family:'DJ',serif;font-size:3.5pt;color:#888;line-height:1.2;font-style:italic;">${astro.starSign.element}<br/>Sign</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:3px 1px;border:0.5px solid #ddd;background:#fff;">
-          <div style="font-size:0.9rem;line-height:1;margin-bottom:2px;">${getZodiacEmoji(astro.chineseZodiac.animal)}</div>
-          <div style="font-family:'PB',sans-serif;font-size:4pt;color:#111;line-height:1.2;">${astro.chineseZodiac.animal}</div>
-          <div style="font-family:'DJ',serif;font-size:3.5pt;color:#888;line-height:1.2;font-style:italic;">Chinese<br/>${year}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:3px 1px;border:0.5px solid #ddd;background:#fff;">
-          ${moonSVG}
-          <div style="font-family:'PB',sans-serif;font-size:4pt;color:#111;line-height:1.2;">${astro.moonPhase.name.split(' ')[0]}<br/>${astro.moonPhase.name.split(' ').slice(1).join(' ')}</div>
-          <div style="font-family:'DJ',serif;font-size:3.5pt;color:#888;font-style:italic;">Moon</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:3px 1px;border:0.5px solid #ddd;background:#fff;">
-          ${starMapSVG}
-          <div style="font-family:'PB',sans-serif;font-size:4pt;color:#111;line-height:1.2;">Night<br/>Sky</div>
-          <div style="font-family:'DJ',serif;font-size:3.5pt;color:#888;font-style:italic;">${day} ${monthAbbr(month)}</div>
-        </div>
-      </div>
-    </div>`;
-
-  // ── TICKER ──
-  const tickerHTML = ticker.map(t => `
-    <div class="tick">
-      <span class="tn">${t.label}</span>
-      <span class="tv">${t.value}</span>
-      <span class="${t.direction === 'up' ? 'tu' : t.direction === 'down' ? 'td' : 'tne'}">${t.direction === 'up' ? '▲' : t.direction === 'down' ? '▼' : '―'}</span>
-    </div>`).join('');
-
-  // ── WORLD NEWS ──
-  const worldNewsHTML = worldNews.map((s, i) => {
-    const hedClass = `hed-${s.size || (i === 0 ? 'xl' : i === 1 ? 'md' : 'sm')}`;
-    const body2 = s.body2 ? `<div class="lead-col-rule"><div class="copy">${s.body2}</div></div>` : '';
-    const inner = i === 0 ? `
-      <div class="lead-2col">
-        <div><div class="copy drop-cap">${s.body}</div></div>
-        ${body2 || `<div class="lead-col-rule"><div class="copy">${s.body}</div></div>`}
-      </div>` : `<div class="copy">${s.body}</div>`;
-    return `
-      ${i > 0 ? '<div class="' + (i === 1 ? 'centre-rule-thick' : 'centre-rule') + '"></div>' : ''}
-      <div class="yr">${s.year}</div>
-      <div class="${hedClass}">${s.headline}</div>
-      ${s.deck ? `<div class="deck">${s.deck}</div>` : ''}
-      ${s.byline ? `<div class="byline">${s.byline}</div>` : ''}
-      ${inner}`;
-  }).join('');
-
-  // ── LOCAL NEWS ──
-  const localNewsHTML = localNews.map((s, i) => `
-    <div class="mini-item">
-      <div class="mini-label">${s.year}</div>
-      <div class="hed-${s.size || 'sm'}">${s.headline}</div>
-      <div class="copy-sm">${s.body}</div>
-    </div>
-    ${i < localNews.length - 1 ? '<div class="story-rule"></div>' : ''}`).join('');
-
-  // ── SPORT ──
-  const sportHTML = sport.slice(0, 5).map((s, i) => `
-    <div class="right-box${s.boxed ? ' right-box-featured' : ''}">
-      <div class="hed-sm">${s.headline}</div>
-    </div>`).join('');
-
-  // ── BUSINESS ──
-  const businessHTML = business.map((s, i) => `
-    ${i > 0 ? '<div class="story-rule"></div>' : ''}
-    <div class="yr">${s.year}</div>
-    <div class="hed-${s.size || 'sm'}">${s.headline}</div>
-    ${s.byline ? `<div class="byline">${s.byline}</div>` : ''}
-    <div class="copy-sm">${s.body}</div>`).join('');
-
-  // ── CHART ──
-  const chartHTML = chart.entries.map(e => `
-    <div class="chart-row">
-      <div class="cnum">${e.position}</div>
-      <div><div class="ctit">${e.title}</div><div class="cart">${e.artist}</div></div>
-    </div>`).join('');
-
-  // ── PRICES ──
+  // ── PRICES TABLE ──
   const pricesHTML = prices.items.map(p => `
-    <div class="prow">
-      <span class="pitem">${p.label}</span>
-      <span class="pval">${p.value}</span>
-    </div>`).join('');
+    <tr><td>${p.label}</td><td>${p.value}</td></tr>`).join('');
 
-  // ── WORLD IN NUMBERS ──
-  const numbersHTML = worldInNumbers.map(n => `
-    <div class="prow">
-      <span class="pitem">${n.label}</span>
-      <span class="pval">${n.value}</span>
-    </div>`).join('');
+  // ── BORN ON THIS DAY ──
+  const birthdaysHTML = birthdays.slice(0, 4).map((b, i) => `
+    <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${b.note}</span></div>`).join('');
 
-  // ── BOOKS ──
-  const booksHTML = books.map((b, i) => `
-    <div style="${i < books.length-1 ? 'margin-bottom:4px;padding-bottom:4px;border-bottom:0.5px dotted #ccc;' : ''}">
-      <div style="font-family:'PB',sans-serif;font-size:6pt;color:#111;">${b.title}</div>
-      <div style="font-family:'DJ',serif;font-style:italic;font-size:5pt;color:#666;">${b.author} · ${b.note}</div>
-    </div>`).join('');
+  // ── MUSIC CHART ──
+  const chartsHTML = chart.entries.slice(0, 5).map(e => `
+    <li><b>${e.title}</b> &mdash; <span class="artist">${e.artist}</span></li>`).join('');
 
-  // ── CINEMA ──
-  const cinemaHTML = cinema.map((f, i) => `
-    <div style="${i < cinema.length-1 ? 'margin-bottom:4px;padding-bottom:4px;border-bottom:0.5px dotted #ccc;' : ''}">
-      <div style="font-family:'PB',sans-serif;font-size:6pt;color:#111;">${f.title}</div>
-      <div style="font-family:'DJ',serif;font-style:italic;font-size:5pt;color:#666;">${f.credit} · ${f.note}</div>
-    </div>`).join('');
+  // ── WEATHER CONTENT ──
+  const weatherText = `Weather in ${country} was typical for ${weather.season || 'the season'}: ${weather.condition || ''} with average temperatures around ${weather.temp || ''}°C.`;
 
-  // ── BIRTHDAYS ──
-  const birthdaysHTML = birthdays.map(b => `
-    <div class="fitem">
-      <div class="fname">${b.name}</div>
-      <div class="fnote">${b.note}</div>
-    </div>`).join('');
+  // ── ALSO ON THIS DAY STORIES (Clipped to OTD slots) ──
+  const otd1Text = `<b>World:</b> ${worldNews[1]?.body || (business[0] ? business[0].body : '')}`;
+  const otd2Text = `<b>Science:</b> ${worldNews[2]?.body || (business[1] ? business[1].body : '')}`;
+  const otd3Text = `<b>Culture:</b> ${worldNews[3]?.body || (localNews[1] ? localNews[1].body : '')}`;
 
-  // ── SIGNATURE ──
-  const sigHTML = edition === 'radio' ? `
-    <div class="sig">
-      <div class="sblock"><div class="sline"></div><div class="slbl">Signed by ${senderName}</div></div>
-      <div class="smsg">${message}</div>
-      <div class="sblock"><div class="sline"></div><div class="slbl">Date</div></div>
-    </div>` : `
-    <div class="sig-simple">
-      <div class="gift-from">A ${edition === 'florist' ? 'gift' : 'personal gift'} from ${senderName}</div>
-      <div class="smsg">${message}</div>
-      ${edition === 'public' ? `<div class="gift-ordered">Ordered at tributetimes.co.nz · © ${new Date().getFullYear()} The Tribute Times</div>` : ''}
-    </div>`;
+  // ── SPORT TEXT ──
+  const sportText = sport[0]?.body || (sport[0]?.headline ? `On this day, ${sport[0].headline}.` : 'Sporting events of the day concluded with high spirits and remarkable achievements across the country.');
 
-  // ── COMPACT ESTABLISHED LINE ──
-  const establishedLine = `Established 2026, ${monthName(month)}, ${country}`;
-
-  // ── FULL HTML ──
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Tribute Times — ${recipientName}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-${getFontFaces(fonts)}
-${getStyles()}
+  /* ================= FONT FACE SELF-HOSTED ================= */
+  @font-face { font-family:'Chomsky'; src:url('data:font/otf;base64,${fonts.chomsky}') format('opentype'); }
+
+  /* ================= PRINT LOCK — DO NOT MODIFY ================= */
+  @page { size: A4 portrait; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { background: #6b6b6b; }
+
+  .sheet {
+    width: 210mm;
+    height: 297mm;
+    background: #f7f3e8;              /* aged paper */
+    color: #1a1712;
+    padding: 8mm 9mm 7mm 9mm;
+    margin: 10mm auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,.45);
+    overflow: hidden;                  /* the hard guarantee */
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 8.4pt;
+    line-height: 1.28;
+    display: flex;
+    flex-direction: column;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* ================= SCREEN-ONLY WRAPPER ================= */
+  #wrap { width: 100%; display: flex; justify-content: center; }
+  #star {
+    width: 210mm;
+    flex-shrink: 0;
+    transform-origin: top center;
+  }
+
+  /* ================= MASTHEAD ================= */
+  .masthead { height: 30mm; text-align: center; flex: 0 0 auto; }
+  .masthead h1 {
+    font-family: 'Chomsky', 'UnifrakturMaguntia', serif;
+    font-weight: 400;
+    font-size: 46pt;
+    line-height: 1;
+    letter-spacing: .5mm;
+  }
+  .masthead .est {
+    font-size: 7pt; letter-spacing: 1.2mm; text-transform: uppercase;
+    margin-top: 1.2mm;
+  }
+  .dateline {
+    height: 6.5mm; flex: 0 0 auto;
+    border-top: .6mm solid #1a1712; border-bottom: .25mm solid #1a1712;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 7.5pt; letter-spacing: .3mm; text-transform: uppercase;
+    padding: 0 1mm; margin-top: 1.5mm;
+  }
+
+  /* ================= LEAD HEADLINE ================= */
+  .lead { height: 22mm; flex: 0 0 auto; text-align: center; padding-top: 2mm; overflow: hidden; }
+  .lead h2 {
+    font-family: 'Playfair Display', serif; font-weight: 900;
+    font-size: 19pt; line-height: 1.05;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .lead .sub {
+    font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500;
+    font-size: 9.5pt; margin-top: 1.2mm;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  /* ================= COLUMN GRID ================= */
+  .cols {
+    flex: 1 1 auto; min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    gap: 0 4mm;
+    border-top: .25mm solid #1a1712;
+    padding-top: 2mm; margin-top: 2mm;
+    overflow: hidden;
+  }
+  .col { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .col + .col { border-left: .2mm solid #b9b09a; padding-left: 4mm; }
+
+  section { overflow: hidden; flex: 0 0 auto; }
+  section h3 {
+    font-family: 'Playfair Display', serif; font-weight: 700;
+    font-size: 9pt; text-transform: uppercase; letter-spacing: .4mm;
+    border-bottom: .25mm solid #1a1712; padding-bottom: .8mm; margin-bottom: 1.4mm;
+  }
+  section p { text-align: justify; hyphens: auto; }
+  .clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+  .clamp6 { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+  .story-head {
+    font-family:'Playfair Display', serif; font-weight:700; font-size:10.5pt; line-height:1.1;
+    margin-bottom:1mm;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  /* fixed section heights — the budget that guarantees one page */
+  .s-news1     { height: 58mm; }
+  .s-news2     { height: 46mm; margin-top: 3mm; }
+  .s-prices    { height: 74mm; margin-top: 3mm; }
+  .s-onthisday { height: 60mm; }
+  .s-message   { height: 58mm; margin-top: 3mm; }
+  .s-birthdays { height: 60mm; margin-top: 3mm; }
+  .s-charts    { height: 52mm; }
+  .s-weather   { height: 26mm; margin-top: 3mm; }
+  .s-horoscope { height: 38mm; margin-top: 3mm; }
+  .s-sport     { height: 34mm; margin-top: 3mm; }
+  .s-moon      { height: 22mm; margin-top: 3mm; }
+
+  /* tables & lists */
+  .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
+  .datatable td { padding: .6mm 0; border-bottom: .15mm dotted #b9b09a; vertical-align: top; }
+  .datatable td:last-child { text-align: right; white-space: nowrap; }
+  ol.chart { list-style: none; counter-reset: c; }
+  ol.chart li { counter-increment: c; padding: .7mm 0; border-bottom: .15mm dotted #b9b09a;
+    display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+  ol.chart li::before { content: counter(c) ". "; font-weight: 600; }
+  ol.chart .artist { font-style: italic; }
+
+  /* the personal message centerpiece */
+  .s-message .box {
+    border: .5mm double #1a1712; height: calc(100% - 5mm);
+    padding: 2.5mm; text-align: center;
+    display: flex; flex-direction: column; justify-content: center; gap: 1.5mm;
+    background: #fbf8ef;
+  }
+  .s-message .to { font-family:'Playfair Display', serif; font-size: 11pt; font-weight: 700; }
+  .s-message .msg { font-style: italic; font-size: 9pt;
+    display:-webkit-box; -webkit-line-clamp:7; -webkit-box-orient:vertical; overflow:hidden; }
+  .s-message .from { font-size: 8.5pt; }
+
+  .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
+  .bday b { font-weight: 600; }
+  .bday .desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+  .moonrow { display: flex; align-items: center; gap: 2.5mm; }
+  .moonrow .glyph { font-size: 16pt; line-height: 1; }
+  .agecount { margin-top: 1.5mm; font-family:'Playfair Display', serif; font-weight: 700; font-size: 9.5pt; }
+
+  /* ================= FOOTER ================= */
+  .foot {
+    height: 7mm; flex: 0 0 auto;
+    border-top: .6mm solid #1a1712;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 7pt; letter-spacing: .3mm; text-transform: uppercase; margin-top: 2mm;
+  }
 </style>
 </head>
 <body>
-<div id="wrap"><div id="star"><div class="outer-border">
 
-<!-- MASTHEAD -->
-<div class="mh">
-  <div class="mh-centre">
-    <div class="mh-pre">★ &nbsp; Your Day. Your Story. &nbsp; ★</div>
-    <div class="mh-title">The Tribute Times</div>
-    <div class="mh-established-line">${establishedLine}</div>
-    <div class="mh-rule-dbl">AI generated ${occasion.toLowerCase()} keepsake for commemorative purposes &nbsp;·&nbsp; © The Tribute Times</div>
+<div id="wrap">
+  <div id="star">
+    <div class="sheet">
+
+  <header class="masthead">
+    <h1>The Tribute Times</h1>
+    <div class="est">A Personal Record of a Most Remarkable Day &bull; Est. for One Reader Only</div>
+  </header>
+
+  <div class="dateline">
+    <span data-field="dateline-day">${dateLong}</span>
+    <span data-field="dateline-edition">Keepsake Edition &mdash; No. 1 of 1</span>
+    <span data-field="dateline-price">Price: Priceless</span>
   </div>
-</div>
 
-<!-- EDITION BAR -->
-<div class="ebar">
-  <span>Special Edition</span>
-  <span class="ebar-date">${day}${ordinal(day)} ${monthName(month)}</span>
-  <span>Priceless</span>
-</div>
-
-<!-- NAMEPLATE -->
-<div class="nameplate" style="display:grid;grid-template-columns:1fr 136px;align-items:center;">
-  <div style="padding:5px 8px;text-align:center;">
-    <div class="np-extra">✦ &nbsp; ${bannerText} &nbsp; ✦</div>
-    <div class="np-name">${recipientName}</div>
-    <div class="np-sub">${titleCase(dateIntro || 'born on')} ${dateFormatted} &nbsp;·&nbsp; ${edition === 'radio' ? `With Love From ${stationName}` : edition === 'florist' ? `A Gift From ${senderName}` : `A Gift From ${senderName}`}</div>
+  <div class="lead">
+    <h2 data-field="lead-headline">A Star Arrives: The World Gains Its Most Important New Resident While History Carries On Around ${recipientName} Completely Unaware of What It Has Just Been Given</h2>
+    <div class="sub" data-field="lead-subhead">Born on ${dateFormatted} in ${country} — full report from the day everything changed</div>
   </div>
-  <div style="border-left:1px solid #333;padding:3px;background:#fffdf5;align-self:stretch;display:flex;align-items:center;">
-    ${astroPanel}
-  </div>
-</div>
 
-<!-- INFO BAR -->
-<div class="info-bar">
-  <div class="info-cell">
-    <div class="info-cell-title">Weather · ${country} · ${monthAbbr(month)} ${year}</div>
-    <div class="wx-row">
-      <div class="wx-icon">${weather.icon}</div>
-      <div>
-        <div style="display:flex;align-items:baseline;gap:2px;"><div class="wx-temp">${weather.temp}</div><div class="wx-unit">°C</div></div>
-        <div class="wx-cond">${weather.condition} · ${weather.season}</div>
-      </div>
+  <div class="cols">
+
+    <!-- ============ COLUMN 1 ============ -->
+    <div class="col">
+      <section class="s-news1">
+        <h3>News of the Day</h3>
+        <div class="story-head" data-field="news1-head">${worldNews[0]?.headline || ''}</div>
+        <p class="clamp6" data-field="news1-body">${worldNews[0]?.body || ''}</p>
+      </section>
+      <section class="s-news2">
+        <div class="story-head" data-field="news2-head">${localNews[0]?.headline || ''}</div>
+        <p class="clamp6" data-field="news2-body">${localNews[0]?.body || ''}</p>
+      </section>
+      <section class="s-prices">
+        <h3>Cost of Living, <span data-field="prices-year">${year}</span></h3>
+        <table class="datatable" data-field="prices-table">
+          ${pricesHTML}
+        </table>
+      </section>
     </div>
-  </div>
-  <div class="info-bar-divider"></div>
-  <div class="info-cell">
-    <div class="info-cell-title">${chart.label} · ${year}</div>
-    <div class="info-cell-body">
-      <b>#1 ${chart.entries[0].title}</b> — ${chart.entries[0].artist}<br/>
-      #2 ${chart.entries[1].title} — ${chart.entries[1].artist}<br/>
-      #3 ${chart.entries[2].title} — ${chart.entries[2].artist}<br/>
-      #4 ${chart.entries[3].title} — ${chart.entries[3].artist}<br/>
-      #5 ${chart.entries[4].title} — ${chart.entries[4].artist}
+
+    <!-- ============ COLUMN 2 (CENTRE) ============ -->
+    <div class="col">
+      <section class="s-onthisday">
+        <h3>Also On This Day</h3>
+        <p class="clamp4" data-field="otd-1">${otd1Text}</p>
+        <p class="clamp4" data-field="otd-2" style="margin-top:1.5mm">${otd2Text}</p>
+        <p class="clamp3" data-field="otd-3" style="margin-top:1.5mm">${otd3Text}</p>
+      </section>
+      <section class="s-message">
+        <div class="box">
+          <div class="to" data-field="msg-to">For ${recipientName}</div>
+          <div class="msg" data-field="msg-body">&ldquo;${message}&rdquo;</div>
+          <div class="from" data-field="msg-from">&mdash; With all our love, ${senderName}</div>
+        </div>
+      </section>
+      <section class="s-birthdays">
+        <h3>Born On This Day</h3>
+        ${birthdaysHTML}
+      </section>
     </div>
-  </div>
-  <div class="info-bar-divider"></div>
-  <div class="info-cell">
-    <div class="info-cell-title">Cost of Living · ${year} · ${country}</div>
-    <div class="info-cell-body">
-      ${prices.items.map(p => `${p.label}: <b>${p.value}</b>`).join('<br/>')}
+
+    <!-- ============ COLUMN 3 ============ -->
+    <div class="col">
+      <section class="s-charts">
+        <h3>Top of the Charts</h3>
+        <ol class="chart" data-field="charts">
+          ${chartsHTML}
+        </ol>
+      </section>
+      <section class="s-weather">
+        <h3>The Weather</h3>
+        <p class="clamp3" data-field="weather">${weatherText}</p>
+      </section>
+      <section class="s-horoscope">
+        <h3>Your Stars &mdash; <span data-field="starsign">${astro.starSign.name}</span></h3>
+        <p class="clamp6" data-field="horoscope">${getVintageHoroscope(astro.starSign.name)}</p>
+      </section>
+      <section class="s-sport">
+        <h3>Sporting News</h3>
+        <p class="clamp6" data-field="sport">${sportText}</p>
+      </section>
+      <section class="s-moon">
+        <h3>The Night Sky</h3>
+        <div class="moonrow">
+          <span data-field="moon-phase">The moon that night: ${astro.moonPhase.name || 'Clear'}, ${astro.moonPhase.illumination || '100%'} illuminated</span>
+        </div>
+        <div class="agecount" data-field="days-old">${daysOldStr}</div>
+      </section>
     </div>
+
+  </div>
+
+  <footer class="foot">
+    <span>The Tribute Times &mdash; tributetimes.co.nz</span>
+    <span data-field="foot-code">Keepsake Ref: TT-${Math.floor(1000 + Math.random() * 9000)}</span>
+  </footer>
+
   </div>
 </div>
-
-<!-- TICKER -->
-<div class="ticker">
-  <div class="tlabel">Markets · ${monthAbbr(month)} ${year}</div>
-  <div class="titems">${tickerHTML}</div>
 </div>
 
-<!-- DATE INTRO -->
-<div class="date-intro">Here are some news stories from your special day &nbsp;(${day}${ordinal(day)} ${monthName(month)}).</div>
-
-<!-- BODY ROW 1 -->
-<div class="r1">
-
-  <div class="r1-left">
-    <div class="col-hdr">${country}</div>
-    ${localNewsHTML}
-  </div>
-
-  <div class="r1-centre">
-    <div class="extra-headline">✦ &nbsp; Extra &nbsp; Extra &nbsp; Latest &nbsp; News &nbsp; ✦</div>
-    <div class="hed-banner">World News — On This Day</div>
-    ${worldNewsHTML}
-  </div>
-
-  <div class="r1-right">
-    <div class="col-hdr">Sport — On This Day</div>
-    ${sportHTML}
-  </div>
-
-</div>
-
-<!-- BODY ROW 2 -->
-<div class="r2">
-
-  <div class="r2-col">
-    <div class="col-hdr">Business</div>
-    ${businessHTML}
-  </div>
-
-  <div class="r2-col">
-    <div class="col-hdr">The World in Numbers · ${year}</div>
-    ${numbersHTML}
-  </div>
-
-  <div class="r2-col">
-    <div class="col-hdr">What Were They Reading · ${year}</div>
-    ${booksHTML}
-  </div>
-
-  <div class="r2-col">
-    <div class="col-hdr">At the Cinema · ${year}</div>
-    ${cinemaHTML}
-  </div>
-
-</div>
-
-<!-- BOTTOM DATA ROW -->
-<div class="r3">
-  <div class="r3-col">
-    <div class="data-hdr">${chart.label} · ${year}</div>
-    ${chartHTML}
-  </div>
-  <div class="r3-div"></div>
-  <div class="r3-col">
-    <div class="data-hdr">Prices in ${year} · ${country}</div>
-    ${pricesHTML}
-  </div>
-  <div class="r3-div"></div>
-  <div class="r3-col">
-    <div class="data-hdr">Also Born on ${day}${ordinal(day)} ${monthName(month)}</div>
-    ${birthdaysHTML}
-  </div>
-</div>
-
-<!-- SIGNATURE -->
-${sigHTML}
-
-<!-- CLOSER -->
-<div class="closer">
-  <div class="closer-text">✦ &nbsp; You are part of something much bigger. &nbsp; ✦</div>
-</div>
-
-</div></div></div>
-
-<script>
-(function(){
-  var s=document.getElementById('star'),w=document.getElementById('wrap');
-  if(!s||!w)return;
-  var a=w.clientWidth-16,pw=s.scrollWidth;
-  if(pw>a){s.style.transform='scale('+(a/pw)+')';s.style.marginBottom='-'+Math.round(pw*(1-(a/pw)))+'px';}
-})();
-</script>
 </body>
 </html>`;
-}
-
-// ── HELPERS ──
-
-function renderMoonSVG(phase) {
-  const phases = {
-    'New Moon':        'M16,2 A14,14 0 1,0 16,30 A14,14 0 1,0 16,2 Z',
-    'Waxing Crescent': 'M16,2 A14,14 0 0,1 16,30 A6,14 0 0,0 16,2 Z',
-    'First Quarter':   'M16,2 A14,14 0 0,1 16,30 L16,2 Z',
-    'Waxing Gibbous':  'M16,2 A14,14 0 0,1 16,30 A4,14 0 0,1 16,2 Z',
-    'Full Moon':       null,
-    'Waning Gibbous':  'M16,2 A14,14 0 0,0 16,30 A4,14 0 0,0 16,2 Z',
-    'Last Quarter':    'M16,2 A14,14 0 0,0 16,30 L16,2 Z',
-    'Waning Crescent': 'M16,2 A14,14 0 0,0 16,30 A6,14 0 0,1 16,2 Z',
-  };
-  const shadow = phases[phase];
-  return `<svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:2px;">
-    <circle cx="16" cy="16" r="14" fill="${phase === 'New Moon' ? '#333' : '#e8e0c8'}" stroke="#111" stroke-width="1.5"/>
-    ${shadow ? `<path d="${shadow}" fill="#333"/>` : ''}
-    <circle cx="16" cy="16" r="14" fill="none" stroke="#111" stroke-width="1.5"/>
-  </svg>`;
-}
-
-function getZodiacEmoji(animal) {
-  const map = {Monkey:'🐒',Rooster:'🐓',Dog:'🐕',Pig:'🐖',Rat:'🐀',Ox:'🐂',
-                Tiger:'🐯',Rabbit:'🐰',Dragon:'🐉',Snake:'🐍',Horse:'🐴',Goat:'🐐'};
-  return map[animal] || '🌟';
-}
-
-function monthName(month) {
-  return ['January','February','March','April','May','June',
-          'July','August','September','October','November','December'][month-1];
-}
-
-function monthAbbr(month) {
-  return ['Jan','Feb','Mar','Apr','May','Jun',
-          'Jul','Aug','Sep','Oct','Nov','Dec'][month-1];
-}
-
-function ordinal(n) {
-  const s = ['th','st','nd','rd'];
-  const v = n % 100;
-  return s[(v-20)%10]||s[v]||s[0];
-}
-
-function getFontFaces(fonts) {
-  return `
-@font-face{font-family:'Chomsky';src:url('data:font/otf;base64,${fonts.chomsky}') format('opentype');}
-@font-face{font-family:'PB';src:url('data:font/ttf;base64,${fonts.poppinsB}') format('truetype');font-weight:700;}
-@font-face{font-family:'PR';src:url('data:font/ttf;base64,${fonts.poppinsR}') format('truetype');font-weight:400;}
-@font-face{font-family:'DJ';src:url('data:font/ttf;base64,${fonts.dejaVu}') format('truetype');font-weight:400;font-style:normal;}
-@font-face{font-family:'DJ';src:url('data:font/ttf;base64,${fonts.dejaVuB}') format('truetype');font-weight:700;font-style:normal;}
-@font-face{font-family:'DJ';src:url('data:font/ttf;base64,${fonts.dejaVuI}') format('truetype');font-weight:400;font-style:italic;}`;
-}
-
-function getStyles() {
-  // Copied from tribute-times-v2/design-reference.html <style> block,
-  // excluding the six @font-face rules (those come from getFontFaces() above).
-  return `
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:#888;display:flex;flex-direction:column;align-items:center;padding:20px 12px 60px;}
-.note{font-family:'PR',sans-serif;font-size:0.65rem;letter-spacing:0.2em;color:#ddd;margin-bottom:14px;text-align:center;text-transform:uppercase;}
-#wrap{width:100%;display:flex;justify-content:center;}
-#star{
-  background:#fffdf5;
-  color:#111;
-  width:210mm;
-  flex-shrink:0;
-  transform-origin:top center;
-  border:3px double #111;
-  box-shadow:0 8px 40px rgba(0,0,0,0.5);
-  font-family:'DJ',serif;
-  padding:0;
-}
-
-/* ══ ORNATE BORDER ══ */
-.outer-border{
-  border:1.5px solid #111;
-  margin:4px;
-  padding:0;
-}
-
-/* ══ MASTHEAD ══ */
-.mh{
-  border-bottom:3px double #111;
-  padding:6px 8px 4px;
-  text-align:center;
-  background:#fffdf5;
-  position:relative;
-}
-.mh-pre{
-  font-family:'PB',sans-serif;
-  font-size:7pt;letter-spacing:5px;
-  text-transform:uppercase;color:#555;
-  margin-bottom:2px;
-}
-.mh-title{
-  font-family:'Chomsky',serif;
-  font-size:62px;
-  line-height:0.88;
-  color:#111;
-  letter-spacing:2px;
-}
-.mh-established-line{
-  font-family:'PR',sans-serif;
-  font-size:4.5pt;
-  line-height:1;
-  color:#777;
-  letter-spacing:0.6px;
-  margin-top:1px;
-}
-.mh-rule-dbl{
-  border-top:3px double #111;
-  border-bottom:1px solid #111;
-  padding:2px 0;
-  margin:4px 0;
-  font-family:'PR',sans-serif;
-  font-size:4pt;color:#888;
-  letter-spacing:0.5px;
-  text-align:center;
-}
-.mh-logos{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:0 6px;
-  margin-top:3px;
-}
-.mh-logo-box{
-  border:1px solid #ccc;
-  padding:4px 6px;
-  text-align:center;
-  min-width:80px;
-}
-.mh-logo-label{font-family:'PR',sans-serif;font-size:5pt;color:#888;text-transform:uppercase;letter-spacing:0.1em;}
-.mh-logo-name{font-family:'PB',sans-serif;font-size:7pt;color:#111;line-height:1.2;}
-.mh-logo-sub{font-family:'PR',sans-serif;font-size:4.5pt;color:#888;}
-
-/* ══ EDITION BAR ══ */
-.ebar{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:2px 8px;
-  border-bottom:2px solid #111;
-  border-top:2px solid #111;
-  font-family:'PB',sans-serif;
-  font-size:6.5pt;letter-spacing:0.5px;
-  background:#111;color:#fffdf5;
-}
-
-/* ══ NAMEPLATE ══ */
-.nameplate{
-  text-align:center;
-  padding:5px 8px;
-  border-bottom:3px double #111;
-  background:#fffdf5;
-}
-.np-extra{
-  font-family:'PB',sans-serif;
-  font-size:7pt;letter-spacing:4px;
-  text-transform:uppercase;color:#555;
-  margin-bottom:2px;
-}
-.np-name{
-  font-family:'Chomsky',serif;
-  font-size:2rem;
-  line-height:1;color:#111;
-}
-.np-sub{
-  font-family:'PR',sans-serif;
-  font-size:5pt;letter-spacing:0.3em;
-  color:#888;margin-top:2px;
-}
-
-/* ══ INFO BAR ══ */
-.info-bar{
-  display:grid;grid-template-columns:1fr 2px 1fr 2px 1fr;
-  border-bottom:2px solid #111;
-}
-.info-bar-divider{background:#111;}
-.info-cell{padding:4px 7px;}
-.info-cell-title{
-  font-family:'PB',sans-serif;font-size:5.5pt;
-  letter-spacing:0.5px;text-transform:uppercase;
-  border-bottom:0.5px solid #111;padding-bottom:1px;margin-bottom:2px;
-}
-.info-cell-body{font-family:'DJ',serif;font-size:5.5pt;color:#333;line-height:1.6;}
-.info-cell-body b{font-weight:700;color:#111;}
-.wx-row{display:flex;align-items:center;gap:4px;}
-.wx-icon{font-size:1.4rem;line-height:1;}
-.wx-temp{font-family:'PB',sans-serif;font-size:16pt;color:#111;line-height:1;}
-.wx-unit{font-family:'PR',sans-serif;font-size:7pt;color:#666;}
-.wx-cond{font-family:'DJ',serif;font-size:5pt;color:#555;margin-top:1px;font-style:italic;}
-
-/* ══ TICKER ══ */
-.ticker{
-  background:#111;color:#fffdf5;
-  padding:3px 8px;
-  border-bottom:1px solid #111;
-  display:flex;align-items:center;
-  white-space:nowrap;overflow:hidden;
-}
-.tlabel{font-family:'PB',sans-serif;font-size:5.5pt;letter-spacing:1.5px;text-transform:uppercase;color:#c8a020;margin-right:10px;flex-shrink:0;border-right:1px solid #444;padding-right:10px;}
-.titems{display:flex;flex:1;overflow:hidden;}
-.tick{display:flex;align-items:center;gap:3px;padding:0 8px;border-right:1px solid #333;}
-.tick:last-child{border-right:none;}
-.tn{color:#aaa;font-size:5pt;font-family:'PR',sans-serif;}
-.tv{color:#fffdf5;font-family:'PB',sans-serif;font-size:6pt;}
-.tu{color:#90ee90;}
-.td{color:#ff9090;}
-
-/* ══ DATE INTRO ══ */
-.date-intro{
-  text-align:center;
-  padding:3px 8px;
-  border-bottom:1px solid #111;
-  font-family:'DJ',serif;font-style:italic;
-  font-size:8pt;color:#444;
-}
-
-/* ══ MAIN BODY — genuine mosaic layout ══ */
-.body-wrap{padding:0 0;}
-
-/* Row 1: Left narrow + Centre wide lead + Right narrow */
-.r1{display:grid;grid-template-columns:38mm 1fr 38mm;border-bottom:2px solid #111;min-height:120mm;}
-.r1-left{border-right:1.5px solid #111;padding:6px;}
-.r1-centre{border-right:1.5px solid #111;padding:6px 8px;}
-.r1-right{padding:6px;}
-
-/* Row 2: Four unequal columns */
-.r2{display:grid;grid-template-columns:1fr 1.4fr 1fr 0.8fr;border-bottom:2px solid #111;}
-.r2-col{padding:6px 7px;border-right:1px solid #ccc;}
-.r2-col:last-child{border-right:none;}
-
-/* Row 3: Bottom data strip */
-.r3{display:grid;grid-template-columns:1fr 2px 1fr 2px 1fr;border-bottom:2px solid #111;}
-.r3-div{background:#111;}
-.r3-col{padding:5px 7px;}
-
-/* ══ TYPOGRAPHY ══ */
-.col-hdr{
-  font-family:'PB',sans-serif;font-size:6pt;
-  letter-spacing:1.5px;text-transform:uppercase;
-  border-bottom:2px solid #111;
-  padding-bottom:2px;margin-bottom:5px;
-  text-align:center;
-}
-.yr{
-  font-family:'PB',sans-serif;font-size:5pt;
-  color:#fffdf5;background:#111;
-  display:inline-block;padding:1px 4px;
-  margin-bottom:2px;letter-spacing:0.3px;
-}
-.extra-headline{
-  font-family:'PB',sans-serif;
-  font-size:7pt;letter-spacing:4px;
-  text-transform:uppercase;color:#555;
-  text-align:center;margin-bottom:2px;
-}
-.hed-banner{
-  font-family:'PB',sans-serif;
-  font-size:6pt;letter-spacing:3px;
-  text-transform:uppercase;
-  border-top:1px solid #111;border-bottom:1px solid #111;
-  padding:2px 0;text-align:center;
-  color:#111;margin-bottom:4px;
-}
-/* Drop cap */
-.drop-cap::first-letter{
-  font-family:'Chomsky',serif;
-  font-size:3.2rem;
-  float:left;
-  line-height:0.75;
-  margin-right:3px;
-  margin-top:2px;
-  color:#111;
-}
-.hed-xl{font-family:'Chomsky',serif;font-size:28pt;color:#111;line-height:0.95;margin-bottom:3px;}
-.hed-lg{font-family:'PB',sans-serif;font-size:11pt;color:#111;line-height:1.1;margin-bottom:3px;}
-.hed-lg-chomsky{font-family:'Chomsky',serif;font-size:14pt;color:#111;line-height:1.05;margin-bottom:3px;}
-.hed-md{font-family:'PB',sans-serif;font-size:8.5pt;color:#111;line-height:1.15;margin-bottom:2px;}
-.hed-sm{font-family:'PB',sans-serif;font-size:7pt;color:#111;line-height:1.2;margin-bottom:2px;}
-.hed-xs{font-family:'PB',sans-serif;font-size:5.5pt;color:#111;line-height:1.2;margin-bottom:1px;}
-.deck{font-family:'DJ',serif;font-style:italic;font-size:7pt;color:#555;margin-bottom:3px;line-height:1.3;}
-.byline{font-family:'PR',sans-serif;font-size:4.5pt;letter-spacing:0.2em;color:#999;text-transform:uppercase;margin-bottom:4px;}
-.copy{font-family:'DJ',serif;font-size:6pt;color:#222;line-height:1.7;text-align:justify;}
-.copy+.copy{margin-top:4px;}
-.copy-sm{font-family:'DJ',serif;font-size:5.5pt;color:#333;line-height:1.65;text-align:justify;}
-.story-rule{border-top:1px solid #bbb;margin:5px 0;}
-.story-rule-thick{border-top:2px solid #111;margin:5px 0;}
-.story-rule-dbl{border-top:3px double #111;margin:5px 0;}
-
-/* Left column mini-items */
-.mini-item{margin-bottom:6px;padding-bottom:6px;border-bottom:0.5px solid #ccc;}
-.mini-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
-.mini-label{font-family:'PB',sans-serif;font-size:5pt;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:1px;}
-
-/* ── Right column boxes ── */
-.right-box{
-  border:1px solid #111;
-  padding:5px;
-  margin-bottom:6px;
-}
-.right-box:last-child{margin-bottom:0;}
-.right-box-hdr{
-  background:#111;color:#fffdf5;
-  font-family:'PB',sans-serif;font-size:5.5pt;
-  letter-spacing:1px;text-transform:uppercase;
-  padding:2px 4px;margin:-5px -5px 4px;
-  text-align:center;
-}
-
-.r1-right .right-box{
-  border:none;
-  border-bottom:1px solid #111;
-  padding:0 0 5px;
-  margin-bottom:5px;
-}
-.r1-right .right-box:last-child{
-  border-bottom:none;
-}
-.r1-right .right-box-hdr,
-.r1-right .byline,
-.r1-right .copy-sm{
-  display:none;
-}
-.r1-right .hed-sm{
-  font-size:7.5pt;
-  line-height:1.18;
-  margin-bottom:0;
-}
-
-/* ── Lead story 2-col internal ── */
-.lead-2col{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:0;column-gap:8px;
-}
-.lead-col-rule{border-left:0.5px solid #ccc;padding-left:8px;}
-
-/* ── Centre mid-rule ── */
-.centre-rule{
-  border-top:3px double #111;
-  margin:6px 0 4px;
-}
-
-/* Signature */
-.sig{display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px;align-items:end;padding:5px 8px 4px;border-bottom:1px solid #ccc;}
-.sblock{text-align:center;}
-.sline{border-bottom:1px solid #111;height:18px;}
-.slbl{font-family:'PR',sans-serif;font-size:4.5pt;letter-spacing:0.2em;color:#bbb;margin-top:1px;text-transform:uppercase;}
-.smsg{font-family:'DJ',serif;font-style:italic;font-size:6pt;color:#555;line-height:1.5;text-align:center;}
-
-/* Closer */
-.closer{text-align:center;padding:4px 8px;border-top:1px solid #ccc;}
-.closer-text{font-family:'DJ',serif;font-style:italic;font-size:6.5pt;color:#888;letter-spacing:1px;}
-
-/* Chart / prices / bdays in ad-like boxes */
-.data-hdr{
-  font-family:'PB',sans-serif;font-size:6pt;letter-spacing:1px;
-  text-transform:uppercase;text-align:center;
-  border-bottom:2px solid #111;border-top:2px solid #111;
-  padding:2px 0;margin-bottom:4px;
-}
-.chart-row{display:flex;align-items:baseline;gap:4px;border-bottom:0.5px dotted #ccc;padding:1.5px 0;}
-.chart-row:last-child{border-bottom:none;}
-.cnum{font-family:'PB',sans-serif;font-size:8pt;color:#111;width:12px;flex-shrink:0;}
-.ctit{font-family:'PB',sans-serif;font-size:6pt;color:#111;}
-.cart{font-family:'DJ',serif;font-style:italic;font-size:5pt;color:#666;}
-.prow{display:flex;justify-content:space-between;border-bottom:0.5px dotted #ccc;padding:1.5px 0;}
-.pitem{font-family:'DJ',serif;font-size:5.5pt;color:#444;}
-.pval{font-family:'PB',sans-serif;font-size:5.5pt;color:#111;}
-.fitem{border-bottom:0.5px dotted #ccc;padding:2px 0;}
-.fitem:last-child{border-bottom:none;}
-.fname{font-family:'PB',sans-serif;font-size:6pt;color:#111;}
-.fnote{font-family:'DJ',serif;font-style:italic;font-size:4.5pt;color:#666;line-height:1.4;}
-
-@media print{
-  body{background:white;padding:0;}
-  .note{display:none;}
-  #star{box-shadow:none;width:210mm;transform:none!important;margin-bottom:0!important;}
-}
-`;
 }
 
 module.exports = { renderNewspaper };

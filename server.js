@@ -237,6 +237,60 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Get list of active radio stations / station managers for public dropdown
+app.get('/api/public/stations', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('stations')
+      .select('id, name')
+      .eq('active', true)
+      .eq('account_type', 'radio');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('List stations error:', err);
+    res.status(500).json({ error: 'Failed to load stations' });
+  }
+});
+
+// Send email inquiry to a specific station manager
+app.post('/api/public/stations/inquiry', async (req, res) => {
+  const { stationId, senderName, senderEmail, message } = req.body;
+  if (!stationId || !senderName || !senderEmail || !message) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+  try {
+    const { data: station, error } = await supabase
+      .from('stations')
+      .select('name, email')
+      .eq('id', stationId)
+      .single();
+    if (error || !station) {
+      return res.status(404).json({ error: 'Station manager not found' });
+    }
+
+    await sendEmail({
+      to: station.email,
+      subject: `New Station Inquiry from ${senderName}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #8b1010; margin-top: 0;">New Listener Inquiry</h2>
+          <p>You have received a new message regarding your Tribute Times station edition:</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p><strong>From:</strong> ${senderName} (${senderEmail})</p>
+          <p><strong>Message:</strong></p>
+          <p style="background: #f7fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #8b1010; white-space: pre-wrap;">${message}</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Inquiry sent successfully' });
+  } catch (err) {
+    console.error('Send inquiry error:', err);
+    res.status(500).json({ error: 'Failed to send inquiry' });
+  }
+});
+
 // DJ login
 app.post('/api/auth/dj-login', async (req, res) => {
   const { email, password } = req.body;
@@ -263,6 +317,52 @@ app.post('/api/auth/dj-login', async (req, res) => {
   } catch (err) {
     console.error('DJ login error:', err);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Update password for Florist / Station Managers
+app.post('/api/auth/update-password', authStation, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Old password and new password are required' });
+  }
+  try {
+    const { data: station } = await supabase.from('stations').select('*').eq('id', req.station.id).single();
+    if (!station) return res.status(404).json({ error: 'Account not found' });
+
+    const valid = await bcrypt.compare(oldPassword, station.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Incorrect current password' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('stations').update({ password_hash: newHash }).eq('id', station.id);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Update password error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// Update password for DJs
+app.post('/api/auth/dj/update-password', authDJ, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Old password and new password are required' });
+  }
+  try {
+    const { data: dj } = await supabase.from('djs').select('*').eq('id', req.dj.id).single();
+    if (!dj) return res.status(404).json({ error: 'Account not found' });
+
+    const valid = await bcrypt.compare(oldPassword, dj.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Incorrect current password' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('djs').update({ password_hash: newHash }).eq('id', dj.id);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Update DJ password error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
   }
 });
 
@@ -534,8 +634,12 @@ function sendEditionTemplate(res, edition) {
   res.send(template.replace('{{EDITION}}', edition));
 }
 
-app.get(['/', '/radio', '/florist', '/public'], (req, res) => {
-  const edition = req.path === '/' ? 'public' : req.path.replace('/', '');
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/landing.html'));
+});
+
+app.get(['/radio', '/florist', '/public'], (req, res) => {
+  const edition = req.path.replace('/', '');
   sendEditionTemplate(res, edition);
 });
 
