@@ -747,6 +747,131 @@ body {
 .footer-bottom-links a:hover { color: #ffffff; }
 
 /* ════════════════════════════════════════
+   PRICING SECTION
+   ════════════════════════════════════════ */
+.pricing-section {
+  margin-bottom: 90px;
+}
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.pricing-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: all 0.2s;
+}
+.pricing-card:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-4px);
+}
+.pricing-card.popular {
+  border-color: var(--accent-red);
+  background: rgba(139, 16, 16, 0.08);
+}
+.pricing-card.popular:hover {
+  background: rgba(139, 16, 16, 0.12);
+  border-color: var(--accent-red-hover);
+}
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-red);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+.tier-title {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+.tier-description {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.tier-price-val {
+  font-family: var(--font-sans);
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.price-currency {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.tier-features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.tier-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  text-align: left;
+}
+.tier-feature-check {
+  color: #ff6b6b;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+.btn-tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 14px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  width: 100%;
+}
+.btn-tier:hover {
+  background: rgba(255,255,255,0.08);
+}
+.pricing-card.popular .btn-tier {
+  background: var(--accent-red);
+  border: none;
+  box-shadow: 0 4px 12px rgba(139, 16, 16, 0.3);
+}
+.pricing-card.popular .btn-tier:hover {
+  background: var(--accent-red-hover);
+}
+
+/* ════════════════════════════════════════
    RESPONSIVE DESIGN (PWA MOBILE)
    ════════════════════════════════════════ */
 @media (max-width: 992px) {
@@ -763,6 +888,7 @@ body {
   .cta-banner { flex-direction: column; text-align: center; }
   .cta-banner-left { flex-direction: column; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
+  .pricing-grid { grid-template-columns: 1fr; gap: 24px; }
 }
 
 @media (max-width: 680px) {
@@ -912,6 +1038,65 @@ body {
     <div class="hero-visual">
       <div class="hero-img-wrap">
         <img src="/feature_keepsake_desk.png" alt="Handcrafted vintage newspaper keepsake" class="hero-img" />
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING SECTION -->
+  <section class="pricing-section">
+    <div class="section-header">
+      <div class="section-eyebrow">CHOOSE YOUR EDITION</div>
+      <h2 class="section-h2">Simple, Transparent Pricing</h2>
+    </div>
+
+    <div class="pricing-grid">
+      <!-- Digital Edition -->
+      <div class="pricing-card">
+        <div>
+          <h3 class="tier-title">Digital Edition</h3>
+          <p class="tier-description">Perfect for instant gifts, remote sharing, and self-printing.</p>
+          <div class="tier-price-val"><span class="price-currency">NZ$</span>14.95</div>
+          <ul class="tier-features-list">
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> High-resolution digital PDF download</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Locked A4 single-page template geometry</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Complete historical data (news, charts, weather)</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Personal dedication space in the center</li>
+          </ul>
+        </div>
+        <a href="/public?tier=digital" class="btn-tier">Get Digital Edition</a>
+      </div>
+
+      <!-- Standard Edition -->
+      <div class="pricing-card popular">
+        <div class="popular-badge">Most Popular</div>
+        <div>
+          <h3 class="tier-title">Standard Edition</h3>
+          <p class="tier-description">Our signature physical keepsake, printed on authentic premium paper.</p>
+          <div class="tier-price-val"><span class="price-currency">NZ$</span>24.95</div>
+          <ul class="tier-features-list">
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> High-resolution digital PDF copy included</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Printed on premium vintage-toned paper</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Local printing & flat-lay safe packaging</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Hand-packed & dispatched across New Zealand</li>
+          </ul>
+        </div>
+        <a href="/public?tier=standard" class="btn-tier">Get Standard Edition</a>
+      </div>
+
+      <!-- Premium Edition -->
+      <div class="pricing-card">
+        <div>
+          <h3 class="tier-title">Premium Edition</h3>
+          <p class="tier-description">The ultimate commemorative package with textured linen presentation.</p>
+          <div class="tier-price-val"><span class="price-currency">NZ$</span>34.95</div>
+          <ul class="tier-features-list">
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Digital PDF and standard print included</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Printed on heavy linen textured stock</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Hand-stamped custom serial number</li>
+            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Priority local NZ packaging & express dispatch</li>
+          </ul>
+        </div>
+        <a href="/public?tier=premium" class="btn-tier">Get Premium Edition</a>
       </div>
     </div>
   </section>
