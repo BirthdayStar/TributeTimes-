@@ -183,14 +183,40 @@
       padding: 0;
     }
 
-    /* ── AUTH STAGE (LOGIN VIEW) ── */
+    /* ── AUTH STAGE (LOGIN VIEW) ──
+       Matches the dark-crimson gradient + centered white-card pattern used
+       on every other portal's sign-in screen (public/florist/radio/station). */
+    body:not(.logged-in) {
+      background: radial-gradient(circle at top right, #381212, #180d0b 60%);
+      background-attachment: fixed;
+    }
+    .hero {
+      text-align: center;
+      padding: 56px 20px 12px;
+    }
+    body.logged-in .hero { display: none; }
+    .hero-inner { max-width: 480px; margin: 0 auto; }
+    .hero .header-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    .hero .header-sub {
+      font-size: 0.72rem;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 8px;
+      font-weight: 600;
+    }
     .auth-stage {
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
+      min-height: 60vh;
       padding: 20px;
-      background: #f2ece2;
     }
     body.logged-in .auth-stage { display: none; }
     .auth-card {
@@ -205,6 +231,14 @@
     .auth-card-head {
       padding: 28px 28px 18px;
       border-bottom: 1px solid #ece5db;
+    }
+    .auth-card-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
     }
     .auth-card-head h2 {
       margin: 0;
@@ -705,11 +739,8 @@
     <!-- Hero — visible only on login screen -->
     <div class="hero" id="hero-block">
       <div class="hero-inner">
-        <div class="brand">
-          <div class="eyebrow">⚙ Col's Admin Console</div>
-          <h1>Fulfilment Queue</h1>
-          <p>Manage printed orders, download PDFs, update dispatch status, curate famous birthdays, and track consultant attribution — all from one screen.</p>
-        </div>
+        <div class="header-title">The Tribute Times</div>
+        <div class="header-sub">Admin Console</div>
       </div>
     </div>
 
@@ -717,6 +748,7 @@
     <div class="auth-stage" id="auth-stage">
       <div class="auth-card">
         <div class="auth-card-head">
+          <div class="auth-card-eyebrow">Admin Portal</div>
           <h2>Admin Sign In</h2>
           <p>Sign in with Col's admin credentials to access the fulfilment console.</p>
         </div>
@@ -732,7 +764,7 @@
               <button class="pass-toggle" id="password-toggle" type="button" aria-pressed="false" aria-label="Show password">👁</button>
             </div>
           </div>
-          <button class="btn btn-login btn-full" id="login-btn" type="button">Sign in</button>
+          <button class="btn btn-primary btn-full" id="login-btn" type="button">Sign in</button>
           <div class="msg" id="login-message"></div>
         </div>
       </div>
