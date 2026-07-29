@@ -127,9 +127,9 @@ const FLORIST_CREDIT_PACK_TYPES = Object.freeze({
     description: 'Floral embossed envelope',
     priceEnvPrefix: 'STRIPE_FLORIST_PREMIUM_FLORAL_PACK',
     packs: Object.freeze({
-      30: Object.freeze({ credits: 30, priceNzd: 96, priceCents: 9600 }),
-      60: Object.freeze({ credits: 60, priceNzd: 192, priceCents: 19200 }),
-      120: Object.freeze({ credits: 120, priceNzd: 380, priceCents: 38000 }),
+      30: Object.freeze({ credits: 30, priceNzd: 110, priceCents: 11000 }),
+      60: Object.freeze({ credits: 60, priceNzd: 230, priceCents: 23000 }),
+      120: Object.freeze({ credits: 120, priceNzd: 450, priceCents: 45000 }),
     }),
   }),
 });

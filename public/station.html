@@ -177,6 +177,207 @@
       background: #374151;
       box-shadow: 0 6px 16px rgba(75, 85, 99, 0.3);
     }
+    .btn:disabled, .pay-btn:disabled {
+      opacity: 0.62;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .payment-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .payment-option {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd5c8;
+      border-radius: 10px;
+      background: #faf8f4;
+      color: #1a1714;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .purchase-note {
+      color: #6b6259;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin: 12px 0;
+    }
+    .gcash-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(16, 10, 9, 0.74);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      animation: gcashOverlayIn 0.18s ease-out;
+    }
+    .gcash-modal-overlay.visible {
+      display: flex;
+    }
+    @keyframes gcashOverlayIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes gcashCardIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .gcash-modal-card {
+      width: min(100%, 560px);
+      max-height: 92vh;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      background: #ffffff;
+      color: #1a1714;
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.42);
+      border-top: 4px solid #0b5fff;
+      padding: 24px;
+      position: relative;
+      animation: gcashCardIn 0.22s cubic-bezier(0.16,1,0.3,1);
+    }
+    .gcash-modal-card::-webkit-scrollbar {
+      display: none;
+    }
+    .gcash-modal-close {
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid #ddd5c8;
+      border-radius: 8px;
+      background: #fff;
+      color: #1a1714;
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .gcash-modal-close:hover {
+      background: #faf0f0;
+      transform: scale(1.05);
+    }
+    .gcash-summary {
+      border: 1.5px solid #ece5db;
+      border-radius: 12px;
+      background: #faf8f4;
+      padding: 14px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+    .gcash-amount {
+      color: #8b1010;
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+    .gcash-qr-wrap {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      border: 1.5px solid #dbe8ff;
+      border-radius: 14px;
+      background: linear-gradient(180deg,#f5f9ff 0%,#eef4ff 100%);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .gcash-qr-frame {
+      position: relative;
+      flex-shrink: 0;
+      width: 130px;
+      height: 130px;
+    }
+    .gcash-qr-wrap img {
+      width: 130px;
+      height: 130px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid #ece5db;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .gcash-qr-wrap img:hover {
+      transform: scale(1.04);
+      box-shadow: 0 8px 22px rgba(11,95,255,0.25);
+    }
+    .gcash-qr-hint {
+      margin-top: 6px;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #0b5fff;
+      letter-spacing: 0.02em;
+    }
+    .qr-lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: rgba(8,6,5,0.9);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      animation: gcashOverlayIn 0.15s ease-out;
+    }
+    .qr-lightbox-overlay.visible {
+      display: flex;
+    }
+    .qr-lightbox-card {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: gcashCardIn 0.2s cubic-bezier(0.16,1,0.3,1);
+    }
+    .qr-lightbox-card img {
+      max-width: min(88vw, 420px);
+      max-height: 78vh;
+      width: 100%;
+      object-fit: contain;
+      border-radius: 18px;
+      background: #fff;
+      padding: 18px;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+    }
+    .qr-lightbox-close {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid #ece5db;
+      background: #fff;
+      color: #1a1714;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .qr-lightbox-close:hover {
+      background: #faf0f0;
+      transform: scale(1.06);
+    }
+    @media (max-width: 480px) {
+      .qr-lightbox-close { top: -14px; right: 0; }
+    }
     .table-wrap {
       overflow-x: auto;
       border-radius: 10px;
@@ -337,12 +538,160 @@
         <button class="btn" onclick="saveSettings()">Save Settings</button>
         <div class="msg hidden" id="settings-msg"></div>
       </div>
+
+      <!-- Billing -->
+      <div class="card">
+        <h2>Subscription Billing</h2>
+        <div class="purchase-copy">Choose a station plan, then pay by card or submit a GCash payment for manual approval.</div>
+        <div class="grid">
+          <div class="form-field">
+            <label for="billing-tier">Plan</label>
+            <select id="billing-tier" onchange="updateSubscriptionPrice()">
+              <option value="community">Community</option>
+              <option value="regional">Regional</option>
+              <option value="city">City</option>
+              <option value="national">National</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="billing-interval">Billing Interval</label>
+            <select id="billing-interval" onchange="updateSubscriptionPrice()">
+              <option value="monthly">Monthly</option>
+              <option value="annual">Annual</option>
+            </select>
+          </div>
+        </div>
+        <div class="payment-grid">
+          <label class="payment-option">
+            <input type="radio" name="stationSubscriptionPaymentMethod" value="card" checked />
+            <span>Pay by Card (secure Stripe checkout)</span>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="stationSubscriptionPaymentMethod" value="gcash" />
+            <span>Pay with GCash (manual verification)</span>
+          </label>
+        </div>
+        <div class="purchase-note" id="subscription-price-note">Selected plan total: NZ$49.00.</div>
+        <button class="btn" id="subscription-pay-btn" onclick="startSubscriptionPayment()">Start Payment</button>
+        <button class="btn btn-secondary" style="margin-left:8px;" onclick="openBillingPortal()">Manage Stripe Billing</button>
+        <div class="msg hidden" id="subscription-msg"></div>
+      </div>
+
+      <div class="card">
+        <h2>Frame Orders</h2>
+        <div class="purchase-copy">Order clip frames for station fulfilment. Minimum order is 100 frames.</div>
+        <div class="grid">
+          <div class="form-field">
+            <label for="frame-quantity">Quantity</label>
+            <input type="number" id="frame-quantity" min="100" step="1" value="100" oninput="updateFramePrice()" />
+          </div>
+          <div class="form-field">
+            <label for="frame-delivery-name">Delivery Name</label>
+            <input type="text" id="frame-delivery-name" placeholder="Recipient name" />
+          </div>
+          <div class="form-field">
+            <label for="frame-delivery-address">Delivery Address</label>
+            <input type="text" id="frame-delivery-address" placeholder="Street address" />
+          </div>
+          <div class="form-field">
+            <label for="frame-delivery-city">City</label>
+            <input type="text" id="frame-delivery-city" placeholder="City" />
+          </div>
+          <div class="form-field">
+            <label for="frame-delivery-postcode">Postcode</label>
+            <input type="text" id="frame-delivery-postcode" placeholder="Postcode" />
+          </div>
+          <div class="form-field">
+            <label for="frame-delivery-country">Country</label>
+            <input type="text" id="frame-delivery-country" value="New Zealand" />
+          </div>
+        </div>
+        <div class="payment-grid">
+          <label class="payment-option">
+            <input type="radio" name="stationFramePaymentMethod" value="card" checked />
+            <span>Pay by Card (secure Stripe checkout)</span>
+          </label>
+          <label class="payment-option">
+            <input type="radio" name="stationFramePaymentMethod" value="gcash" />
+            <span>Pay with GCash (manual verification)</span>
+          </label>
+        </div>
+        <div class="purchase-note" id="frame-price-note">Frame order total: NZ$138.00 including GST.</div>
+        <button class="btn" id="frame-pay-btn" onclick="startFramePayment()">Order Frames</button>
+        <div class="msg hidden" id="frame-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gcash-modal-overlay" id="station-gcash-modal" role="dialog" aria-modal="true" aria-labelledby="station-gcash-title">
+    <div class="gcash-modal-card">
+      <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px;">
+        <div>
+          <div class="purchase-eyebrow">GCash Payment</div>
+          <h2 class="purchase-title" id="station-gcash-title">Pay with GCash, then submit proof</h2>
+        </div>
+        <button class="gcash-modal-close" type="button" aria-label="Close GCash payment" onclick="closeStationGcashModal()">&times;</button>
+      </div>
+      <div class="gcash-summary" id="station-gcash-summary">Loading GCash details...</div>
+      <div class="gcash-qr-wrap">
+        <div class="gcash-qr-frame">
+          <img id="station-gcash-qr-image" alt="GCash QR code" onclick="openQrLightbox(this.src)" />
+          <div class="gcash-qr-hint">🔍 Tap to enlarge</div>
+        </div>
+        <div>
+          <div><strong>Payee:</strong> <span id="station-gcash-payee-name">Not configured</span></div>
+          <div><strong>GCash number:</strong> <span id="station-gcash-mobile-number">Not configured</span></div>
+          <div id="station-gcash-instructions" style="margin-top:8px;">Pay the exact amount, then submit the details below.</div>
+        </div>
+      </div>
+      <form onsubmit="submitStationGcashProof(event)">
+        <div class="grid">
+          <div class="form-field">
+            <label for="station-gcash-customer-name">Your Name</label>
+            <input type="text" id="station-gcash-customer-name" required />
+          </div>
+          <div class="form-field">
+            <label for="station-gcash-customer-email">Your Email</label>
+            <input type="email" id="station-gcash-customer-email" required />
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="station-gcash-sender-name">GCash Account Name Used To Pay</label>
+          <input type="text" id="station-gcash-sender-name" placeholder="Name shown in GCash payment" required />
+        </div>
+        <div class="form-field">
+          <label for="station-gcash-reference-id">GCash Transaction / Reference ID</label>
+          <input type="text" id="station-gcash-reference-id" placeholder="Reference number from GCash receipt" required />
+        </div>
+        <button class="btn" id="station-gcash-submit-btn" type="submit">Submit Payment Proof</button>
+        <div class="msg hidden" id="station-gcash-msg"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="qr-lightbox-overlay" id="qr-lightbox" role="dialog" aria-modal="true" aria-label="GCash QR code preview" onclick="if (event.target === this) closeQrLightbox();">
+    <div class="qr-lightbox-card">
+      <button class="qr-lightbox-close" type="button" aria-label="Close QR preview" onclick="closeQrLightbox()">&times;</button>
+      <img id="qr-lightbox-image" alt="GCash QR code full preview" />
     </div>
   </div>
 
   <script>
     const STORAGE_KEY = 'tributetimes_station_token';
     let token = localStorage.getItem(STORAGE_KEY) || '';
+    let stationProfile = null;
+    let stationGcashSettings = null;
+    let pendingStationGcashPayment = null;
+
+    const STATION_PLAN_PRICES = {
+      community: { label: 'Community', monthly: 49, annual: 490 },
+      regional: { label: 'Regional', monthly: 99, annual: 990 },
+      city: { label: 'City', monthly: 199, annual: 1990 },
+      national: { label: 'National', monthly: 299, annual: 2990 },
+    };
+    const FRAME_UNIT_PRICE_NZD = 1.20;
+    const FRAME_GST_RATE = 0.15;
+    const FRAME_MIN_QTY = 100;
 
     if (token) {
       showDashboard();
@@ -398,6 +747,12 @@
         document.getElementById('settings-name').value = data.station.name || '';
         document.getElementById('settings-country').value = data.station.country || '';
         document.getElementById('settings-sponsor').value = data.station.sponsor_name || '';
+        stationProfile = data.station;
+        document.getElementById('billing-tier').value = data.station.tier || 'community';
+        document.getElementById('frame-delivery-name').value = data.station.name || '';
+        document.getElementById('frame-delivery-country').value = data.station.country || 'New Zealand';
+        updateSubscriptionPrice();
+        updateFramePrice();
       } catch {
         logout();
       }
@@ -499,6 +854,274 @@
       } catch (err) {
         msg.textContent = err.message;
         msg.className = 'msg error';
+      }
+    }
+
+    function getAuthHeaders() {
+      return { 'Authorization': `Bearer ${token}` };
+    }
+
+    function formatMoney(amount) {
+      return `NZ$${Number(amount || 0).toFixed(2)}`;
+    }
+
+    function setMsg(id, message, isError = false) {
+      const msg = document.getElementById(id);
+      msg.textContent = message || '';
+      msg.className = message ? `msg ${isError ? 'error' : 'success'}` : 'msg hidden';
+    }
+
+    function getRadioValue(name) {
+      const selected = document.querySelector(`input[name="${name}"]:checked`);
+      return selected ? selected.value : 'card';
+    }
+
+    function getSelectedSubscriptionTotal() {
+      const tier = document.getElementById('billing-tier').value;
+      const interval = document.getElementById('billing-interval').value;
+      return Number(STATION_PLAN_PRICES[tier]?.[interval] || 0);
+    }
+
+    function updateSubscriptionPrice() {
+      const tier = document.getElementById('billing-tier').value;
+      const interval = document.getElementById('billing-interval').value;
+      const plan = STATION_PLAN_PRICES[tier] || STATION_PLAN_PRICES.community;
+      document.getElementById('subscription-price-note').textContent = `Selected plan total: ${formatMoney(plan[interval])} (${interval}).`;
+    }
+
+    function getFrameQuantity() {
+      return Math.max(Number(document.getElementById('frame-quantity').value || 0), FRAME_MIN_QTY);
+    }
+
+    function getSelectedFrameTotal() {
+      const qty = getFrameQuantity();
+      return Number((qty * FRAME_UNIT_PRICE_NZD * (1 + FRAME_GST_RATE)).toFixed(2));
+    }
+
+    function updateFramePrice() {
+      const qty = getFrameQuantity();
+      document.getElementById('frame-quantity').value = String(qty);
+      document.getElementById('frame-price-note').textContent = `Frame order total: ${formatMoney(getSelectedFrameTotal())} including GST.`;
+    }
+
+    async function startSubscriptionPayment() {
+      const tier = document.getElementById('billing-tier').value;
+      const interval = document.getElementById('billing-interval').value;
+      setMsg('subscription-msg', '');
+
+      if (getRadioValue('stationSubscriptionPaymentMethod') === 'gcash') {
+        await openStationGcashModal({
+          endpoint: '/api/gcash/station/subscription/payment-request',
+          messageId: 'subscription-msg',
+          payload: { tier, interval },
+          itemLabel: `${STATION_PLAN_PRICES[tier]?.label || tier} station plan (${interval})`,
+          totalNzd: getSelectedSubscriptionTotal(),
+          successMessage: 'GCash proof received. After admin verification, the station plan will be activated.',
+        });
+        return;
+      }
+
+      try {
+        const r = await fetch('/api/billing/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({ tier, interval }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to start subscription checkout.');
+        window.location.href = data.url;
+      } catch (err) {
+        setMsg('subscription-msg', err.message, true);
+      }
+    }
+
+    async function openBillingPortal() {
+      setMsg('subscription-msg', '');
+      try {
+        const r = await fetch('/api/billing/portal', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to open billing portal.');
+        window.location.href = data.url;
+      } catch (err) {
+        setMsg('subscription-msg', err.message, true);
+      }
+    }
+
+    function getFramePayload() {
+      return {
+        quantity: getFrameQuantity(),
+        delivery_name: document.getElementById('frame-delivery-name').value.trim(),
+        delivery_address: document.getElementById('frame-delivery-address').value.trim(),
+        delivery_city: document.getElementById('frame-delivery-city').value.trim(),
+        delivery_postcode: document.getElementById('frame-delivery-postcode').value.trim(),
+        delivery_country: document.getElementById('frame-delivery-country').value.trim() || 'New Zealand',
+      };
+    }
+
+    function validateFramePayload(payload) {
+      if (!payload.delivery_name || !payload.delivery_address || !payload.delivery_city || !payload.delivery_postcode) {
+        throw new Error('Frame orders need delivery name, address, city, and postcode.');
+      }
+    }
+
+    async function startFramePayment() {
+      setMsg('frame-msg', '');
+      const payload = getFramePayload();
+      try {
+        validateFramePayload(payload);
+        if (getRadioValue('stationFramePaymentMethod') === 'gcash') {
+          await openStationGcashModal({
+            endpoint: '/api/gcash/station/frames/payment-request',
+            messageId: 'frame-msg',
+            payload: {
+              quantity: payload.quantity,
+              deliveryName: payload.delivery_name,
+              deliveryAddress: payload.delivery_address,
+              deliveryCity: payload.delivery_city,
+              deliveryPostcode: payload.delivery_postcode,
+              deliveryCountry: payload.delivery_country,
+            },
+            itemLabel: `${payload.quantity} Tribute Times clip frames`,
+            totalNzd: getSelectedFrameTotal(),
+            successMessage: 'GCash proof received. After admin verification, the frame order will be recorded.',
+          });
+          return;
+        }
+
+        const r = await fetch('/api/billing/frames', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to start frame checkout.');
+        window.location.href = data.url;
+      } catch (err) {
+        setMsg('frame-msg', err.message, true);
+      }
+    }
+
+    async function ensureStationGcashSettings() {
+      if (stationGcashSettings) return stationGcashSettings;
+      const r = await fetch('/api/public/gcash/settings');
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Unable to load GCash details.');
+      stationGcashSettings = data;
+      return data;
+    }
+
+    function formatGcashAmount(totalNzd, settings) {
+      if (settings?.phpPerNzd) {
+        return `${formatMoney(totalNzd)} / PHP ${(Number(totalNzd || 0) * Number(settings.phpPerNzd || 0)).toFixed(2)}`;
+      }
+      return formatMoney(totalNzd);
+    }
+
+    async function openStationGcashModal(config) {
+      try {
+        const settings = await ensureStationGcashSettings();
+        pendingStationGcashPayment = config;
+        const rateLine = settings.phpPerNzd
+          ? `<div><strong>Rate:</strong> 1 NZD = PHP ${Number(settings.phpPerNzd).toFixed(4)} (${settings.rateIsLive ? 'live' : 'fallback'}${settings.rateDate ? `, ${escapeHtml(settings.rateDate)}` : ''})</div>`
+          : '<div><strong>Rate:</strong> PHP conversion unavailable. Pay the NZD amount equivalent agreed with admin.</div>';
+
+        document.getElementById('station-gcash-summary').innerHTML = `
+          <div><strong>Selected:</strong> ${escapeHtml(config.itemLabel)}</div>
+          <div><strong>Pay exact amount:</strong> <span class="gcash-amount">${escapeHtml(formatGcashAmount(config.totalNzd, settings))}</span></div>
+          ${rateLine}
+          <div style="margin-top:6px;">After sending payment in GCash, enter the sender name and transaction/reference ID below.</div>
+        `;
+        document.getElementById('station-gcash-payee-name').textContent = settings.accountName || 'Not configured';
+        document.getElementById('station-gcash-mobile-number').textContent = settings.mobileNumber || 'Not configured';
+        document.getElementById('station-gcash-instructions').textContent = settings.instructions || 'Pay the exact amount, then submit your payment details below.';
+        document.getElementById('station-gcash-customer-name').value = stationProfile?.name || '';
+        document.getElementById('station-gcash-customer-email').value = stationProfile?.email || '';
+        document.getElementById('station-gcash-sender-name').value = '';
+        document.getElementById('station-gcash-reference-id').value = '';
+        const qr = document.getElementById('station-gcash-qr-image');
+        if (settings.qrImageUrl) {
+          qr.src = settings.qrImageUrl;
+          qr.style.display = 'block';
+        } else {
+          qr.removeAttribute('src');
+          qr.style.display = 'none';
+        }
+        setMsg('station-gcash-msg', '');
+        document.getElementById('station-gcash-modal').classList.add('visible');
+      } catch (err) {
+        setMsg(config.messageId, err.message, true);
+      }
+    }
+
+    function closeStationGcashModal() {
+      document.getElementById('station-gcash-modal').classList.remove('visible');
+      setMsg('station-gcash-msg', '');
+    }
+
+    function openQrLightbox(src) {
+      if (!src) return;
+      document.getElementById('qr-lightbox-image').src = src;
+      document.getElementById('qr-lightbox').classList.add('visible');
+    }
+
+    function closeQrLightbox() {
+      document.getElementById('qr-lightbox').classList.remove('visible');
+    }
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeQrLightbox();
+    });
+
+    async function submitStationGcashProof(event) {
+      event.preventDefault();
+      if (!pendingStationGcashPayment) {
+        setMsg('station-gcash-msg', 'Start the GCash payment again.', true);
+        return;
+      }
+
+      const payload = {
+        ...pendingStationGcashPayment.payload,
+        customerName: document.getElementById('station-gcash-customer-name').value.trim(),
+        customerEmail: document.getElementById('station-gcash-customer-email').value.trim(),
+        gcashSenderName: document.getElementById('station-gcash-sender-name').value.trim(),
+        gcashReferenceId: document.getElementById('station-gcash-reference-id').value.trim(),
+      };
+      if (!payload.customerName || !payload.customerEmail || !payload.gcashSenderName || !payload.gcashReferenceId) {
+        setMsg('station-gcash-msg', 'Enter your name, email, GCash sender name, and transaction/reference ID.', true);
+        return;
+      }
+
+      const btn = document.getElementById('station-gcash-submit-btn');
+      btn.disabled = true;
+      setMsg('station-gcash-msg', 'Submitting payment proof...');
+      try {
+        const r = await fetch(pendingStationGcashPayment.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to submit GCash payment proof.');
+        const message = `${pendingStationGcashPayment.successMessage} Request ${data.request?.requestNumber || ''}.`;
+        const targetMsg = pendingStationGcashPayment.messageId;
+        closeStationGcashModal();
+        setMsg(targetMsg, message);
+      } catch (err) {
+        setMsg('station-gcash-msg', err.message, true);
+      } finally {
+        btn.disabled = false;
       }
     }
 

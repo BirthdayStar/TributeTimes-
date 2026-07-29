@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const {
   PRODUCT_TIERS,
   DELIVERY_OPTIONS,
@@ -15,6 +16,7 @@ const { saveKeepsakeRecord, updateKeepsakeRecord } = require('./save-keepsake');
 const { generatePdfFromHtml } = require('./pdf-service');
 const { buildPublicOrderAdminEmail } = require('./email-service');
 const { resolvePaidOrderAttribution } = require('./attribution');
+const { tryRedeemGcashPaidPromoCode } = require('./gcash-payment-requests');
 
 function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
   if (!app) throw new Error('Express app is required.');
@@ -25,6 +27,15 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
     try {
       const rawPayload = normalizePayload(req.body || {}, req.ip);
       const payload = await enrichPayloadFromExistingKeepsake(supabase, rawPayload);
+      const gcashRedemption = await tryRedeemGcashPaidPromoCode({
+        supabase,
+        sendEmail,
+        payload,
+      });
+      if (gcashRedemption) {
+        return res.json(gcashRedemption);
+      }
+
       const baseUrl = getBaseUrl(req);
       const attribution = await resolvePaidOrderAttribution({
         supabase,
@@ -48,12 +59,17 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
       });
 
       const lineItems = buildLineItems(tier, delivery);
+      const viralShare = payload.referralCode ? await resolveViralShareRow(supabase, payload.referralCode) : null;
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
         customer_email: payload.customerEmail,
         billing_address_collection: 'auto',
         line_items: lineItems,
+        ...(viralShare && process.env.STRIPE_VIRAL_SHARE_COUPON_ID
+          ? { discounts: [{ coupon: process.env.STRIPE_VIRAL_SHARE_COUPON_ID }] }
+          : {}),
         success_url: `${baseUrl}/public?checkout=success&order=${orderRecord.id}`,
         cancel_url: `${baseUrl}/public?checkout=cancelled&order=${orderRecord.id}`,
         metadata: {
@@ -68,6 +84,7 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
           attribution_source: orderRecord.attribution_source || ATTRIBUTION_SOURCE.none,
           sales_consultant_id: orderRecord.sales_consultant_id || '',
           territory_id: orderRecord.territory_id || '',
+          viral_share_code: viralShare ? payload.referralCode.toUpperCase() : '',
         },
       });
 
@@ -75,6 +92,13 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
         .from('orders')
         .update({ stripe_checkout_session_id: session.id })
         .eq('id', orderRecord.id);
+
+      if (viralShare) {
+        await supabase
+          .from('viral_shares')
+          .update({ redeemed_count: (viralShare.redeemed_count || 0) + 1 })
+          .eq('id', viralShare.id);
+      }
 
       return res.json({
         url: session.url,
@@ -104,6 +128,79 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
       return res.status(404).json({ error: error.message || 'Order not found.' });
     }
   });
+
+  // Viral share loop (Tasks 1.7/1.8). Pre-payment shares unlock 10% off
+  // immediately for the sharer; post-purchase shares create a link that
+  // gives the next visitor 10% off at their own checkout.
+  app.post('/api/public/share', async (req, res) => {
+    try {
+      const keepsakeId = req.body?.keepsakeId || null;
+      const orderId = req.body?.orderId || null;
+      if (!keepsakeId && !orderId) {
+        throwStatus(400, 'A keepsake or order is required to create a share link.');
+      }
+
+      const originType = orderId ? 'post_purchase' : 'pre_payment';
+      const code = await createOrReuseShareCode(supabase, { keepsakeId, orderId, originType });
+      const baseUrl = getBaseUrl(req);
+
+      return res.json({
+        code,
+        shareUrl: `${baseUrl}/public?ref=${encodeURIComponent(code)}`,
+        discountUnlocked: originType === 'pre_payment',
+      });
+    } catch (error) {
+      console.error('Share link error:', error);
+      return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to create share link.' });
+    }
+  });
+}
+
+async function createOrReuseShareCode(supabase, { keepsakeId, orderId, originType }) {
+  const matchColumn = orderId ? 'origin_order_id' : 'origin_keepsake_id';
+  const matchValue = orderId || keepsakeId;
+
+  const { data: existing } = await supabase
+    .from('viral_shares')
+    .select('code')
+    .eq('origin_type', originType)
+    .eq(matchColumn, matchValue)
+    .maybeSingle();
+  if (existing) return existing.code;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const { data, error } = await supabase
+      .from('viral_shares')
+      .insert({
+        code,
+        origin_type: originType,
+        origin_keepsake_id: keepsakeId || null,
+        origin_order_id: orderId || null,
+      })
+      .select('code')
+      .single();
+
+    if (!error) return data.code;
+    if (error.code !== '23505') {
+      throw new Error(`Unable to create share link: ${error.message}`);
+    }
+  }
+
+  throw new Error('Unable to generate a unique share code.');
+}
+
+async function resolveViralShareRow(supabase, referralCode) {
+  const code = String(referralCode || '').trim().toUpperCase();
+  if (!code) return null;
+
+  const { data, error } = await supabase
+    .from('viral_shares')
+    .select('id, redeemed_count')
+    .ilike('code', code)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data;
 }
 
 function getBaseUrl(req) {
@@ -122,6 +219,7 @@ function normalizePayload(body, requestIp) {
   const productTier = String(body.productTier || '').trim().toLowerCase();
   const deliveryOptionRaw = String(body.deliveryOption || '').trim().toLowerCase();
   const promoCode = String(body.promoCode || '').trim();
+  const referralCode = String(body.referralCode || '').trim();
 
   if (!PRODUCT_TIERS[productTier]) {
     throw new Error('Invalid product tier.');
@@ -164,6 +262,7 @@ function normalizePayload(body, requestIp) {
     productTier,
     deliveryOption,
     promoCode,
+    referralCode,
     customerName: String(body.customerName).trim(),
     customerEmail: String(body.customerEmail).trim(),
     recipientName,
@@ -526,6 +625,12 @@ function buildPublicOrderResponse(order) {
     pdfPath: keepsake.pdf_path || null,
     watermarkStatus: keepsake.watermark_status || WATERMARK_STATUS.none,
   };
+}
+
+function throwStatus(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
 }
 
 function escapeHtml(value) {

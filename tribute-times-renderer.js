@@ -5,6 +5,7 @@
 // ============================================================
 
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
+const { buildStarMapSvg } = require('./src/phase2/star-map');
 
 function titleCase(value) {
   return String(value || '')
@@ -12,6 +13,39 @@ function titleCase(value) {
     .filter(Boolean)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+}
+
+function cleanTruncate(text, maxLength) {
+  if (!text) return '';
+  const str = String(text).trim();
+  if (str.length <= maxLength) return str;
+
+  // Try to truncate at the last sentence boundary (. ! ?)
+  const sentenceRegex = /[.!?]\s+/g;
+  let match;
+  let lastSentenceIndex = -1;
+
+  while ((match = sentenceRegex.exec(str)) !== null) {
+    const endIndex = match.index + 1; // Include the punctuation
+    if (endIndex <= maxLength) {
+      lastSentenceIndex = endIndex;
+    } else {
+      break;
+    }
+  }
+
+  if (lastSentenceIndex > 0) {
+    return str.slice(0, lastSentenceIndex).trim();
+  }
+
+  // Fallback to word boundary
+  const sliced = str.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(' ');
+  if (lastSpace > 0) {
+    return sliced.slice(0, lastSpace).trim() + '...';
+  }
+
+  return sliced.trim() + '...';
 }
 
 function getVintageHoroscope(signName) {
@@ -36,8 +70,10 @@ function renderNewspaper(data, content, fonts) {
   const {
     recipientName, dateFormatted, dateLong, day, month, year,
     country, occasion, bannerText, senderName, stationName,
-    edition, currency, age
+    edition, currency, age, personalMessage
   } = data;
+
+  const cleanedRecipientName = titleCase(recipientName);
 
   const {
     worldNews, localNews, sport, business,
@@ -53,35 +89,112 @@ function renderNewspaper(data, content, fonts) {
   const daysOldVal = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const daysOldStr = `You are ${daysOldVal.toLocaleString()} days old today`;
 
+  // ── NIGHT SKY STAR MAP (mathematically calculated, not AI-generated) ──
+  const starMap = buildStarMapSvg({ year, month, day, country, size: 168 });
+  const moonIlluminationPct = `${Math.round(starMap.illuminationFraction * 100)}%`;
+
   // ── PRICES TABLE ──
   const pricesHTML = prices.items.map(p => `
     <tr><td>${p.label}</td><td>${p.value}</td></tr>`).join('');
 
   // ── BORN ON THIS DAY ──
+  // The 120-char budget was written against a 120-char AI prompt spec, not
+  // against what actually fits the 2-line clamp box (measured ~87 chars).
   const birthdaysHTML = birthdays.slice(0, 4).map((b, i) => `
-    <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${b.note}</span></div>`).join('');
+    <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── MUSIC CHART ──
+  // Single-line ellipsis truncation (white-space:nowrap + text-overflow)
+  // instead of -webkit-line-clamp:1, which combined with the counter
+  // pseudo-element left visible fragments of the second line bleeding
+  // in above the row's bottom border.
   const chartsHTML = chart.entries.slice(0, 5).map(e => `
-    <li><b>${e.title}</b> &mdash; <span class="artist">${e.artist}</span></li>`).join('');
+    <li><span class="entry-text"><b>${e.title}</b> &mdash; <span class="artist">${e.artist}</span></span></li>`).join('');
 
   // ── WEATHER CONTENT ──
-  const weatherText = `Weather in ${country} was typical for ${weather.season || 'the season'}: ${weather.condition || ''} with average temperatures around ${weather.temp || ''}°C.`;
+  // Previously unbounded — always overflowed its 3-line clamp and got cut
+  // mid-word by the browser (e.g. "...with avera..."). Shortened the
+  // fixed wording too, so a normal-length condition description has room
+  // to render complete rather than sitting right at the safety ceiling.
+  const weatherText = cleanTruncate(`${weather.season || 'The season'} in ${country}: ${weather.condition || 'typical weather'}, around ${weather.temp || ''}°C.`, 80);
 
   // ── ALSO ON THIS DAY STORIES (Clipped to OTD slots) ──
-  const otd1Text = `<b>World:</b> ${worldNews[1]?.body || (business[0] ? business[0].body : '')}`;
-  const otd2Text = `<b>Science:</b> ${worldNews[2]?.body || (business[1] ? business[1].body : '')}`;
-  const otd3Text = `<b>Culture:</b> ${worldNews[3]?.body || (localNews[1] ? localNews[1].body : '')}`;
+  // Budgets below are empirically measured against each box's actual
+  // rendered line-clamp capacity (see scratch_renderer_stress_test.js),
+  // with a safety margin — not guessed character counts. Going over these
+  // causes the CSS line-clamp to hard-cut mid-word/mid-sentence instead of
+  // cleanTruncate's sentence-aware cut ever being what the reader sees.
+  const otd1Body = cleanTruncate(worldNews[1]?.body || (business[0] ? business[0].body : ''), 165);
+  const otd2Body = cleanTruncate(worldNews[2]?.body || (business[1] ? business[1].body : ''), 165);
+  const otd3Body = cleanTruncate(worldNews[3]?.body || (localNews[1] ? localNews[1].body : ''), 115);
+  const otd1Text = `<b>World:</b> ${otd1Body}`;
+  const otd2Text = `<b>Science:</b> ${otd2Body}`;
+  const otd3Text = `<b>Culture:</b> ${otd3Body}`;
 
   // ── SPORT TEXT ──
-  const sportText = sport[0]?.body || (sport[0]?.headline ? `On this day, ${sport[0].headline}.` : 'Sporting events of the day concluded with high spirits and remarkable achievements across the country.');
+  const sportText = cleanTruncate(sport[0]?.body || (sport[0]?.headline ? `On this day, ${sport[0].headline}.` : 'Sporting events of the day concluded with high spirits and remarkable achievements across the country.'), 200);
+
+  // ── DEDICATION MESSAGE OVERRIDE ──
+  const finalMessage = cleanTruncate(personalMessage ? personalMessage.trim() : (message || ''), 260);
+
+  // ── NEWS STORIES TRUNCATION ──
+  const news1Body = cleanTruncate(worldNews[0]?.body || '', 235);
+  const news2Body = cleanTruncate(localNews[0]?.body || '', 235);
+
+  // ── HOROSCOPE (previously unbounded — the static copy runs ~350-450
+  // characters, always overflowing its 6-line clamp box) ──
+  const horoscopeText = cleanTruncate(getVintageHoroscope(astro.starSign.name), 230);
+
+  // ── NAME BANNER ── font size steps down for longer occasion/name
+  // combinations (empirically measured, see banner_search.js), and the
+  // box still allows a 2-line wrap as a last resort so a very long name
+  // is never cut off with an ellipsis.
+  const bannerFullText = `${bannerText.toUpperCase()} — ${cleanedRecipientName.toUpperCase()}`;
+  const bannerLen = bannerFullText.length;
+  const bannerFontSize = bannerLen <= 33 ? 21 : bannerLen <= 36 ? 18 : bannerLen <= 40 ? 16 : bannerLen <= 45 ? 14 : 12;
+
+  // ── LEAD HEADLINE ──
+  // Empirically the 2-line clamp at 19pt safely holds ~110 characters of
+  // dense text (see scratch_renderer_stress_test.js measurements). The old
+  // fixed sentence was ~155 characters BEFORE adding the name, so it
+  // overflowed on nearly every keepsake, cutting off wherever the 2-line
+  // boundary happened to land — often mid-name. This template is short
+  // enough to leave headroom for long names, with a hard safety trim as
+  // a backstop so no name length can ever break it.
+  const leadHeadline = cleanTruncate(`A Star Arrives: The World Welcomes ${cleanedRecipientName}`, 105);
+
+  // ── TICKER CONTENT ──
+  const activeTicker = (ticker && ticker.length) ? ticker : [
+    { label: 'Dow Jones', value: '1,234', direction: 'up' },
+    { label: 'London FT', value: '512', direction: 'up' },
+    { label: 'Gold', value: '$35', direction: 'up' },
+    { label: 'Oil', value: '$14', direction: 'down' },
+    { label: `${currency || 'USD'} Rate`, value: 'Stable', direction: 'flat' }
+  ];
+  const tickerHTML = activeTicker.map(t => {
+    let arrow = '&bull;';
+    let colorClass = 'tn';
+    if (t.direction === 'up') {
+      arrow = '▲';
+      colorClass = 'tu';
+    } else if (t.direction === 'down') {
+      arrow = '▼';
+      colorClass = 'td';
+    }
+    return `
+      <div class="tick">
+        <span class="tn">${t.label}:</span>
+        <span class="tv">${t.value}</span>
+        <span class="${colorClass}">${arrow}</span>
+      </div>`;
+  }).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Tribute Times — ${recipientName}</title>
+<title>The Tribute Times — ${cleanedRecipientName}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -142,6 +255,72 @@ function renderNewspaper(data, content, fonts) {
     padding: 0 1mm; margin-top: 1.5mm;
   }
 
+  /* ================= TICKER ================= */
+  .ticker {
+    height: 6.5mm; flex: 0 0 auto;
+    border-bottom: .25mm solid #1a1712;
+    display: flex; align-items: center;
+    background: #1a1712; color: #f7f3e8;
+    font-size: 6pt;
+    padding: 0 2mm;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker .tlabel {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-right: 3mm;
+    border-right: .2mm solid #b9b09a;
+    padding-right: 3mm;
+    color: #c8a020;
+    flex-shrink: 0;
+  }
+  .ticker .titems {
+    display: flex;
+    flex-grow: 1;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+  .ticker .tick {
+    display: flex;
+    align-items: center;
+    gap: 1.5mm;
+  }
+  .ticker .tn {
+    text-transform: uppercase;
+    color: #b9b09a;
+  }
+  .ticker .tv {
+    font-weight: 600;
+  }
+  .ticker .tu {
+    color: #5ad05a;
+  }
+  .ticker .td {
+    color: #ff7878;
+  }
+
+  /* ================= NAME BANNER ================= */
+  .name-banner {
+    height: 17mm; flex: 0 0 auto;
+    border-bottom: .25mm solid #1a1712;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1mm;
+    padding: 0 2mm; margin-top: 1.5mm;
+  }
+  .name-banner-main {
+    font-family: 'Playfair Display', Georgia, serif; font-weight: 900;
+    font-size: 21pt; line-height: 1.05; letter-spacing: .6mm; text-transform: uppercase;
+    color: #8b1010; text-align: center;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .name-banner-from {
+    font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500;
+    font-size: 9pt; letter-spacing: .3mm; color: #1a1712;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
   /* ================= LEAD HEADLINE ================= */
   .lead { height: 22mm; flex: 0 0 auto; text-align: center; padding-top: 2mm; overflow: hidden; }
   .lead h2 {
@@ -174,7 +353,8 @@ function renderNewspaper(data, content, fonts) {
     font-size: 9pt; text-transform: uppercase; letter-spacing: .4mm;
     border-bottom: .25mm solid #1a1712; padding-bottom: .8mm; margin-bottom: 1.4mm;
   }
-  section p { text-align: justify; hyphens: auto; }
+  section p { text-align: justify; }
+  .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp6 { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
@@ -185,17 +365,22 @@ function renderNewspaper(data, content, fonts) {
   }
 
   /* fixed section heights — the budget that guarantees one page */
-  .s-news1     { height: 58mm; }
-  .s-news2     { height: 46mm; margin-top: 3mm; }
-  .s-prices    { height: 74mm; margin-top: 3mm; }
-  .s-onthisday { height: 60mm; }
-  .s-message   { height: 58mm; margin-top: 3mm; }
-  .s-birthdays { height: 60mm; margin-top: 3mm; }
-  .s-charts    { height: 52mm; }
-  .s-weather   { height: 26mm; margin-top: 3mm; }
-  .s-horoscope { height: 38mm; margin-top: 3mm; }
-  .s-sport     { height: 34mm; margin-top: 3mm; }
-  .s-moon      { height: 22mm; margin-top: 3mm; }
+  /* Section heights were rebalanced against actual measured content need
+     (prices/weather were carrying ~2x the height their content ever uses,
+     leaving visible empty gaps, while news/message/horoscope were tight
+     enough to invite overflow). Each column's total is unchanged so the
+     single-page budget still holds. */
+  .s-news1     { height: 70mm; }
+  .s-news2     { height: 58mm; margin-top: 3mm; }
+  .s-prices    { height: 50mm; margin-top: 3mm; }
+  .s-onthisday { height: 54mm; }
+  .s-message   { height: 72mm; margin-top: 3mm; }
+  .s-birthdays { height: 52mm; margin-top: 3mm; }
+  .s-charts    { height: 44mm; }
+  .s-weather   { height: 16mm; margin-top: 3mm; }
+  .s-horoscope { height: 40mm; margin-top: 3mm; }
+  .s-sport     { height: 22mm; margin-top: 3mm; }
+  .s-starmap   { height: 50mm; margin-top: 3mm; text-align: center; }
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -203,8 +388,11 @@ function renderNewspaper(data, content, fonts) {
   .datatable td:last-child { text-align: right; white-space: nowrap; }
   ol.chart { list-style: none; counter-reset: c; }
   ol.chart li { counter-increment: c; padding: .7mm 0; border-bottom: .15mm dotted #b9b09a;
-    display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-  ol.chart li::before { content: counter(c) ". "; font-weight: 600; }
+    display: flex; align-items: baseline; gap: 1mm; }
+  ol.chart li::before { content: counter(c) "."; font-weight: 600; flex-shrink: 0; }
+  ol.chart li .entry-text {
+    min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
   ol.chart .artist { font-style: italic; }
 
   /* the personal message centerpiece */
@@ -223,8 +411,9 @@ function renderNewspaper(data, content, fonts) {
   .bday b { font-weight: 600; }
   .bday .desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
-  .moonrow { display: flex; align-items: center; gap: 2.5mm; }
-  .moonrow .glyph { font-size: 16pt; line-height: 1; }
+  .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
+  .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
+  .starmap-caption { font-size: 7.3pt; font-style: italic; color: #3d3730; }
   .agecount { margin-top: 1.5mm; font-family:'Playfair Display', serif; font-weight: 700; font-size: 9.5pt; }
 
   /* ================= FOOTER ================= */
@@ -253,8 +442,20 @@ function renderNewspaper(data, content, fonts) {
     <span data-field="dateline-price">Price: Priceless</span>
   </div>
 
+  <div class="ticker">
+    <span class="tlabel">Financial Markets</span>
+    <div class="titems">
+      ${tickerHTML}
+    </div>
+  </div>
+
+  <div class="name-banner">
+    <div class="name-banner-main" data-field="banner-text" style="font-size:${bannerFontSize}pt">${bannerFullText}</div>
+    <div class="name-banner-from" data-field="banner-sender">With Love From ${senderName}</div>
+  </div>
+
   <div class="lead">
-    <h2 data-field="lead-headline">A Star Arrives: The World Gains Its Most Important New Resident While History Carries On Around ${recipientName} Completely Unaware of What It Has Just Been Given</h2>
+    <h2 data-field="lead-headline">${leadHeadline}</h2>
     <div class="sub" data-field="lead-subhead">Born on ${dateFormatted} in ${country} — full report from the day everything changed</div>
   </div>
 
@@ -265,11 +466,11 @@ function renderNewspaper(data, content, fonts) {
       <section class="s-news1">
         <h3>News of the Day</h3>
         <div class="story-head" data-field="news1-head">${worldNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news1-body">${worldNews[0]?.body || ''}</p>
+        <p class="clamp6" data-field="news1-body">${news1Body}</p>
       </section>
       <section class="s-news2">
         <div class="story-head" data-field="news2-head">${localNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news2-body">${localNews[0]?.body || ''}</p>
+        <p class="clamp6" data-field="news2-body">${news2Body}</p>
       </section>
       <section class="s-prices">
         <h3>Cost of Living, <span data-field="prices-year">${year}</span></h3>
@@ -289,8 +490,8 @@ function renderNewspaper(data, content, fonts) {
       </section>
       <section class="s-message">
         <div class="box">
-          <div class="to" data-field="msg-to">For ${recipientName}</div>
-          <div class="msg" data-field="msg-body">&ldquo;${message}&rdquo;</div>
+          <div class="to" data-field="msg-to">For ${cleanedRecipientName}</div>
+          <div class="msg" data-field="msg-body">&ldquo;${finalMessage}&rdquo;</div>
           <div class="from" data-field="msg-from">&mdash; With all our love, ${senderName}</div>
         </div>
       </section>
@@ -310,21 +511,20 @@ function renderNewspaper(data, content, fonts) {
       </section>
       <section class="s-weather">
         <h3>The Weather</h3>
-        <p class="clamp3" data-field="weather">${weatherText}</p>
+        <p class="clamp2" data-field="weather">${weatherText}</p>
       </section>
       <section class="s-horoscope">
         <h3>Your Stars &mdash; <span data-field="starsign">${astro.starSign.name}</span></h3>
-        <p class="clamp6" data-field="horoscope">${getVintageHoroscope(astro.starSign.name)}</p>
+        <p class="clamp6" data-field="horoscope">${horoscopeText}</p>
       </section>
       <section class="s-sport">
         <h3>Sporting News</h3>
         <p class="clamp6" data-field="sport">${sportText}</p>
       </section>
-      <section class="s-moon">
+      <section class="s-starmap">
         <h3>The Night Sky</h3>
-        <div class="moonrow">
-          <span data-field="moon-phase">The moon that night: ${astro.moonPhase.name || 'Clear'}, ${astro.moonPhase.illumination || '100%'} illuminated</span>
-        </div>
+        <div class="starmap-graphic">${starMap.svg}</div>
+        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
         <div class="agecount" data-field="days-old">${daysOldStr}</div>
       </section>
     </div>

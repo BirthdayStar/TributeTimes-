@@ -8,9 +8,11 @@ const fs = require('fs');
 const cors = require('cors');
 const multer = require('multer');
 const { registerAdminFulfilmentRoutes, authAdmin } = require('./src/phase2/admin-fulfilment');
+const { registerGcashPaymentRoutes } = require('./src/phase2/gcash-payment-requests');
 const { registerPublicCheckoutRoutes } = require('./src/phase2/public-checkout');
 const { registerPdfRoutes } = require('./src/phase2/pdf-routes');
 const { createClient } = require('@supabase/supabase-js');
+const { FLORIST_CREDIT_PACK_TYPES } = require('./src/phase2/constants');
 const Stripe = require('stripe');
 
 const app = express();
@@ -80,6 +82,19 @@ app.use(express.static(PUBLIC_DIR, { index: false }));
 require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
 registerAdminFulfilmentRoutes(app, { supabase, sendEmail });
 registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail });
+registerGcashPaymentRoutes(app, {
+  supabase,
+  sendEmail,
+  authAdmin,
+  stationBilling: {
+    tiers: TIERS,
+    frames: {
+      unitPriceNzd: FRAMES_PRICE_NZD,
+      gstRate: FRAMES_GST,
+      minQty: FRAMES_MIN_QTY,
+    },
+  },
+});
 registerPdfRoutes(app, { supabase, authStation });
 
 // ── AUTH MIDDLEWARE ──
@@ -250,6 +265,20 @@ app.get('/api/public/stations', async (req, res) => {
   } catch (err) {
     console.error('List stations error:', err);
     res.status(500).json({ error: 'Failed to load stations' });
+  }
+});
+
+// Live keepsake count for the landing page social-proof counter
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const { count, error } = await supabase
+      .from('keepsakes')
+      .select('*', { count: 'exact', head: true });
+    if (error) throw error;
+    res.json({ keepsakesCreated: count || 0 });
+  } catch (err) {
+    console.error('Public stats error:', err);
+    res.status(500).json({ error: 'Failed to load stats' });
   }
 });
 
@@ -428,6 +457,48 @@ app.get('/api/station/stats', authStation, async (req, res) => {
   });
 });
 
+// Florist credit pack checkout
+app.post('/api/florist/credits/checkout-session', authStation, async (req, res) => {
+  try {
+    const { packType, packSize } = req.body || {};
+    const pack = getFloristCreditPack(packType, packSize);
+    const { data: station } = await supabase.from('stations').select('*').eq('id', req.station.id).single();
+    if (!station || station.active === false || station.account_type !== 'florist') {
+      return res.status(403).json({ error: 'Florist account required.' });
+    }
+
+    const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+    const session = await stripe.checkout.sessions.create({
+      customer: station.stripe_customer_id || undefined,
+      customer_email: station.stripe_customer_id ? undefined : station.email,
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'nzd',
+          unit_amount: pack.price.priceCents,
+          product_data: { name: `The Tribute Times - ${pack.packType.label} ${pack.size}-credit pack` },
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${appUrl}/florist?credits=success`,
+      cancel_url: `${appUrl}/florist?credits=cancelled`,
+      metadata: {
+        type: 'florist_credits',
+        station_id: station.id,
+        pack_type: pack.packType.code,
+        pack_size: String(pack.size),
+        credits: String(pack.price.credits),
+      },
+    });
+
+    return res.json({ url: session.url });
+  } catch (error) {
+    console.error('Florist credit checkout error:', error);
+    return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to start florist credit checkout.' });
+  }
+});
+
 // ── DJ MANAGEMENT ──
 app.get('/api/station/djs', authStation, async (req, res) => {
   const { data } = await supabase.from('djs').select('id,name,email,active,created_at,last_login').eq('station_id', req.station.id);
@@ -534,7 +605,27 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
-      if (session.metadata?.type === 'frames') {
+      if (session.metadata?.type === 'florist_credits') {
+        const { station_id, pack_size, credits } = session.metadata;
+        const creditAmount = Number(credits || pack_size || 0);
+        const { data: st } = await supabase
+          .from('stations')
+          .select('name,email,florist_credit_balance')
+          .eq('id', station_id)
+          .single();
+        await supabase.from('stations').update({
+          florist_credit_balance: Number(st?.florist_credit_balance || 0) + creditAmount,
+          florist_last_pack_size: creditAmount,
+          florist_credit_updated_at: new Date().toISOString(),
+        }).eq('id', station_id);
+        if (st?.email) {
+          await sendEmail({
+            to: st.email,
+            subject: 'Your Tribute Times florist credits are active',
+            html: `<p>Hi ${st.name || 'there'},</p><p>${creditAmount} florist credits have been added to your account.</p>`,
+          });
+        }
+      } else if (session.metadata?.type === 'frames') {
         // Frame order paid
         const { station_id, quantity, delivery_name, delivery_address, delivery_city, delivery_postcode, delivery_country } = session.metadata;
         const qty = parseInt(quantity);
@@ -601,6 +692,19 @@ function isStaticAssetRequest(requestPath) {
     || requestPath.startsWith('/fonts/')
     || requestPath.startsWith('/screenshots/')
     || STATIC_ASSET_PATTERN.test(requestPath);
+}
+
+function getFloristCreditPack(packTypeValue, packSizeValue) {
+  const packTypeCode = String(packTypeValue || '').trim();
+  const size = Number(packSizeValue || 0);
+  const packType = FLORIST_CREDIT_PACK_TYPES[packTypeCode];
+  const price = packType?.packs?.[size];
+  if (!packType || !price) {
+    const error = new Error('Invalid florist credit pack.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return { packType, size, price };
 }
 
 

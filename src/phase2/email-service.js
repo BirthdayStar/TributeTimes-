@@ -112,6 +112,64 @@ function buildPublicOrderAdminEmail(order) {
   `;
 }
 
+function buildGcashPromoApprovedEmail({ request, promoCode, appUrl }) {
+  const expiry = promoCode?.valid_until
+    ? new Date(promoCode.valid_until).toLocaleDateString('en-NZ', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '30 days from approval';
+  const product = productLabel(request?.product_tier);
+  const delivery = request?.delivery_option ? ` with ${deliveryLabel(request.delivery_option)} delivery` : '';
+  const totalNzd = Number(request?.expected_amount_nzd || 0).toFixed(2);
+  const phpAmount = request?.expected_amount_php
+    ? ` / PHP ${Number(request.expected_amount_php || 0).toFixed(2)}`
+    : '';
+  const publicUrl = appUrl ? `${String(appUrl).replace(/\/$/, '')}/public` : '/public';
+
+  return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
+    <h1 style="color:#8b1010;">Your GCash payment is approved</h1>
+    <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
+    <p>Your GCash payment for <strong>${escapeHtml(product)}${escapeHtml(delivery)}</strong> has been verified.</p>
+    <p><strong>Approved amount:</strong> NZ$${escapeHtml(totalNzd)}${escapeHtml(phpAmount)}</p>
+    <p style="font-size:1.15rem;"><strong>Your one-time promo code:</strong> ${escapeHtml(promoCode?.code || '')}</p>
+    <p>This code works only once, is valid until <strong>${escapeHtml(expiry)}</strong>, and can only be used for the same product and delivery option you paid for.</p>
+    <p>Return to <a href="${escapeHtml(publicUrl)}">The Tribute Times public checkout</a>, select the same product, enter this code in the promo code field, and continue to payment. The site will unlock your paid order without charging your card.</p>
+    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+  </div>`;
+}
+
+function buildGcashPaymentRejectedEmail({ request }) {
+  const note = request?.admin_note
+    ? `<p><strong>Review note:</strong> ${escapeHtml(request.admin_note)}</p>`
+    : '';
+
+  return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
+    <h1 style="color:#8b1010;">GCash payment could not be verified</h1>
+    <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
+    <p>We could not verify the GCash payment details submitted for request ${escapeHtml(request?.request_number || '')}.</p>
+    ${note}
+    <p>Please reply with the correct GCash sender name, transaction/reference ID, and payment screenshot if available.</p>
+    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+  </div>`;
+}
+
+function buildGcashManualPaymentApprovedEmail({ request, result }) {
+  const phpAmount = request?.expected_amount_php
+    ? ` / PHP ${Number(request.expected_amount_php || 0).toFixed(2)}`
+    : '';
+  const item = request?.item_label || manualPaymentItemLabel(request, result);
+  const context = manualPaymentContextLabel(request?.payment_context);
+  const outcome = manualPaymentOutcomeText(request, result);
+
+  return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
+    <h1 style="color:#8b1010;">Your GCash payment is approved</h1>
+    <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
+    <p>Your GCash payment for <strong>${escapeHtml(item)}</strong> has been verified.</p>
+    <p><strong>Payment type:</strong> ${escapeHtml(context)}</p>
+    <p><strong>Approved amount:</strong> NZ$${Number(request?.expected_amount_nzd || 0).toFixed(2)}${escapeHtml(phpAmount)}</p>
+    <p>${escapeHtml(outcome)}</p>
+    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+  </div>`;
+}
+
 function buildRadioOrderAdminEmail(order) {
   const shippingLines = [
     order.shipping_name,
@@ -178,6 +236,54 @@ function tierKeepsakes(tier) {
   }[tier] || 0;
 }
 
+function productLabel(value) {
+  return {
+    digital: 'Digital',
+    standard: 'Standard',
+    premium: 'Premium',
+  }[value] || String(value || '');
+}
+
+function manualPaymentContextLabel(value) {
+  return {
+    florist_credits: 'Florist credits',
+    station_subscription: 'Station subscription',
+    station_frames: 'Station frame order',
+  }[value] || 'GCash payment';
+}
+
+function manualPaymentItemLabel(request, result) {
+  if (request?.payment_context === 'florist_credits') {
+    return `${result?.creditsAdded || request?.quantity || ''} florist credits`.trim();
+  }
+  if (request?.payment_context === 'station_subscription') {
+    return `${result?.tierLabel || result?.tier || 'Station'} plan`;
+  }
+  if (request?.payment_context === 'station_frames') {
+    return `${result?.quantity || request?.quantity || ''} frames`.trim();
+  }
+  return 'your purchase';
+}
+
+function manualPaymentOutcomeText(request, result) {
+  if (request?.payment_context === 'florist_credits') {
+    return `${result?.creditsAdded || request?.quantity || 0} credits have been added to the florist account.`;
+  }
+  if (request?.payment_context === 'station_subscription') {
+    return `The station plan is now active${result?.tierLabel ? ` on ${result.tierLabel}` : ''}${result?.interval ? ` (${result.interval})` : ''}.`;
+  }
+  if (request?.payment_context === 'station_frames') {
+    return `The frame order has been recorded and ${result?.quantity || request?.quantity || 0} frames were added to station stock.`;
+  }
+  return 'Your payment has been approved.';
+}
+
+function deliveryLabel(value) {
+  if (value === '2day') return '2 Day';
+  if (value === 'overnight') return 'Overnight';
+  return 'Standard';
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -193,6 +299,9 @@ module.exports = {
   buildDjWelcomeEmail,
   buildSubscriptionActiveEmail,
   buildPublicOrderAdminEmail,
+  buildGcashPromoApprovedEmail,
+  buildGcashPaymentRejectedEmail,
+  buildGcashManualPaymentApprovedEmail,
   buildRadioOrderAdminEmail,
   buildFloristLowCreditEmail,
   buildPostedOrderCustomerEmail,

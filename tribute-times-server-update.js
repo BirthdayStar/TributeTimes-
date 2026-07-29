@@ -14,6 +14,7 @@ const { resolveFreeDemoAttribution } = require('./src/phase2/attribution');
 const { createGenerateRateLimiter } = require('./src/phase2/rate-limit');
 const { extractAnthropicUsage, estimateAnthropicCostUsd, logAnthropicUsage } = require('./src/phase2/anthropic-usage');
 const { SOURCE_PORTALS, PAYMENT_STATUS, QUEUE_STATUS, ATTRIBUTION_SOURCE, WATERMARK_STATUS } = require('./src/phase2/constants');
+const { queryApprovedFamousBirthdays, normalizeCountry } = require('./src/phase2/famous-birthdays');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -143,6 +144,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         currency: currency.symbol,
         currencyName: currency.name,
         age,
+        personalMessage: personalMessage || '',
       };
 
       if (normalizedEdition === SOURCE_PORTALS.florist && supabase) {
@@ -162,36 +164,56 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         freeDemoAttribution = await resolveFreeDemoAttribution({ supabase, promoCode });
       }
 
-      // ── BUILD PROMPT ──
-      const prompt = buildPrompt(data);
-
-      let content;
+      // ── GENERATED CONTENT CACHE ──
+      // The bulk of the AI output (on-this-day news, prices, chart,
+      // weather, ticker, horoscope, birthdays) depends only on the
+      // date/country/occasion/edition, not on who the recipient is — so a
+      // repeat request for the same combination can reuse prior output
+      // instead of spending a fresh Anthropic call. See src/db.phase3.sql.
+      const contentCacheKey = buildContentCacheKey({ day, month, year, country, occasion, edition: normalizedEdition });
+      let content = supabase ? await loadCachedContent(supabase, contentCacheKey, data) : null;
       let anthropicUsage = { inputTokens: 0, outputTokens: 0 };
       let anthropicEstimatedCostUsd = 0;
 
-      try {
-        const aiResponse = await client.messages.create({
-          model: ANTHROPIC_GENERATE_MODEL,
-          max_tokens: 4000,
-          messages: [{ role: 'user', content: prompt }],
-        });
-
-        anthropicUsage = extractAnthropicUsage(aiResponse);
-        anthropicEstimatedCostUsd = estimateAnthropicCostUsd({
-          modelName: ANTHROPIC_GENERATE_MODEL,
-          inputTokens: anthropicUsage.inputTokens,
-          outputTokens: anthropicUsage.outputTokens,
-        });
-        const rawText = aiResponse.content[0].text.trim();
-        const jsonStr = rawText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-        content = JSON.parse(jsonStr);
-      } catch (aiError) {
-        if (!isAnthropicFallbackError(aiError)) {
-          throw aiError;
+      if (!content) {
+        // ── CURATED FAMOUS BIRTHDAYS (real Wikipedia data, admin-approved) ──
+        // Falls back to the AI-invents behavior in buildPrompt() if fewer
+        // than 3 approved rows exist for this exact date/country.
+        if (supabase) {
+          data.curatedBirthdays = await loadCuratedBirthdays(supabase, day, month, country);
         }
 
-        console.warn('Anthropic unavailable, using local fallback content for keepsake generation.');
-        content = buildFallbackContent(data);
+        // ── BUILD PROMPT ──
+        const prompt = buildPrompt(data);
+
+        try {
+          const aiResponse = await client.messages.create({
+            model: ANTHROPIC_GENERATE_MODEL,
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: prompt }],
+          });
+
+          anthropicUsage = extractAnthropicUsage(aiResponse);
+          anthropicEstimatedCostUsd = estimateAnthropicCostUsd({
+            modelName: ANTHROPIC_GENERATE_MODEL,
+            inputTokens: anthropicUsage.inputTokens,
+            outputTokens: anthropicUsage.outputTokens,
+          });
+          const rawText = aiResponse.content[0].text.trim();
+          const jsonStr = rawText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+          content = JSON.parse(jsonStr);
+
+          if (supabase) {
+            await saveCachedContent(supabase, contentCacheKey, { day, month, year, country, occasion, edition: normalizedEdition }, content);
+          }
+        } catch (aiError) {
+          if (!isAnthropicFallbackError(aiError)) {
+            throw aiError;
+          }
+
+          console.warn('Anthropic unavailable, using local fallback content for keepsake generation.');
+          content = buildFallbackContent(data);
+        }
       }
 
       // ── RENDER HTML ──
@@ -482,6 +504,77 @@ async function loadAuthenticatedFlorist(req, supabase) {
   return { station };
 }
 
+function buildContentCacheKey({ day, month, year, country, occasion, edition }) {
+  const normalizedCountry = String(country || '').trim().toLowerCase();
+  const normalizedOccasion = String(occasion || '').trim().toLowerCase();
+  return `${day}-${month}-${year}-${normalizedCountry}-${normalizedOccasion}-${edition}`;
+}
+
+async function loadCachedContent(supabase, cacheKey, data) {
+  try {
+    const { data: row, error } = await supabase
+      .from('generated_content_cache')
+      .select('id, content, hits')
+      .eq('cache_key', cacheKey)
+      .maybeSingle();
+    if (error || !row) return null;
+
+    await supabase
+      .from('generated_content_cache')
+      .update({ hits: (row.hits || 0) + 1, last_used_at: new Date().toISOString() })
+      .eq('id', row.id);
+
+    // Everything except the personal message is date/country/occasion
+    // invariant and safe to share across recipients. The message names a
+    // specific sender, so it's always recomputed fresh per request.
+    return { ...row.content, message: buildFallbackMessage(data) };
+  } catch (error) {
+    console.warn('Content cache lookup skipped:', error.message);
+    return null;
+  }
+}
+
+async function saveCachedContent(supabase, cacheKey, meta, content) {
+  try {
+    const { error } = await supabase
+      .from('generated_content_cache')
+      .upsert({
+        cache_key: cacheKey,
+        birth_day: meta.day,
+        birth_month: meta.month,
+        birth_year: meta.year,
+        country: meta.country,
+        occasion: meta.occasion,
+        edition: meta.edition,
+        content,
+        updated_at: new Date().toISOString(),
+        last_used_at: new Date().toISOString(),
+      }, { onConflict: 'cache_key' });
+    if (error) {
+      console.warn('Content cache save skipped:', error.message);
+    }
+  } catch (error) {
+    console.warn('Content cache save skipped:', error.message);
+  }
+}
+
+async function loadCuratedBirthdays(supabase, day, month, country) {
+  try {
+    const normalizedCountry = normalizeCountry(country);
+    const rows = await queryApprovedFamousBirthdays({ supabase, day, month, country: normalizedCountry, limit: 6 });
+    if (rows.length < 3) return [];
+    return rows.map(row => ({
+      fullName: row.full_name,
+      birthYear: row.birth_year || null,
+      occupation: row.occupation || '',
+      shortBio: row.short_bio || '',
+    }));
+  } catch (error) {
+    console.warn('Curated famous birthdays lookup skipped:', error.message);
+    return [];
+  }
+}
+
 function getCountryCode(country) {
   const codes = {
     'New Zealand':'NZ','Australia':'AU','United Kingdom':'GB',
@@ -613,12 +706,22 @@ function buildFallbackContent(data) {
       chineseZodiac: { animal: chineseZodiac },
       moonPhase: { name: moonPhase },
     },
-    message: edition === 'radio'
-      ? `From ${senderName || 'your DJ'} with love.`
-      : occasion === 'Golden Anniversary'
-        ? `Fifty Golden Years Together, ${recipientName}!`
-        : occasion === 'In Loving Memory'
-          ? `Remembering ${recipientName} with love.`
-          : `Happy ${occasion.toLowerCase()}, ${recipientName}!`,
+    message: buildFallbackMessage(data),
   };
+}
+
+// A simple, non-AI, per-recipient message. Used both for the offline
+// fallback content above, and to override a shared cached content
+// object's `message` field (see loadCachedContent) — the rest of a
+// cached entry is date/country-invariant, but the personal message
+// names a specific sender and must never be reused across recipients.
+function buildFallbackMessage(data) {
+  const { recipientName, senderName, occasion, edition } = data;
+  return edition === 'radio'
+    ? `From ${senderName || 'your DJ'} with love.`
+    : occasion === 'Golden Anniversary'
+      ? `Fifty Golden Years Together, ${recipientName}!`
+      : occasion === 'In Loving Memory'
+        ? `Remembering ${recipientName} with love.`
+        : `Happy ${occasion.toLowerCase()}, ${recipientName}!`;
 }

@@ -64,10 +64,19 @@ async function fitNewspaperToSingleA4Page(page) {
   return page.evaluate(({ width, height }) => {
     const target = document.getElementById('star') || document.body;
     const wrap = document.getElementById('wrap') || document.body;
+    const sheet = document.querySelector('.sheet');
 
     target.style.transform = 'none';
-    target.style.marginBottom = '0';
     target.style.zoom = '1';
+    // The .sheet element carries its own 10mm top/bottom margin (a
+    // screen-preview affordance for centering the page on the grey
+    // background). Zeroing #star's own margin here did nothing, since
+    // #star never had a margin — the real 10mm lived on its child. That
+    // left every PDF measured ~20mm taller than the actual page content,
+    // triggering an unnecessary vertical squish via scaleY below.
+    if (sheet) {
+      sheet.style.margin = '0';
+    }
 
     const rect = target.getBoundingClientRect();
     const availableWidth = width;
