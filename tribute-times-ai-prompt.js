@@ -6,6 +6,8 @@
 // The output is parsed and slotted into the HTML template.
 // ============================================================
 
+const { resolveLocalMarketIndexLabel } = require('./src/phase2/market-index-data');
+
 function buildPrompt(data) {
   const {
     recipientName,     // e.g. "Colin McCabe"
@@ -40,9 +42,14 @@ function buildPrompt(data) {
   const moonPhase = getMoonPhase(day, month, year);
   
   // Pre-1952 chart handling
-  const chartLabel = year < 1952 
-    ? `Popular Music of ${year}` 
+  const chartLabel = year < 1952
+    ? `Popular Music of ${year}`
     : `${country} Top 5 Singles`;
+
+  // Correct historical index name for the recipient's country/era (e.g.
+  // "FTSE 100" did not exist before Jan 1984 — pre-1984 UK dates must show
+  // "London FT" instead). See src/phase2/market-index-data.js.
+  const localIndexLabel = resolveLocalMarketIndexLabel(country, new Date(year, month - 1, day));
 
   const prompt = `You are generating content for The Tribute Times — a personalised vintage newspaper keepsake for ${recipientName}, ${dateIntro || 'born on'} ${dateLong} in ${country}.
 
@@ -67,17 +74,18 @@ STRICT CONTENT RULES
 WORLD NEWS — On This Day (any year):
 - 3 stories from different years, all on ${day}th ${monthName(month)}
 - Stories must be REAL verified historical events on this exact date
-- Each story: year, headline (max 10 words), byline, body (60-80 words)
-- LEAD story gets 2 paragraphs (80-100 words total) — this is the dominant story
-- Second story: 50-60 words
-- Third story: 30-40 words (short footnote style)
+- Each story: year, headline (max 10 words), byline
+- LEAD story: body (no more than 220 characters total, ending on a complete sentence). Do NOT exceed 220 characters.
+- Second story: body (no more than 145 characters, ending on a complete sentence). Do NOT exceed 145 characters.
+- Third story: body (no more than 105 characters, ending on a complete sentence). Do NOT exceed 105 characters.
+- These limits are hard layout constraints, not targets to fill — write a complete, satisfying sentence well inside the limit rather than a long sentence that has to be cut.
 - Headlines must vary in size — lead is biggest, third is smallest
 - Vary the years dramatically — e.g. 1945, 1969, 1815
 
 ${country.toUpperCase()} NEWS — On This Day (any year):
 - 3-4 short items from different years, all on ${day}th ${monthName(month)}
 - Must be genuinely relevant to ${country} — local events, not international
-- Each item: year, short headline, 25-40 words
+- Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence)
 - If ${country} is a smaller nation, include regional/Commonwealth events that affected it
 
 SPORT — On This Day (any year):
@@ -118,8 +126,7 @@ WEATHER — ${country} in ${monthName(month)}:
 
 MARKET TICKER — ${year}:
 - Dow Jones closing price
-- London FT index
-- Sydney/local stock index if relevant
+- ${localIndexLabel} closing/index value — this is the correct historical index name for ${country} on this exact date. Use this exact label, do not invent or guess a different index name (in particular, never label it "FTSE" or "FTSE 100" unless the label given here is exactly that).
 - Gold price per oz in USD
 - Oil price per barrel in USD
 - One locally relevant commodity price (e.g. NZ wool, Philippine peso/USD, etc.)
@@ -145,12 +152,7 @@ AT THE CINEMA — ${year}:
 - Title, Director or lead actor, one-line description
 - Must be real films released around that time
 
-FAMOUS BIRTHDAYS — Born on ${day}th ${monthName(month)}:
-3-4 real people born on this date (any year):
-- Prefer people famous in or relevant to ${country}
-- Format: Full name, nationality, profession, what known for
-- NEVER use character names — always real person's name
-- Include birth year in description
+${buildFamousBirthdaysSection(data, day, month, country)}
 
 ASTRO PANEL:
 - Star sign: ${starSign.name} (${starSign.symbol}) — element, dates
@@ -162,7 +164,7 @@ DJ/SENDER MESSAGE:
 Write a warm personal message from ${senderName}${stationName ? ` at ${stationName}` : ''} to ${recipientName}.
 - Reference 2-3 specific things from the On This Day content
 - Warm, personal, radio-ready tone (for radio edition) or warm gift tone (florist/public)
-- 40-60 words maximum
+- Maximum 240 characters, ending on a complete sentence. This is a hard layout limit — write a complete, warm message well inside it rather than one that has to be cut.
 - End with ${occasion === 'Golden Anniversary' ? '"Fifty Golden Years Together."' : occasion === 'In Loving Memory' ? 'an appropriate memorial closing' : `"Happy ${occasion}" or appropriate closing`}
 
 ════════════════════════════════════════
@@ -238,7 +240,7 @@ RETURN THIS EXACT JSON STRUCTURE
   },
   "ticker": [
     {"label": "DOW JONES", "value": "string", "direction": "up|down|flat"},
-    {"label": "LONDON FT", "value": "string", "direction": "up|down|flat"},
+    {"label": "${localIndexLabel.toUpperCase()}", "value": "string", "direction": "up|down|flat"},
     {"label": "GOLD", "value": "string", "direction": "up|down|flat"},
     {"label": "OIL", "value": "string", "direction": "up|down|flat"},
     {"label": "string — local commodity", "value": "string", "direction": "up|down|flat"}
@@ -263,16 +265,16 @@ RETURN THIS EXACT JSON STRUCTURE
     {"title": "string", "credit": "string", "note": "string — one line"}
   ],
   "birthdays": [
-    {"name": "string", "note": "string — nationality, profession, what known for, birth year"},
-    {"name": "string", "note": "string"},
-    {"name": "string", "note": "string"}
+    {"name": "string", "note": "string — max 120 characters, ending on a complete sentence"},
+    {"name": "string", "note": "string — max 120 characters, ending on a complete sentence"},
+    {"name": "string", "note": "string — max 120 characters, ending on a complete sentence"}
   ],
   "astro": {
     "starSign": {"symbol": "${starSign.symbol}", "name": "${starSign.name}", "element": "${starSign.element}", "dates": "${starSign.dates}"},
     "chineseZodiac": {"animal": "${chineseZodiac}", "year": ${year}},
     "moonPhase": {"name": "${moonPhase}", "description": "string — one line about this moon phase"}
   },
-  "message": "string — personal message from sender to recipient, 40-60 words"
+  "message": "string — personal message from sender to recipient, max 280 characters, ending on a complete sentence"
 }`;
 
   return prompt;
@@ -285,6 +287,35 @@ RETURN THIS EXACT JSON STRUCTURE
 function monthName(month) {
   return ['January','February','March','April','May','June',
           'July','August','September','October','November','December'][month-1];
+}
+
+// When 3+ admin-approved, Wikipedia-sourced entries exist for this exact
+// date/country (data.curatedBirthdays, attached by the caller before
+// buildPrompt() — see tribute-times-server-update.js), the AI must use
+// those real people instead of inventing names. Otherwise falls back to
+// the original AI-invents behavior.
+function buildFamousBirthdaysSection(data, day, month, country) {
+  const curated = Array.isArray(data.curatedBirthdays) ? data.curatedBirthdays : [];
+
+  if (curated.length >= 3) {
+    const list = curated.map(b => {
+      const year = b.birthYear ? ` (born ${b.birthYear})` : '';
+      const detail = b.occupation || b.shortBio || 'notable figure';
+      return `- ${b.fullName}${year} — ${detail}`;
+    }).join('\n');
+
+    return `FAMOUS BIRTHDAYS — Born on ${day}th ${monthName(month)}:
+Use EXACTLY these verified real people, sourced from Wikipedia. Do NOT invent, substitute, or add anyone else:
+${list}
+For each person, write a "note" description under 80 characters, ending on a complete sentence, based on the information given above.`;
+  }
+
+  return `FAMOUS BIRTHDAYS — Born on ${day}th ${monthName(month)}:
+3-4 real people born on this date (any year):
+- Prefer people famous in or relevant to ${country}
+- Format: Full name, nationality, profession, what known for. Keep description short and under 80 characters, ending on a complete sentence.
+- NEVER use character names — always real person's name
+- Include birth year in description`;
 }
 
 function getStarSign(day, month) {

@@ -17,6 +17,7 @@
     "@anthropic-ai/sdk": "^0.110.0",
     "@playwright/test": "^1.54.2",
     "@supabase/supabase-js": "^2.39.0",
+    "astronomy-engine": "^2.1.19",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
@@ -24,6 +25,7 @@
     "jsonwebtoken": "^9.0.0",
     "multer": "^2.0.0",
     "node-fetch": "^2.7.0",
+    "playwright": "^1.54.2",
     "puppeteer-core": "^24.12.1",
     "resend": "^2.0.0",
     "stripe": "^14.0.0"

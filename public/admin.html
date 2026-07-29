@@ -9,34 +9,34 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    /* ── TOKENS ── */
+    /* ── TOKENS & STYLE VARIABLES ── */
     :root {
-      --bg:        #f2ece2;
-      --surface:   #faf6ef;
-      --panel:     #ffffff;
-      --ink:       #1a1714;
-      --ink-2:     #3d3730;
-      --muted:     #6b6259;
-      --accent:    #7c1717;
-      --accent-h:  #9b2020;
-      --accent-2:  #b08a2e;
-      --green:     #1a6b3e;
-      --green-bg:  #ecfbf3;
-      --blue:      #1e4d8c;
-      --blue-bg:   #eef3ff;
-      --amber:     #92600a;
-      --amber-bg:  #fffaeb;
-      --line:      #ddd5c8;
-      --line-2:    #ece5db;
-      --radius:    16px;
+      --bg: #f2ece2;
+      --surface: #faf6ef;
+      --panel: #ffffff;
+      --ink: #1a1714;
+      --ink-2: #3d3730;
+      --muted: #6b6259;
+      --accent: #7c1717;
+      --accent-h: #9b2020;
+      --accent-2: #b08a2e;
+      --green: #1a6b3e;
+      --green-bg: #ecfbf3;
+      --blue: #1e4d8c;
+      --blue-bg: #eef3ff;
+      --amber: #92600a;
+      --amber-bg: #fffaeb;
+      --line: #ddd5c8;
+      --line-2: #ece5db;
+      --radius: 16px;
       --radius-sm: 10px;
       --shadow-sm: 0 1px 3px rgba(30,20,10,.07), 0 4px 12px rgba(30,20,10,.06);
-      --shadow:    0 4px 24px rgba(30,20,10,.10), 0 1px 4px rgba(30,20,10,.06);
+      --shadow: 0 4px 24px rgba(30,20,10,.10), 0 1px 4px rgba(30,20,10,.06);
       --shadow-lg: 0 16px 48px rgba(30,20,10,.14);
-      --transition: 0.18s ease;
+      --transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* ── RESET ── */
+    /* ── RESET & BASE ── */
     *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
@@ -47,148 +47,175 @@
       background: var(--bg);
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── TOP NAV BAR (shown when logged in) ── */
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 0 20px;
-      height: 56px;
-      background: var(--ink);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(0,0,0,.25);
-    }
-    body.logged-in .topbar { display: flex; }
-    .topbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      font-size: 0.95rem;
-      letter-spacing: -0.01em;
-    }
-    .topbar-brand .badge {
-      background: var(--accent);
-      color: #fff;
-      border-radius: 6px;
-      padding: 3px 8px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .topbar-user {
-      font-size: 0.82rem;
-      color: rgba(255,255,255,.65);
-    }
-    .topbar-user strong {
-      color: #fff;
-      font-weight: 600;
-    }
-    #logout-btn {
-      font-family: inherit;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: 1px solid rgba(255,255,255,.25);
-      background: transparent;
-      color: rgba(255,255,255,.85);
-      border-radius: 8px;
-      padding: 6px 14px;
-      cursor: pointer;
       transition: background var(--transition), color var(--transition);
     }
-    #logout-btn:hover {
-      background: rgba(255,255,255,.12);
-      color: #fff;
-      transform: none;
+
+    /* ── LOGGED IN STYLES (DARK CRIMSON THEME) ── */
+    body.logged-in {
+      background: linear-gradient(135deg, #381212 0%, #180d0b 100%);
+      background-attachment: fixed;
+      color: #fffdf5;
+      --surface: rgba(255, 255, 255, 0.04);
+      --panel: rgba(30, 18, 17, 0.7);
+      --line: rgba(255, 255, 255, 0.08);
+      --line-2: rgba(255, 255, 255, 0.05);
+      --ink: #fffdf5;
+      --ink-2: rgba(255, 255, 255, 0.85);
+      --muted: rgba(255, 255, 255, 0.5);
     }
 
-    /* ── SHELL / HERO ── */
-    .shell {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 28px 20px 60px;
-    }
-    .hero {
-      margin-bottom: 28px;
-    }
-    .hero-inner {
+    /* ── FIXED LAYOUT & PORTAL STRUCTURE ── */
+    .portal-container {
       display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      align-items: flex-end;
-      justify-content: space-between;
+      min-height: 100vh;
     }
-    .brand .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #1a1714;
+    
+    /* Left Navigation Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 260px;
+      background: rgba(20, 12, 11, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: none;
+      flex-direction: column;
+      z-index: 1000;
       color: #fff;
-      border-radius: 999px;
-      padding: 6px 14px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      transition: transform 0.3s ease;
+    }
+    body.logged-in .sidebar { display: flex; }
+
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .sidebar-logo {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .sidebar-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #b08a2e 0%, #d4af37 100%);
+      color: #1a0d0a;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .brand h1 {
-      margin: 0 0 6px;
-      font-size: clamp(2rem, 4vw, 3.2rem);
-      font-weight: 700;
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-    .brand p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.95rem;
-      max-width: 52ch;
+      margin-top: 4px;
     }
 
-    /* ── AUTH STAGE ── */
+    .sidebar-nav {
+      flex: 1;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+      transition: background var(--transition), color var(--transition);
+    }
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+    .nav-item.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(124, 23, 23, 0.3);
+    }
+    .nav-item[onclick="navigateTo('consultants')"],
+    .nav-item[onclick="navigateTo('promo-codes')"] {
+      display: none;
+    }
+
+    .sidebar-footer {
+      padding: 18px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .sidebar-user {
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sidebar-user strong {
+      color: #fff;
+      font-weight: 600;
+    }
+    
+    /* Main Content Wrapper */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 30px 40px;
+      transition: margin-left 0.3s ease;
+      min-width: 0;
+    }
+    body:not(.logged-in) .main-content {
+      margin-left: 0;
+      padding: 0;
+    }
+
+    /* ── AUTH STAGE (LOGIN VIEW) ── */
     .auth-stage {
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: min(70vh, 680px);
-      padding: 12px 0;
+      min-height: 100vh;
+      padding: 20px;
+      background: #f2ece2;
     }
     body.logged-in .auth-stage { display: none; }
     .auth-card {
       width: min(100%, 480px);
-      background: var(--panel);
+      background: #ffffff;
       border: 1px solid var(--line);
       border-radius: 24px;
       box-shadow: var(--shadow-lg);
       overflow: hidden;
+      color: #1a1714;
     }
     .auth-card-head {
-      padding: 24px 28px 18px;
-      border-bottom: 1px solid var(--line-2);
+      padding: 28px 28px 18px;
+      border-bottom: 1px solid #ece5db;
     }
     .auth-card-head h2 {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1.35rem;
       font-weight: 700;
       letter-spacing: -0.02em;
     }
     .auth-card-head p {
       margin: 6px 0 0;
       font-size: 0.85rem;
-      color: var(--muted);
+      color: #6b6259;
     }
     .auth-card-body {
       padding: 24px 28px 28px;
@@ -198,20 +225,20 @@
       display: block;
       margin-bottom: 6px;
       font-size: 0.78rem;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: #6b6259;
     }
     .form-field input {
       width: 100%;
-      border: 1.5px solid var(--line);
+      border: 1.5px solid #ddd5c8;
       border-radius: var(--radius-sm);
       padding: 12px 14px;
       font: inherit;
       font-size: 0.95rem;
-      color: var(--ink);
-      background: var(--surface);
+      color: #1a1714;
+      background: #faf6ef;
       transition: border-color var(--transition), box-shadow var(--transition);
       outline: none;
     }
@@ -228,9 +255,9 @@
       transform: translateY(-50%);
       width: 34px; height: 34px;
       border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--panel);
-      color: var(--muted);
+      border: 1px solid #ddd5c8;
+      background: #ffffff;
+      color: #6b6259;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -239,7 +266,56 @@
       font-family: inherit;
       transition: background var(--transition);
     }
-    .pass-toggle:hover { background: var(--line-2); transform: translateY(-50%); }
+    .pass-toggle:hover { background: #ece5db; transform: translateY(-50%); }
+
+    /* ── PAGE VIEW WRAPPERS ── */
+    .page-view {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .page-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION PANELS (GLASSMORPHISM) ── */
+    .section {
+      background: var(--panel);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line-2);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .section-head h3 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-head-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .section-body { padding: 20px 22px; }
 
     /* ── BUTTONS ── */
     .btn {
@@ -253,75 +329,117 @@
       border-radius: var(--radius-sm);
       padding: 10px 18px;
       cursor: pointer;
-      transition: transform var(--transition), opacity var(--transition), box-shadow var(--transition);
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
       white-space: nowrap;
       text-decoration: none;
+      font-family: 'Inter', system-ui, sans-serif;
     }
     .btn:hover { transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
-    .btn-primary  { background: var(--accent);   color: #fff; box-shadow: 0 2px 8px rgba(124,23,23,.3); }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(124,23,23,.3); }
     .btn-primary:hover { background: var(--accent-h); }
-    .btn-dark     { background: var(--ink);       color: #fff; }
-    .btn-ghost    { background: transparent; border: 1.5px solid var(--line); color: var(--ink-2); }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
     .btn-ghost:hover { background: var(--line-2); }
-    .btn-soft     { background: var(--line-2);    color: var(--ink-2); }
+    .btn-soft { background: var(--line-2); color: var(--ink-2); }
     .btn-soft:hover { background: var(--line); }
-    .btn-green    { background: var(--green);     color: #fff; box-shadow: 0 2px 8px rgba(26,107,62,.25); }
+    .btn-green { background: var(--green); color: #fff; }
     .btn-green:hover { background: #155e35; }
-    .btn-sm       { padding: 7px 13px; font-size: 0.8rem; border-radius: 8px; }
-    .btn-full     { width: 100%; justify-content: center; padding: 13px 18px; font-size: 0.95rem; }
-    .btn-login    { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(124,23,23,.35); }
-    .btn-login:hover { background: var(--accent-h); }
+    .btn-danger { background: #a51d24; color: #fff; }
+    .btn-danger:hover { background: #be1e2d; }
+    .btn-sm { padding: 7px 13px; font-size: 0.8rem; border-radius: 8px; }
+    .btn-full { width: 100%; justify-content: center; padding: 13px 18px; font-size: 0.95rem; }
 
-    /* ── MESSAGES ── */
-    .msg {
-      font-size: 0.88rem;
-      min-height: 1.4em;
-      color: var(--muted);
-      margin-top: 10px;
-      border-radius: 8px;
-      padding: 0;
-      transition: color var(--transition);
-    }
-    .msg.error  { color: #b91c1c; }
-    .msg.ok     { color: var(--green); }
-    .hidden     { display: none !important; }
-
-    /* ── SECTION PANELS ── */
-    .section {
-      background: var(--panel);
+    /* ── DATA TABLES ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      box-shadow: var(--shadow-sm);
-      overflow: hidden;
-      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.1);
     }
-    .section-head {
-      display: flex;
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .data-table thead th {
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 14px 16px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid var(--line-2);
+      transition: background var(--transition);
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    .data-table td {
+      padding: 14px 16px;
+      vertical-align: middle;
+    }
+
+    /* ── FORM ELEMENTS ── */
+    .fld label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .fld input,
+    .fld select,
+    .fld textarea,
+    .inline-select {
+      width: 100%;
+      font: inherit;
+      font-size: 0.88rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 11px;
+      color: var(--ink);
+      background: rgba(0, 0, 0, 0.2);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .fld input:focus,
+    .fld select:focus,
+    .fld textarea:focus,
+    .inline-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,23,23,.15);
+    }
+
+    /* ── MOBILE HEADER & HAMBURGER menu ── */
+    .mobile-header {
+      display: none;
+      height: 56px;
+      background: #1a0d0a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 18px 22px;
-      border-bottom: 1px solid var(--line-2);
-      background: rgba(250,246,239,.6);
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 999;
     }
-    .section-head h3 {
-      margin: 0;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-    }
-    .section-head-right {
+    .hamburger-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .section-body { padding: 20px 22px; }
-    .section-divider {
-      border: none;
-      border-top: 1px solid var(--line-2);
-      margin: 20px 0;
+      justify-content: center;
+      padding: 4px;
     }
 
     /* ── METRIC CARDS ── */
@@ -338,7 +456,6 @@
       padding: 16px 18px;
       box-shadow: var(--shadow-sm);
       position: relative;
-      overflow: hidden;
     }
     .metric-card::before {
       content: '';
@@ -347,10 +464,10 @@
       height: 3px;
       border-radius: 16px 16px 0 0;
     }
-    .metric-card.c-total::before   { background: var(--ink); }
+    .metric-card.c-total::before { background: #b08a2e; }
     .metric-card.c-pending::before { background: var(--amber); }
     .metric-card.c-printed::before { background: var(--blue); }
-    .metric-card.c-posted::before  { background: var(--green); }
+    .metric-card.c-posted::before { background: var(--green); }
     .metric-card.c-delivered::before { background: #7c3aed; }
     .metric-label {
       font-size: 0.7rem;
@@ -368,223 +485,6 @@
       color: var(--ink);
     }
 
-    /* ── TABLE ── */
-    .table-wrap {
-      overflow-x: auto;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--panel);
-      font-size: 0.88rem;
-    }
-    .data-table thead th {
-      background: #f5f0e8;
-      color: var(--muted);
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 12px 14px;
-      text-align: left;
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      border-bottom: 1px solid var(--line);
-    }
-    .data-table tbody tr {
-      border-bottom: 1px solid var(--line-2);
-      transition: background var(--transition);
-    }
-    .data-table tbody tr:last-child { border-bottom: none; }
-    .data-table tbody tr:hover { background: #fdf8f2; }
-    .data-table td {
-      padding: 14px 14px;
-      vertical-align: top;
-    }
-    .data-table td.tc { vertical-align: middle; }
-
-    /* ── STATUS CELL ── */
-    .status-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 150px;
-    }
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      border-radius: 999px;
-      padding: 5px 11px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: capitalize;
-      border: 1.5px solid transparent;
-    }
-    .status-pill::before {
-      content: '';
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .status-pill.pending   { background: #fffbeb; border-color: #fcd34d; color: #92600a; }
-    .status-pill.pending::before { background: #f59e0b; }
-    .status-pill.printed   { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
-    .status-pill.printed::before { background: #3b82f6; }
-    .status-pill.posted    { background: #f0fdf4; border-color: #86efac; color: #166534; }
-    .status-pill.posted::before  { background: #22c55e; }
-    .status-pill.delivered { background: #f5f3ff; border-color: #c4b5fd; color: #5b21b6; }
-    .status-pill.delivered::before { background: #8b5cf6; }
-    .status-pill.approved  { background: #f0fdf4; border-color: #86efac; color: #166534; }
-    .status-pill.approved::before { background: #22c55e; }
-    .status-pill.rejected  { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-    .status-pill.rejected::before { background: #ef4444; }
-
-    /* Status change widget */
-    .status-changer {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .status-select {
-      font: inherit;
-      font-size: 0.8rem;
-      font-weight: 500;
-      border: 1.5px solid var(--line);
-      border-radius: 8px;
-      padding: 6px 8px;
-      color: var(--ink);
-      background: var(--surface);
-      cursor: pointer;
-      outline: none;
-      flex: 1;
-      min-width: 0;
-      transition: border-color var(--transition);
-    }
-    .status-select:focus { border-color: var(--accent); }
-    .save-status-btn {
-      font: inherit;
-      font-size: 0.75rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 11px;
-      background: var(--ink);
-      color: #fff;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background var(--transition), transform var(--transition);
-      flex-shrink: 0;
-    }
-    .save-status-btn:hover { background: #333; transform: translateY(-1px); }
-
-    /* ── ACTION BUTTONS IN TABLE ── */
-    .action-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 130px;
-    }
-
-    /* ── ADDRESS CELL ── */
-    .addr {
-      white-space: pre-line;
-      color: var(--muted);
-      font-size: 0.83rem;
-      line-height: 1.4;
-      max-width: 180px;
-    }
-
-    /* ── FORM GRID ── */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-    .form-grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 14px;
-    }
-    .form-grid-4 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 14px;
-    }
-    .form-stack { display: flex; flex-direction: column; gap: 12px; }
-    .fld label {
-      display: block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
-    .fld input,
-    .fld select,
-    .fld textarea {
-      width: 100%;
-      font: inherit;
-      font-size: 0.88rem;
-      border: 1.5px solid var(--line);
-      border-radius: 8px;
-      padding: 9px 11px;
-      color: var(--ink);
-      background: var(--surface);
-      outline: none;
-      transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .fld input:focus,
-    .fld select:focus,
-    .fld textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124,23,23,.1);
-    }
-    .fld textarea { resize: vertical; min-height: 72px; }
-
-    /* Inline select in table */
-    .inline-select {
-      font: inherit;
-      font-size: 0.83rem;
-      border: 1.5px solid var(--line);
-      border-radius: 8px;
-      padding: 6px 8px;
-      background: var(--surface);
-      color: var(--ink);
-      outline: none;
-      width: 100%;
-      cursor: pointer;
-    }
-    .inline-select:focus { border-color: var(--accent); }
-
-    /* ── TOOLBAR ── */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .toolbar-left { display: flex; flex-direction: column; gap: 2px; }
-    .toolbar-title { font-size: 0.82rem; font-weight: 600; color: var(--ink-2); }
-    .toolbar-sub   { font-size: 0.78rem; color: var(--muted); }
-    .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-    /* ── EMPTY STATE ── */
-    .empty-row td {
-      text-align: center;
-      padding: 32px 20px !important;
-      color: var(--muted);
-      font-size: 0.88rem;
-    }
-
     /* ── ATTRIBUTION METRICS ── */
     .attr-metrics {
       display: grid;
@@ -593,7 +493,7 @@
       margin-bottom: 20px;
     }
     .attr-card {
-      background: var(--surface);
+      background: rgba(0, 0, 0, 0.15);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 14px 16px;
@@ -601,117 +501,207 @@
     .attr-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 4px; }
     .attr-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
 
-    /* ── ADD FORM TABS ── */
-    .add-tab-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      background: var(--surface);
-      border: 1.5px solid var(--line);
-      border-radius: 14px;
-      padding: 5px;
-      margin-bottom: 10px;
-    }
-    .add-tab {
-      flex: 1;
-      font: inherit;
-      font-size: 0.84rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 16px;
-      cursor: pointer;
-      background: transparent;
+    /* ── MESSAGES ── */
+    .msg {
+      font-size: 0.88rem;
+      min-height: 1.4em;
       color: var(--muted);
-      transition: background var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
-      white-space: nowrap;
+      margin-top: 10px;
+      border-radius: 8px;
     }
-    .add-tab:hover {
-      background: var(--line-2);
-      color: var(--ink-2);
-      transform: none;
-    }
-    .add-tab.active {
-      background: var(--panel);
-      color: var(--accent);
-      box-shadow: 0 1px 6px rgba(0,0,0,.1), 0 0 0 1px var(--line);
-    }
-    .add-tab-panel {
-      display: none;
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.22s ease, transform 0.22s ease;
-      background: var(--surface);
-      border: 1.5px solid var(--line);
-      border-radius: 14px;
-      padding: 20px;
-    }
-    .add-tab-panel.active {
-      display: block;
-    }
-    .add-tab-panel.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    .tab-form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    .tab-form-actions {
-      display: flex;
-      gap: 10px;
+    .msg.error { color: #fca5a5; }
+    .msg.ok { color: #86efac; }
+    .hidden { display: none !important; }
+
+    /* ── STATUS PILLS ── */
+    .status-pill {
+      display: inline-flex;
       align-items: center;
-      padding-top: 4px;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: capitalize;
+    }
+    .status-pill::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-pill.pending   { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+    .status-pill.pending::before { background: #f59e0b; }
+    .status-pill.printed   { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+    .status-pill.printed::before { background: #3b82f6; }
+    .status-pill.posted    { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .status-pill.posted::before  { background: #22c55e; }
+    .status-pill.delivered { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; }
+    .status-pill.delivered::before { background: #8b5cf6; }
+    .status-pill.approved  { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .status-pill.approved::before { background: #22c55e; }
+    .status-pill.rejected  { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+    .status-pill.rejected::before { background: #ef4444; }
+
+    /* ── PAGINATION CONTROLS ── */
+    .pagination-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 10px 4px 4px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .pagination-buttons {
+      display: flex;
+      gap: 8px;
     }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 1100px) {
-      .metrics-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .form-grid-4 { grid-template-columns: 1fr 1fr; }
+    /* ── POPUP MODALS ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
     }
-    @media (max-width: 860px) {
+    .modal-card {
+      background: #ffffff;
+      color: #1a1714;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body.logged-in .modal-card {
+      background: #1c110f;
+      color: #fffdf5;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .close-modal-btn {
+      background: transparent;
+      border: none;
+      color: var(--ink);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── RESPONSIVE MEDIA QUERIES ── */
+    @media (max-width: 992px) {
+      body.logged-in .mobile-header {
+        display: flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0 !important;
+        padding: 20px 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
       .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .form-grid { grid-template-columns: 1fr; }
-      .form-grid-3 { grid-template-columns: 1fr 1fr; }
       .attr-metrics { grid-template-columns: 1fr 1fr; }
-      .shell { padding: 16px 14px 48px; }
-      .section-body { padding: 16px; }
+      .metrics-row { gap: 10px; }
     }
-    @media (max-width: 600px) {
-      .metrics-row { grid-template-columns: 1fr 1fr; }
-      .form-grid-3 { grid-template-columns: 1fr; }
-      .form-grid-4 { grid-template-columns: 1fr; }
-      .attr-metrics { grid-template-columns: 1fr 1fr; }
-      .brand h1 { font-size: 1.85rem; }
-      .topbar { padding: 0 12px; }
-      .topbar-user { display: none; }
-      .section-head { padding: 14px 16px; flex-wrap: wrap; }
-    }
-    @media (max-width: 420px) {
+    @media (max-width: 576px) {
       .metrics-row { grid-template-columns: 1fr; }
       .attr-metrics { grid-template-columns: 1fr; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
 
-  <!-- Sticky top nav — only visible when logged in -->
-  <nav class="topbar" id="topbar">
-    <div class="topbar-brand">
-      <span>The Tribute Times</span>
-      <span class="badge">Admin</span>
-    </div>
-    <div class="topbar-right">
-      <span class="topbar-user" id="admin-meta">Signed out</span>
-      <button id="change-password-btn" type="button" onclick="openUpdatePasswordModal()" style="font-family: inherit; font-size: 0.8rem; font-weight: 600; border: 1px solid rgba(255,255,255,.25); background: transparent; color: rgba(255,255,255,.85); border-radius: 8px; padding: 6px 14px; cursor: pointer; transition: background var(--transition), color var(--transition); margin-right: 8px; display: none;">Change Password</button>
-      <button id="logout-btn" type="button">Log out</button>
-    </div>
-  </nav>
+  <!-- Mobile Header (Visible on viewport < 992px) -->
+  <header class="mobile-header" id="mobile-header">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Toggle Sidebar Navigation">☰</button>
+    <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.15rem; font-weight: 700; color: #fff;">The Tribute Times</div>
+    <div style="width: 24px;"></div>
+  </header>
 
-  <div class="shell">
+  <div class="portal-container">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">The Tribute Times</div>
+        <span class="sidebar-badge">Admin Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" type="button" onclick="navigateTo('dashboard')">📊 Dashboard</button>
+        <button class="nav-item" type="button" onclick="navigateTo('gcash-payments')">📲 GCash Payments</button>
+        <button class="nav-item" type="button" onclick="navigateTo('orders')">📬 Order Queue</button>
+        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Consultants</button>
+        <button class="nav-item" type="button" onclick="navigateTo('promo-codes')">🏷️ Promo Codes</button>
+        <button class="nav-item" type="button" onclick="navigateTo('territories')">🗺️ Territories</button>
+        <button class="nav-item" type="button" onclick="navigateTo('stations')">📻 Station Managers</button>
+        <button class="nav-item" type="button" onclick="navigateTo('florists')">🌸 Florist Partners</button>
+        <button class="nav-item" type="button" onclick="navigateTo('birthdays')">🎂 Famous Birthdays</button>
+        <button class="nav-item" type="button" onclick="navigateTo('settings')">⚙️ Settings</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebar-user-meta">Signed out</div>
+        <button class="btn btn-danger btn-sm btn-full" id="sidebar-logout-btn" type="button">Log out</button>
+      </div>
+    </aside>
 
+    <!-- Main Content Panel Area -->
+    <main class="main-content">
+      <div class="shell">
     <!-- Hero — visible only on login screen -->
     <div class="hero" id="hero-block">
       <div class="hero-inner">
@@ -751,298 +741,354 @@
     <!-- Dashboard — hidden until logged in -->
     <div id="dashboard" class="hidden">
 
-      <!-- Metrics strip -->
-      <div class="metrics-row" id="summary-grid"></div>
+      <!-- ── VIEW: DASHBOARD ── -->
+      <div id="view-dashboard" class="page-view active">
+        <!-- Metrics strip -->
+        <div class="metrics-row" id="summary-grid"></div>
 
-      <!-- ── FULFILMENT QUEUE ── -->
-      <div class="section">
-        <div class="section-head">
-          <h3>📬 Fulfilment Queue</h3>
-          <div class="section-head-right">
-            <button class="btn btn-soft btn-sm" id="refresh-btn" type="button">↻ Refresh queue</button>
+        <!-- System overview card -->
+        <div class="section">
+          <div class="section-head">
+            <h3>📊 Dashboard Overview</h3>
+          </div>
+          <div class="section-body">
+            <p style="margin: 0 0 20px; font-size: 0.95rem; line-height: 1.6;">
+              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, consultants, radio networks, florist stores, and famous birthdays.
+            </p>
+            <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Attribution Summary (This Month)</p>
+            <div class="attr-metrics" id="attribution-summary-grid"></div>
+
+            <hr class="section-divider" style="margin: 24px 0;" />
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Consultant Attribution Report</p>
+              <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh Report</button>
+            </div>
+            <div class="msg" id="attribution-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Consultant</th>
+                    <th>Free Demos This Month</th>
+                    <th>Paid Sales</th>
+                    <th>Paid Total</th>
+                  </tr>
+                </thead>
+                <tbody id="attribution-report-body">
+                  <tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <div class="section-body">
-          <div class="msg" id="queue-message"></div>
-          <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Address</th>
-                  <th>Tier</th>
-                  <th>Delivery</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="queue-body">
-                <tr class="empty-row"><td colspan="8">Sign in to load the queue.</td></tr>
-              </tbody>
-            </table>
+      </div>
+
+      <!-- ── VIEW: ORDERS ── -->
+      <div id="view-orders" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>📬 Fulfilment Queue</h3>
+            <div class="section-head-right">
+              <button class="btn btn-soft btn-sm" id="refresh-btn" type="button">↻ Refresh queue</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="queue-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Address</th>
+                    <th>Tier</th>
+                    <th>Delivery</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="queue-body">
+                  <tr class="empty-row"><td colspan="8">Sign in to load the queue.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- ── PROMO, REFERRALS & TERRITORIES ── -->
-      <div class="section">
-        <div class="section-head">
-          <h3>📊 Promo, Referrals &amp; Territories</h3>
-          <div class="section-head-right">
-            <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh</button>
-          </div>
-        </div>
-        <div class="section-body">
-
-          <!-- Attribution summary metrics -->
-          <div class="attr-metrics" id="attribution-summary-grid"></div>
-
-          <hr class="section-divider" />
-
-          <!-- ── TABBED ADD FORMS ── -->
-          <div class="add-tab-bar">
-            <button class="add-tab active" type="button" data-tab="consultant" id="tab-consultant">👤 Add Consultant</button>
-            <button class="add-tab" type="button" data-tab="promo" id="tab-promo">🏷 Add Promo Code</button>
-            <button class="add-tab" type="button" data-tab="territory" id="tab-territory">🗺 Add Territory</button>
-            <button class="add-tab" type="button" data-tab="station-manager" id="tab-station-manager">📻 Add Station Manager</button>
-            <button class="add-tab" type="button" data-tab="florist-partner" id="tab-florist-partner">🌸 Add Florist</button>
-          </div>
-
-          <!-- Tab: Add Consultant -->
-          <div class="add-tab-panel active" id="panel-consultant">
-            <div class="tab-form-grid">
-              <div class="fld">
-                <label for="consultant-name">Full Name</label>
-                <input id="consultant-name" type="text" placeholder="e.g. Sarah Jones" />
-              </div>
-              <div class="fld">
-                <label for="consultant-email">Email Address</label>
-                <input id="consultant-email" type="email" placeholder="sarah@example.com" />
-              </div>
-            </div>
-            <div class="tab-form-actions">
-              <button class="btn btn-primary" id="add-consultant-btn" type="button">+ Add Consultant</button>
+      <!-- ── VIEW: CONSULTANTS ── -->
+      <div id="view-gcash-payments" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>GCash Payment Requests</h3>
+            <div class="section-head-right">
+              <select id="gcash-status-filter" class="inline-select" style="width:auto;min-width:130px;">
+                <option value="">All statuses</option>
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <button class="btn btn-soft btn-sm" id="refresh-gcash-payments-btn" type="button">Refresh</button>
             </div>
           </div>
-
-          <!-- Tab: Add Promo Code -->
-          <div class="add-tab-panel" id="panel-promo">
-            <div class="tab-form-grid">
-              <div class="fld">
-                <label for="promo-consultant">Consultant</label>
-                <select id="promo-consultant"><option value="">— select consultant —</option></select>
-              </div>
-              <div class="fld">
-                <label for="promo-code">Promo Code</label>
-                <input id="promo-code" type="text" placeholder="e.g. SARAH5" />
-              </div>
-              <div class="fld">
-                <label for="promo-limit">Monthly Free Demos</label>
-                <input id="promo-limit" type="number" min="0" value="5" />
-              </div>
+          <div class="section-body">
+            <div class="msg" id="gcash-payments-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Request</th>
+                    <th>Customer</th>
+                    <th>Item</th>
+                    <th>Expected</th>
+                    <th>GCash Proof</th>
+                    <th>Status</th>
+                    <th>Promo Code</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="gcash-payments-body">
+                  <tr class="empty-row"><td colspan="8">No GCash payment requests loaded.</td></tr>
+                </tbody>
+              </table>
             </div>
-            <div class="tab-form-actions">
-              <button class="btn btn-primary" id="add-promo-btn" type="button">+ Add Promo Code</button>
-            </div>
+            <div id="gcash-payments-pagination" class="pagination-footer"></div>
           </div>
-
-          <!-- Tab: Add Territory -->
-          <div class="add-tab-panel" id="panel-territory">
-            <div class="tab-form-grid">
-              <div class="fld">
-                <label for="territory-consultant">Consultant</label>
-                <select id="territory-consultant"><option value="">— select —</option></select>
-              </div>
-              <div class="fld">
-                <label for="territory-name">Territory Name</label>
-                <input id="territory-name" type="text" placeholder="e.g. North Auckland" />
-              </div>
-              <div class="fld">
-                <label for="territory-country">Country</label>
-                <input id="territory-country" type="text" value="New Zealand" />
-              </div>
-              <div class="fld">
-                <label for="territory-match-type">Match Type</label>
-                <select id="territory-match-type">
-                  <option value="exact">Exact</option>
-                  <option value="prefix">Prefix</option>
-                  <option value="range">Range</option>
-                </select>
-              </div>
-              <div class="fld">
-                <label for="territory-postcode-start">Postcode / Start</label>
-                <input id="territory-postcode-start" type="text" placeholder="1010" />
-              </div>
-              <div class="fld">
-                <label for="territory-postcode-end">End (Range only)</label>
-                <input id="territory-postcode-end" type="text" placeholder="1099" />
-              </div>
-              <div class="fld">
-                <label for="territory-priority">Priority</label>
-                <input id="territory-priority" type="number" value="100" />
-              </div>
-            </div>
-            <div class="tab-form-actions">
-              <button class="btn btn-primary" id="add-territory-btn" type="button">+ Add Territory</button>
-            </div>
-          </div>
-
-          <!-- Tab: Add Station Manager -->
-          <div class="add-tab-panel" id="panel-station-manager">
-            <div class="tab-form-grid">
-              <div class="fld">
-                <label for="station-name">Station Name</label>
-                <input id="station-name" type="text" placeholder="e.g. River FM" />
-              </div>
-              <div class="fld">
-                <label for="station-manager-email">Manager Email</label>
-                <input id="station-manager-email" type="email" placeholder="manager@riverfm.co.nz" />
-              </div>
-              <div class="fld">
-                <label for="station-temp-password">Temporary Password</label>
-                <input id="station-temp-password" type="text" placeholder="Enter temporary password" />
-              </div>
-              <div class="fld">
-                <label for="station-country">Country</label>
-                <input id="station-country" type="text" value="New Zealand" />
-              </div>
-              <div class="fld">
-                <label for="station-tier">Tier</label>
-                <select id="station-tier">
-                  <option value="community">Community</option>
-                  <option value="regional">Regional</option>
-                  <option value="city">City</option>
-                  <option value="national">National</option>
-                </select>
-              </div>
-            </div>
-            <div class="tab-form-actions">
-              <button class="btn btn-primary" id="add-station-manager-btn" type="button">+ Add Station Manager</button>
-            </div>
-          </div>
-
-          <!-- Tab: Add Florist Partner -->
-          <div class="add-tab-panel" id="panel-florist-partner">
-            <div class="tab-form-grid">
-              <div class="fld">
-                <label for="florist-partner-name">Florist Name</label>
-                <input id="florist-partner-name" type="text" placeholder="e.g. Blossom Florist" />
-              </div>
-              <div class="fld">
-                <label for="florist-partner-email">Email Address</label>
-                <input id="florist-partner-email" type="email" placeholder="hello@blossomflorist.co.nz" />
-              </div>
-              <div class="fld">
-                <label for="florist-temp-password">Temporary Password</label>
-                <input id="florist-temp-password" type="text" placeholder="Enter temporary password" />
-              </div>
-              <div class="fld">
-                <label for="florist-country">Country</label>
-                <input id="florist-country" type="text" value="New Zealand" />
-              </div>
-              <div class="fld">
-                <label for="florist-initial-credits">Initial Credits</label>
-                <input id="florist-initial-credits" type="number" min="0" value="30" />
-              </div>
-            </div>
-            <div class="tab-form-actions">
-              <button class="btn btn-primary" id="add-florist-partner-btn" type="button">+ Add Florist</button>
-            </div>
-          </div>
-
-          <div class="msg" id="attribution-message" style="margin-top:14px;"></div>
-
-          <hr class="section-divider" />
-
-          <!-- Attribution report table -->
-          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Consultant Attribution</p>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Consultant</th>
-                  <th>Free Demos This Month</th>
-                  <th>Paid Sales</th>
-                  <th>Paid Total</th>
-                </tr>
-              </thead>
-              <tbody id="attribution-report-body">
-                <tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;">Promo Codes</p>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Consultant</th>
-                  <th>Monthly Limit</th>
-                  <th>Used This Month</th>
-                </tr>
-              </thead>
-              <tbody id="promo-code-body">
-                <tr class="empty-row"><td colspan="4">No promo codes loaded.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;">Postcode Territories</p>
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Territory</th>
-                  <th>Consultant</th>
-                  <th>Country</th>
-                  <th>Match</th>
-                </tr>
-              </thead>
-              <tbody id="territory-body">
-                <tr class="empty-row"><td colspan="4">No territories loaded.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
         </div>
       </div>
 
-      <!-- ── FAMOUS BIRTHDAYS ── -->
-      <div class="section">
-        <div class="section-head">
-          <h3>🎂 Famous Birthdays Curation</h3>
-          <div class="section-head-right">
-            <select id="birthday-status-filter" class="inline-select" style="width:130px;" aria-label="Birthday curation status">
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <button class="btn btn-soft btn-sm" id="refresh-birthdays-btn" type="button">↻ Refresh</button>
+      <div id="view-consultants" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>👤 Sales Consultants Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Consultant</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="consultants-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Commission Notes</th>
+                    <th>Admin Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="consultants-table-body">
+                  <tr class="empty-row"><td colspan="7">No consultants loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="consultants-pagination" class="pagination-footer"></div>
           </div>
         </div>
-        <div class="section-body">
-          <p style="font-size:.83rem;color:var(--muted);margin:0 0 14px;">Review imported Wikipedia rows before they appear in the public birthdays API.</p>
-          <div class="msg" id="birthdays-message"></div>
-          <div class="table-wrap" style="margin-top:12px; max-height:70vh; overflow-y:auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Person</th>
-                  <th>Date</th>
-                  <th>Country &amp; Priority</th>
-                  <th>Summary</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="birthdays-body">
-                <tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>
-              </tbody>
-            </table>
+      </div>
+
+      <!-- ── VIEW: PROMO CODES ── -->
+      <div id="view-promo-codes" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🏷️ Promo Codes Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('promo')">+ Add Promo Code</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="promos-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Consultant</th>
+                    <th>Monthly Limit</th>
+                    <th>Used This Month</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="promo-code-body">
+                  <tr class="empty-row"><td colspan="7">No promo codes loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="promos-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: TERRITORIES ── -->
+      <div id="view-territories" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🗺️ Postcode Territories Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('territory')">+ Add Territory</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="territories-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Territory</th>
+                    <th>Consultant</th>
+                    <th>Country</th>
+                    <th>Match Type</th>
+                    <th>Postcodes</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="territory-body">
+                  <tr class="empty-row"><td colspan="9">No territories loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="territories-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: STATIONS ── -->
+      <div id="view-stations" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>📻 Station Managers Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('station')">+ Add Station Manager</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="stations-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Station Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Tier</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="stations-table-body">
+                  <tr class="empty-row"><td colspan="6">No station managers loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="stations-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: FLORISTS ── -->
+      <div id="view-florists" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🌸 Florist Partners Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('florist')">+ Add Florist Partner</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="florists-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Store Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Credit Balance</th>
+                    <th>Low Threshold</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="florists-table-body">
+                  <tr class="empty-row"><td colspan="7">No florist partners loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="florists-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: FAMOUS BIRTHDAYS ── -->
+      <div id="view-birthdays" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🎂 Famous Birthdays Curation</h3>
+            <div class="section-head-right">
+              <select id="birthday-status-filter" class="inline-select" style="width:130px;" aria-label="Birthday curation status">
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <button class="btn btn-soft btn-sm" id="refresh-birthdays-btn" type="button">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p style="font-size:.83rem;color:var(--muted);margin:0 0 14px;">Review imported Wikipedia rows before they appear in the public birthdays API.</p>
+            <div class="msg" id="birthdays-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:70vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Person</th>
+                    <th>Date</th>
+                    <th>Country &amp; Priority</th>
+                    <th>Summary</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="birthdays-body">
+                  <tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="birthdays-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: SETTINGS ── -->
+      <div id="view-settings" class="page-view">
+        <div class="section" style="max-width: 600px;">
+          <div class="section-head">
+            <h3>⚙️ Account Settings</h3>
+          </div>
+          <div class="section-body">
+            <h4 style="margin: 0 0 16px; font-size: 1rem; font-weight: 700;">Change Admin Password</h4>
+            <form onsubmit="submitPasswordUpdate(event)">
+              <div class="form-field">
+                <label for="settings-old-password">Current Password</label>
+                <input type="password" id="settings-old-password" required placeholder="Enter current password" />
+              </div>
+              <div class="form-field">
+                <label for="settings-new-password">New Password</label>
+                <input type="password" id="settings-new-password" required placeholder="Enter new password" />
+              </div>
+              <div id="settings-password-error" class="msg error" style="display:none; margin-bottom: 12px; padding: 0 0 8px;"></div>
+              <div id="settings-password-success" class="msg ok" style="display:none; margin-bottom: 12px; padding: 0 0 8px;">Password changed successfully!</div>
+              <button class="btn btn-primary" type="submit">Update Password</button>
+            </form>
           </div>
         </div>
       </div>
@@ -1060,6 +1106,8 @@
       summary:     null,
       attribution: null,
       birthdays:   [],
+      gcashPayments: [],
+      consultantsList: [],
     };
 
     // DOM refs
@@ -1069,50 +1117,91 @@
     const queueMessage          = document.getElementById('queue-message');
     const summaryGrid           = document.getElementById('summary-grid');
     const queueBody             = document.getElementById('queue-body');
-    const adminMeta             = document.getElementById('admin-meta');
+    const sidebarUserMeta       = document.getElementById('sidebar-user-meta');
     const attributionMessage    = document.getElementById('attribution-message');
     const attributionSummaryGrid= document.getElementById('attribution-summary-grid');
     const attributionReportBody = document.getElementById('attribution-report-body');
+    const gcashPaymentsMessage  = document.getElementById('gcash-payments-message');
+    const gcashPaymentsBody     = document.getElementById('gcash-payments-body');
     const promoCodeBody         = document.getElementById('promo-code-body');
     const territoryBody         = document.getElementById('territory-body');
     const birthdaysMessage      = document.getElementById('birthdays-message');
     const birthdaysBody         = document.getElementById('birthdays-body');
 
+    // Current pagination state
+    const paginationState = {
+      consultants: { page: 1, limit: 10, total: 0 },
+      gcashPayments: { page: 1, limit: 10, total: 0 },
+      promos: { page: 1, limit: 10, total: 0 },
+      territories: { page: 1, limit: 10, total: 0 },
+      stations: { page: 1, limit: 10, total: 0 },
+      florists: { page: 1, limit: 10, total: 0 },
+      birthdays: { page: 1, limit: 10, total: 0 }
+    };
+
+    const currentNavigation = {
+      page: 'dashboard',
+      currentPageNumber: 1,
+      searchQuery: ''
+    };
+
+    // State Router
+    function navigateTo(viewId) {
+      currentNavigation.page = viewId;
+      currentNavigation.currentPageNumber = 1;
+      
+      // Toggle sidebar nav item styles
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const onclickAttr = item.getAttribute('onclick') || '';
+        item.classList.toggle('active', onclickAttr.includes(`'${viewId}'`));
+      });
+      // Toggle views visibility
+      document.querySelectorAll('.page-view').forEach(view => {
+        view.classList.toggle('active', view.id === `view-${viewId}`);
+      });
+      // Close sidebar on mobile
+      const sb = document.getElementById('sidebar');
+      if (sb) sb.classList.remove('open');
+
+      // Fetch view-specific data
+      if (viewId === 'dashboard') {
+        loadQueue().catch(() => {});
+        loadAttribution().catch(() => {});
+      } else if (viewId === 'orders') {
+        loadQueue(1);
+      } else if (viewId === 'gcash-payments') {
+        loadGcashPayments(1);
+      } else if (viewId === 'consultants') {
+        loadConsultants(1);
+      } else if (viewId === 'promo-codes') {
+        loadPromos(1);
+      } else if (viewId === 'territories') {
+        loadTerritories(1);
+      } else if (viewId === 'stations') {
+        loadStations(1);
+      } else if (viewId === 'florists') {
+        loadFlorists(1);
+      } else if (viewId === 'birthdays') {
+        loadBirthdays(1);
+      }
+    }
+
     // Wire events
     document.getElementById('login-btn').addEventListener('click', login);
-    document.getElementById('refresh-btn').addEventListener('click', loadQueue);
+    document.getElementById('refresh-btn').addEventListener('click', () => loadQueue(1));
     document.getElementById('refresh-attribution-btn').addEventListener('click', loadAttribution);
-    document.getElementById('add-consultant-btn').addEventListener('click', addConsultant);
-    document.getElementById('add-promo-btn').addEventListener('click', addPromoCode);
-    document.getElementById('add-territory-btn').addEventListener('click', addTerritory);
-    document.getElementById('add-station-manager-btn').addEventListener('click', addStationManager);
-    document.getElementById('add-florist-partner-btn').addEventListener('click', addFloristPartner);
-    document.getElementById('refresh-birthdays-btn').addEventListener('click', loadBirthdays);
-    document.getElementById('birthday-status-filter').addEventListener('change', loadBirthdays);
-    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('refresh-gcash-payments-btn').addEventListener('click', () => loadGcashPayments(1));
+    document.getElementById('gcash-status-filter').addEventListener('change', () => loadGcashPayments(1));
+    document.getElementById('refresh-birthdays-btn').addEventListener('click', () => loadBirthdays(1));
+    document.getElementById('birthday-status-filter').addEventListener('change', () => loadBirthdays(1));
+    document.getElementById('sidebar-logout-btn').addEventListener('click', logout);
     document.getElementById('password-toggle').addEventListener('click', togglePasswordVisibility);
     document.getElementById('admin-password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-    // Tab switching for Add Consultant / Add Promo / Add Territory
-    document.querySelectorAll('.add-tab').forEach(btn => {
-      btn.addEventListener('click', () => switchAddTab(btn.dataset.tab));
+    
+    // Mobile hamburger menu wiring
+    document.getElementById('hamburger-btn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
     });
-    // Initialise the first panel as visible
-    requestAnimationFrame(() => {
-      const first = document.querySelector('.add-tab-panel.active');
-      if (first) requestAnimationFrame(() => first.classList.add('visible'));
-    });
-
-    function switchAddTab(tabName) {
-      document.querySelectorAll('.add-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
-      document.querySelectorAll('.add-tab-panel').forEach(panel => {
-        if (panel.id === `panel-${tabName}`) {
-          panel.classList.add('active');
-          requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('visible')));
-        } else {
-          panel.classList.remove('active', 'visible');
-        }
-      });
-    }
 
     boot();
 
@@ -1143,6 +1232,7 @@
       heroBlock.classList.add('hidden');
       dashboard.classList.remove('hidden');
       renderAdminMeta();
+      navigateTo('dashboard');
     }
 
     /* ── LOGIN ── */
@@ -1207,10 +1297,8 @@
 
     function renderAdminMeta() {
       const name = state.admin?.displayName || state.admin?.email || '';
-      adminMeta.innerHTML = `Signed in as <strong>${escapeHtml(name)}</strong>`;
-      const pwdBtn = document.getElementById('change-password-btn');
-      if (pwdBtn) {
-        pwdBtn.style.display = state.token ? 'inline-block' : 'none';
+      if (sidebarUserMeta) {
+        sidebarUserMeta.innerHTML = `Signed in as <strong>${escapeHtml(name)}</strong>`;
       }
     }
 
@@ -1297,16 +1385,17 @@
 
     /* ── ATTRIBUTION ── */
     async function loadAttribution() {
-      setMsg(attributionMessage, 'Loading attribution…', false);
+      if (attributionMessage) setMsg(attributionMessage, 'Loading attribution…', false);
       try {
         const r    = await apiFetch('/api/admin/attribution');
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Unable to load attribution.');
         state.attribution = data;
+        state.consultantsList = data.consultants || [];
         renderAttribution();
-        setMsg(attributionMessage, '', false);
+        if (attributionMessage) setMsg(attributionMessage, '', false);
       } catch (err) {
-        setMsg(attributionMessage, err.message, true);
+        if (attributionMessage) setMsg(attributionMessage, err.message, true);
       }
     }
 
@@ -1329,11 +1418,15 @@
         </div>
       `).join('');
 
-      const consultantOpts = consultants.map(c =>
-        `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`
-      ).join('');
-      document.getElementById('promo-consultant').innerHTML    = consultantOpts || '<option value="">Add a consultant first</option>';
-      document.getElementById('territory-consultant').innerHTML = consultantOpts || '<option value="">Add a consultant first</option>';
+      // Build consultant options for modals
+      const consultantOpts = consultants.length
+        ? consultants.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
+        : '<option value="">No consultants yet</option>';
+
+      const selectPromo = document.getElementById('modal-promo-consultant');
+      const selectTerr = document.getElementById('modal-territory-consultant');
+      if (selectPromo) selectPromo.innerHTML = `<option value="">— select consultant —</option>${consultantOpts}`;
+      if (selectTerr) selectTerr.innerHTML = `<option value="">— select —</option>${consultantOpts}`;
 
       attributionReportBody.innerHTML = (report.byConsultant || []).length
         ? report.byConsultant.map(row => `
@@ -1346,158 +1439,634 @@
           `).join('')
         : '<tr class="empty-row"><td colspan="4">No consultants yet.</td></tr>';
 
-      promoCodeBody.innerHTML = promoCodes.length
-        ? promoCodes.map(code => `
-            <tr>
-              <td><strong>${escapeHtml(code.code)}</strong></td>
-              <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
-              <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
-              <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
-            </tr>
-          `).join('')
-        : '<tr class="empty-row"><td colspan="4">No promo codes yet.</td></tr>';
+      // Only update promoCodeBody if the promo-codes view is NOT currently active
+      // (avoid overwriting the CRUD view with attribution-summary rows)
+      const promoView = document.getElementById('view-promo-codes');
+      if (!promoView || !promoView.classList.contains('active')) {
+        promoCodeBody.innerHTML = promoCodes.length
+          ? promoCodes.map(code => `
+              <tr>
+                <td><strong>${escapeHtml(code.code)}</strong></td>
+                <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
+                <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
+                <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
+              </tr>
+            `).join('')
+          : '<tr class="empty-row"><td colspan="4">No promo codes yet.</td></tr>';
+      }
 
-      territoryBody.innerHTML = territories.length
-        ? territories.map(t => `
-            <tr>
-              <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
-              <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
-              <td>${escapeHtml(t.country)}</td>
-              <td>${escapeHtml(formatTerritoryMatch(t))}</td>
-            </tr>
-          `).join('')
-        : '<tr class="empty-row"><td colspan="4">No territories yet.</td></tr>';
+      // Only update territoryBody if territory view is NOT currently active
+      const terrView = document.getElementById('view-territories');
+      if (!terrView || !terrView.classList.contains('active')) {
+        territoryBody.innerHTML = territories.length
+          ? territories.map(t => `
+              <tr>
+                <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
+                <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
+                <td>${escapeHtml(t.country)}</td>
+                <td>${escapeHtml(formatTerritoryMatch(t))}</td>
+              </tr>
+            `).join('')
+          : '<tr class="empty-row"><td colspan="4">No territories yet.</td></tr>';
+      }
     }
 
-    /* ── ADD CONSULTANT ── */
-    async function addConsultant() {
-      setMsg(attributionMessage, 'Adding consultant…', false);
+    // Modal helpers
+    async function loadEntityForEdit(type, id) {
       try {
-        const r = await apiFetch('/api/admin/consultants', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name:  document.getElementById('consultant-name').value,
-            email: document.getElementById('consultant-email').value,
-          }),
-        });
+        let endpoint = '';
+        if (type === 'consultant') endpoint = `/api/admin/consultants/${id}`;
+        else if (type === 'promo') endpoint = `/api/admin/promo-codes/${id}`;
+        else if (type === 'territory') endpoint = `/api/admin/postcode-territories/${id}`;
+        else if (type === 'station') endpoint = `/api/admin/stations/${id}`;
+        else if (type === 'florist') endpoint = `/api/admin/florists/${id}`;
+        
+        const r = await apiFetch(endpoint);
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Unable to add consultant.');
-        document.getElementById('consultant-name').value  = '';
-        document.getElementById('consultant-email').value = '';
-        setMsg(attributionMessage, '✓ Consultant added.', false);
-        await loadAttribution();
-      } catch (err) { setMsg(attributionMessage, err.message, true); }
+        if (!r.ok) throw new Error(data.error || 'Failed to load details.');
+        
+        if (type === 'consultant') {
+          document.getElementById('modal-consultant-name').value = data.name || '';
+          document.getElementById('modal-consultant-email').value = data.email || '';
+        } else if (type === 'promo') {
+          document.getElementById('modal-promo-consultant').value = data.consultant_id || '';
+          document.getElementById('modal-promo-code').value = data.code || '';
+          document.getElementById('modal-promo-limit').value = data.monthly_free_demo_limit || 5;
+        } else if (type === 'territory') {
+          document.getElementById('modal-territory-consultant').value = data.consultant_id || '';
+          document.getElementById('modal-territory-name').value = data.territory_name || '';
+          document.getElementById('modal-territory-country').value = data.country || 'New Zealand';
+          document.getElementById('modal-territory-match-type').value = data.match_type || 'exact';
+          document.getElementById('modal-territory-postcode-start').value = data.postcode_start || '';
+          document.getElementById('modal-territory-postcode-end').value = data.postcode_end || '';
+          document.getElementById('modal-territory-priority').value = data.priority || 100;
+        } else if (type === 'station') {
+          document.getElementById('modal-station-name').value = data.name || '';
+          document.getElementById('modal-station-email').value = data.email || '';
+          document.getElementById('modal-station-country').value = data.country || 'New Zealand';
+          document.getElementById('modal-station-tier').value = data.tier || 'community';
+          
+          const pwWrap = document.getElementById('modal-station-password-wrap');
+          if (pwWrap) pwWrap.style.display = 'none';
+          const actWrap = document.getElementById('modal-station-active-wrap');
+          if (actWrap) {
+            actWrap.style.display = 'flex';
+            document.getElementById('modal-station-active').checked = !!data.active;
+          }
+        } else if (type === 'florist') {
+          document.getElementById('modal-florist-name').value = data.name || '';
+          document.getElementById('modal-florist-email').value = data.email || '';
+          document.getElementById('modal-florist-country').value = data.country || 'New Zealand';
+          document.getElementById('modal-florist-credits').value = data.initial_credit_balance || data.credit_balance || 30;
+          
+          const pwWrap = document.getElementById('modal-florist-password-wrap');
+          if (pwWrap) pwWrap.style.display = 'none';
+          const actWrap = document.getElementById('modal-florist-active-wrap');
+          if (actWrap) {
+            actWrap.style.display = 'flex';
+            document.getElementById('modal-florist-active').checked = !!data.active;
+          }
+          const thWrap = document.getElementById('modal-florist-threshold-wrap');
+          if (thWrap) {
+            thWrap.style.display = 'block';
+            document.getElementById('modal-florist-threshold').value = data.low_credit_threshold || 5;
+          }
+        }
+      } catch (err) {
+        alert(`Error loading data: ${err.message}`);
+        closeModal(type);
+      }
     }
 
-    /* ── ADD PROMO CODE ── */
-    async function addPromoCode() {
-      setMsg(attributionMessage, 'Adding promo code…', false);
-      try {
-        const r = await apiFetch('/api/admin/promo-codes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            consultantId:        document.getElementById('promo-consultant').value,
-            code:                document.getElementById('promo-code').value,
-            monthlyFreeDemoLimit: Number(document.getElementById('promo-limit').value || 5),
-          }),
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Unable to add promo code.');
-        document.getElementById('promo-code').value  = '';
-        document.getElementById('promo-limit').value = '5';
-        setMsg(attributionMessage, '✓ Promo code added.', false);
-        await loadAttribution();
-      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    function openModal(type, id = null) {
+      const modal = document.getElementById(`${type}-modal`);
+      if (!modal) return;
+      
+      const form = document.getElementById(`${type}-form`);
+      if (form) form.reset();
+      
+      const titleEl = document.getElementById(type === 'florist' ? 'modal-florist-title' : `${type}-modal-title`);
+      const idInput = document.getElementById(`${type}-id`);
+      if (idInput) idInput.value = id || '';
+      
+      if (id) {
+        if (titleEl) titleEl.textContent = `Edit ${capitalize(type)}`;
+        loadEntityForEdit(type, id);
+      } else {
+        if (titleEl) titleEl.textContent = `Add ${capitalize(type)}`;
+        const pwWrap = document.getElementById(`modal-${type}-password-wrap`);
+        if (pwWrap) pwWrap.style.display = 'block';
+        const actWrap = document.getElementById(`modal-${type}-active-wrap`);
+        if (actWrap) actWrap.style.display = 'none';
+        const thWrap = document.getElementById(`modal-${type}-threshold-wrap`);
+        if (thWrap) thWrap.style.display = 'none';
+      }
+      modal.style.display = 'flex';
     }
 
-    /* ── ADD TERRITORY ── */
-    async function addTerritory() {
-      setMsg(attributionMessage, 'Adding territory…', false);
-      try {
-        const r = await apiFetch('/api/admin/postcode-territories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            consultantId:   document.getElementById('territory-consultant').value,
-            territoryName:  document.getElementById('territory-name').value,
-            country:        document.getElementById('territory-country').value,
-            matchType:      document.getElementById('territory-match-type').value,
-            postcodeStart:  document.getElementById('territory-postcode-start').value,
-            postcodeEnd:    document.getElementById('territory-postcode-end').value,
-            priority:       Number(document.getElementById('territory-priority').value || 100),
-          }),
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Unable to add territory.');
-        ['territory-name','territory-postcode-start','territory-postcode-end'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
-        document.getElementById('territory-priority').value = '100';
-        setMsg(attributionMessage, '✓ Territory added.', false);
-        await loadAttribution();
-      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    function closeModal(type) {
+      const modal = document.getElementById(`${type}-modal`);
+      if (modal) modal.style.display = 'none';
     }
 
-    /* ── ADD STATION MANAGER ── */
-    async function addStationManager() {
-      setMsg(attributionMessage, 'Adding station manager…', false);
-      try {
-        const r = await apiFetch('/api/admin/stations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name:            document.getElementById('station-name').value,
-            email:           document.getElementById('station-manager-email').value,
-            password:        document.getElementById('station-temp-password').value,
-            country:         document.getElementById('station-country').value,
-            tier:            document.getElementById('station-tier').value,
-          }),
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Unable to add station manager.');
-        ['station-name','station-manager-email','station-temp-password'].forEach(id => {
-          document.getElementById(id).value = '';
-        });
-        setMsg(attributionMessage, '✓ Station manager account created.', false);
-      } catch (err) { setMsg(attributionMessage, err.message, true); }
+    function capitalize(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ');
     }
 
-    /* ── ADD FLORIST PARTNER ── */
-    async function addFloristPartner() {
-      setMsg(attributionMessage, 'Adding florist partner…', false);
+    // Modal submit saves
+    async function saveConsultant(e) {
+      e.preventDefault();
+      const id = document.getElementById('consultant-id').value;
+      const payload = {
+        name: document.getElementById('modal-consultant-name').value.trim(),
+        email: document.getElementById('modal-consultant-email').value.trim()
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/consultants/${id}` : '/api/admin/consultants';
       try {
-        const r = await apiFetch('/api/admin/florists', {
-          method: 'POST',
+        const r = await apiFetch(endpoint, {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name:                   document.getElementById('florist-partner-name').value,
-            email:                  document.getElementById('florist-partner-email').value,
-            password:               document.getElementById('florist-temp-password').value,
-            country:                document.getElementById('florist-country').value,
-            initial_credit_balance: Number(document.getElementById('florist-initial-credits').value || 30),
-          }),
+          body: JSON.stringify(payload)
         });
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Unable to add florist partner.');
-        ['florist-partner-name','florist-partner-email','florist-temp-password'].forEach(id => {
-          document.getElementById(id).value = '';
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('consultant');
+        loadConsultants(paginationState.consultants.page);
+        loadAttribution().catch(() => {});
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function savePromoCode(e) {
+      e.preventDefault();
+      const id = document.getElementById('promo-id').value;
+      const payload = {
+        consultantId: document.getElementById('modal-promo-consultant').value,
+        code: document.getElementById('modal-promo-code').value.trim().toUpperCase(),
+        monthlyFreeDemoLimit: Number(document.getElementById('modal-promo-limit').value || 5)
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/promo-codes/${id}` : '/api/admin/promo-codes';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        setMsg(attributionMessage, '✓ Florist partner account created.', false);
-      } catch (err) { setMsg(attributionMessage, err.message, true); }
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('promo');
+        loadPromos(paginationState.promos.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function saveTerritory(e) {
+      e.preventDefault();
+      const id = document.getElementById('territory-id').value;
+      const payload = {
+        consultantId: document.getElementById('modal-territory-consultant').value,
+        territoryName: document.getElementById('modal-territory-name').value.trim(),
+        country: document.getElementById('modal-territory-country').value.trim(),
+        matchType: document.getElementById('modal-territory-match-type').value,
+        postcodeStart: document.getElementById('modal-territory-postcode-start').value.trim(),
+        postcodeEnd: document.getElementById('modal-territory-postcode-end').value.trim(),
+        priority: Number(document.getElementById('modal-territory-priority').value || 100)
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/postcode-territories/${id}` : '/api/admin/postcode-territories';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('territory');
+        loadTerritories(paginationState.territories.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function saveStation(e) {
+      e.preventDefault();
+      const id = document.getElementById('station-id').value;
+      const payload = {
+        name: document.getElementById('modal-station-name').value.trim(),
+        email: document.getElementById('modal-station-email').value.trim(),
+        country: document.getElementById('modal-station-country').value.trim(),
+        tier: document.getElementById('modal-station-tier').value
+      };
+      if (!id) {
+        payload.password = document.getElementById('modal-station-password').value;
+      } else {
+        payload.active = document.getElementById('modal-station-active').checked;
+      }
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/stations/${id}` : '/api/admin/stations';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('station');
+        loadStations(paginationState.stations.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function saveFlorist(e) {
+      e.preventDefault();
+      const id = document.getElementById('florist-id').value;
+      const payload = {
+        name: document.getElementById('modal-florist-name').value.trim(),
+        email: document.getElementById('modal-florist-email').value.trim(),
+        country: document.getElementById('modal-florist-country').value.trim(),
+        initial_credit_balance: Number(document.getElementById('modal-florist-credits').value || 30)
+      };
+      if (!id) {
+        payload.password = document.getElementById('modal-florist-password').value;
+      } else {
+        payload.active = document.getElementById('modal-florist-active').checked;
+        payload.low_credit_threshold = Number(document.getElementById('modal-florist-threshold').value || 5);
+      }
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/florists/${id}` : '/api/admin/florists';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('florist');
+        loadFlorists(paginationState.florists.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    // Generic Delete
+    async function deleteEntity(type, id) {
+      if (!confirm(`Are you sure you want to delete this record?`)) return;
+      try {
+        const r = await apiFetch(`/api/admin/${type}/${id}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to delete.');
+        alert('Deleted successfully.');
+        if (type === 'consultants') loadConsultants(paginationState.consultants.page);
+        else if (type === 'promo-codes') loadPromos(paginationState.promos.page);
+        else if (type === 'postcode-territories') loadTerritories(paginationState.territories.page);
+        else if (type === 'stations') loadStations(paginationState.stations.page);
+        else if (type === 'florists') loadFlorists(paginationState.florists.page);
+        else if (type === 'famous-birthdays') loadBirthdays(paginationState.birthdays.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    // State Loaders
+    function loadingRow(cols) {
+      return `<tr class="empty-row"><td colspan="${cols}" style="text-align:center;padding:20px;">
+        <span style="display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>
+        Loading…</td></tr>`;
+    }
+
+    async function loadGcashPayments(page = 1) {
+      paginationState.gcashPayments.page = page;
+      if (gcashPaymentsBody) gcashPaymentsBody.innerHTML = loadingRow(8);
+      setMsg(gcashPaymentsMessage, '', false);
+      try {
+        const status = document.getElementById('gcash-status-filter').value;
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(paginationState.gcashPayments.limit),
+        });
+        if (status) params.set('status', status);
+        const r = await apiFetch(`/api/admin/gcash-payments?${params.toString()}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load GCash payments.');
+
+        paginationState.gcashPayments.total = data.total || 0;
+        state.gcashPayments = data.items || [];
+        renderGcashPayments();
+        renderPaginationControls('gcash-payments-pagination', paginationState.gcashPayments.total, page, paginationState.gcashPayments.limit, 'loadGcashPayments');
+        setMsg(gcashPaymentsMessage, state.gcashPayments.length ? '' : 'No GCash payment requests for this filter.', false);
+      } catch (err) {
+        if (gcashPaymentsBody) gcashPaymentsBody.innerHTML = '<tr class="empty-row"><td colspan="8">Unable to load GCash payments.</td></tr>';
+        setMsg(gcashPaymentsMessage, err.message, true);
+      }
+    }
+
+    function renderGcashPayments() {
+      if (!gcashPaymentsBody) return;
+      gcashPaymentsBody.innerHTML = state.gcashPayments.length
+        ? state.gcashPayments.map(item => {
+            const amount = [
+              formatMoney(item.expectedAmountNzd || 0),
+              item.expectedAmountPhp ? `PHP ${Number(item.expectedAmountPhp).toFixed(2)}` : '',
+            ].filter(Boolean).join(' / ');
+            const rateMeta = item.exchangeRatePhpPerNzd
+              ? `<br/><span style="font-size:.72rem;color:var(--muted);">${escapeHtml(item.exchangeRateIsLive ? 'Live' : 'Fallback')} rate: ${escapeHtml(Number(item.exchangeRatePhpPerNzd).toFixed(4))}</span>`
+              : '';
+            const proof = [
+              `Sender: ${escapeHtml(item.gcashSenderName || '')}`,
+              `Ref: ${escapeHtml(item.gcashReferenceId || '')}`,
+            ].filter(Boolean).join('<br/>');
+            const itemLine = item.itemLabel || [
+              item.productTierLabel || item.productTier || '',
+              item.deliveryOptionLabel || '',
+            ].filter(Boolean).join(' / ');
+            const approvalResult = item.promoCode?.code
+              ? `<strong>${escapeHtml(item.promoCode.code)}</strong><br/><span style="font-size:.74rem;color:var(--muted);">Used ${escapeHtml(String(item.promoCode.usedCount || 0))}/${escapeHtml(String(item.promoCode.maxUses || 1))}</span>`
+              : '—';
+            const approvalResultDisplay = item.promoCode?.code
+              ? approvalResult
+              : item.appliedAt
+                ? `<strong>Applied</strong><br/><span style="font-size:.74rem;color:var(--muted);">${escapeHtml(formatDate(item.appliedAt))}</span>`
+                : approvalResult;
+            const actions = item.status === 'pending'
+              ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="btn btn-green btn-sm" type="button" onclick="approveGcashPayment('${item.id}')">Approve</button>
+                  <button class="btn btn-danger btn-sm" type="button" onclick="rejectGcashPayment('${item.id}')">Reject</button>
+                </div>`
+              : `<span style="font-size:.78rem;color:var(--muted);">${escapeHtml(item.reviewedAt ? formatDate(item.reviewedAt) : 'Reviewed')}</span>`;
+
+            return `
+              <tr>
+                <td>
+                  <strong>${escapeHtml(item.requestNumber)}</strong><br/>
+                  <span style="font-size:.75rem;color:var(--muted);">${escapeHtml(formatDate(item.createdAt))}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(item.customerName || '')}</strong><br/>
+                  <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(item.customerEmail || '')}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(item.paymentContextLabel || 'GCash Payment')}</strong><br/>
+                  <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(itemLine || '')}</span>
+                </td>
+                <td style="white-space:nowrap;">${escapeHtml(amount)}${rateMeta}</td>
+                <td style="font-size:.8rem;line-height:1.45;">${proof || '—'}</td>
+                <td><span class="status-pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+                <td>${approvalResultDisplay}</td>
+                <td>${actions}</td>
+              </tr>
+            `;
+          }).join('')
+        : '<tr class="empty-row"><td colspan="8">No GCash payment requests for this filter.</td></tr>';
+    }
+
+    async function approveGcashPayment(id) {
+      if (!confirm('Approve this GCash payment and apply the paid item?')) return;
+      setMsg(gcashPaymentsMessage, 'Approving GCash payment...', false);
+      try {
+        const r = await apiFetch(`/api/admin/gcash-payments/${id}/approve`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to approve GCash payment.');
+        const code = data.promoCode?.code || data.request?.promoCode?.code || '';
+        if (code) {
+          setMsg(gcashPaymentsMessage, data.emailSent
+            ? `Approved. Promo code ${code} was emailed.`
+            : `Approved. Promo code ${code} was created, but email was not confirmed.`, false);
+        } else {
+          setMsg(gcashPaymentsMessage, data.emailSent
+            ? 'Approved and applied. Customer email sent.'
+            : 'Approved and applied.', false);
+        }
+        await loadGcashPayments(paginationState.gcashPayments.page);
+      } catch (err) {
+        setMsg(gcashPaymentsMessage, err.message, true);
+      }
+    }
+
+    async function rejectGcashPayment(id) {
+      const adminNote = prompt('Reason for rejection / note for customer:');
+      if (adminNote === null) return;
+      setMsg(gcashPaymentsMessage, 'Rejecting GCash payment...', false);
+      try {
+        const r = await apiFetch(`/api/admin/gcash-payments/${id}/reject`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminNote }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to reject GCash payment.');
+        setMsg(gcashPaymentsMessage, data.emailSent ? 'Rejected and customer email sent.' : 'Rejected.', false);
+        await loadGcashPayments(paginationState.gcashPayments.page);
+      } catch (err) {
+        setMsg(gcashPaymentsMessage, err.message, true);
+      }
+    }
+
+    async function loadConsultants(page = 1) {
+      paginationState.consultants.page = page;
+      const msgEl = document.getElementById('consultants-message');
+      const body = document.getElementById('consultants-table-body');
+      if (body) body.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/consultants?page=${page}&limit=${paginationState.consultants.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.consultants.total = data.total;
+        
+        if (body) body.innerHTML = data.items.length ? data.items.map(c => `
+          <tr>
+            <td><strong>${escapeHtml(c.name)}</strong></td>
+            <td>${escapeHtml(c.email || '')}</td>
+            <td>${escapeHtml(c.phone || '—')}</td>
+            <td><span class="status-pill ${c.active ? 'approved' : 'rejected'}">${c.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(c.commission_notes || '—')}</td>
+            <td>${escapeHtml(c.admin_notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('consultant', '${c.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('consultants', '${c.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No consultants found.</td></tr>';
+        
+        renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+
+    async function loadPromos(page = 1) {
+      paginationState.promos.page = page;
+      const msgEl = document.getElementById('promos-message');
+      if (promoCodeBody) promoCodeBody.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/promo-codes?page=${page}&limit=${paginationState.promos.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.promos.total = data.total;
+        
+        promoCodeBody.innerHTML = data.items.length ? data.items.map(code => `
+          <tr>
+            <td><strong>${escapeHtml(code.code)}</strong></td>
+            <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
+            <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
+            <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
+            <td><span class="status-pill ${code.active ? 'approved' : 'rejected'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(code.notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('promo', '${code.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('promo-codes', '${code.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No promo codes found.</td></tr>';
+        
+        renderPaginationControls('promos-pagination', data.total, page, paginationState.promos.limit, 'loadPromos');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadTerritories(page = 1) {
+      paginationState.territories.page = page;
+      const msgEl = document.getElementById('territories-message');
+      if (territoryBody) territoryBody.innerHTML = loadingRow(9);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/postcode-territories?page=${page}&limit=${paginationState.territories.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.territories.total = data.total;
+        
+        territoryBody.innerHTML = data.items.length ? data.items.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
+            <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
+            <td>${escapeHtml(t.country)}</td>
+            <td style="text-transform:capitalize;">${escapeHtml(t.match_type)}</td>
+            <td>${escapeHtml(formatTerritoryMatch(t))}</td>
+            <td>${escapeHtml(String(t.priority || 100))}</td>
+            <td><span class="status-pill ${t.active !== false ? 'approved' : 'rejected'}">${t.active !== false ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(t.notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('territory', '${t.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('postcode-territories', '${t.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="9">No postcode territories found.</td></tr>';
+        
+        renderPaginationControls('territories-pagination', data.total, page, paginationState.territories.limit, 'loadTerritories');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadStations(page = 1) {
+      paginationState.stations.page = page;
+      const msgEl = document.getElementById('stations-message');
+      const body = document.getElementById('stations-table-body');
+      if (body) body.innerHTML = loadingRow(6);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/stations?page=${page}&limit=${paginationState.stations.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.stations.total = data.total;
+        
+        const body = document.getElementById('stations-table-body');
+        body.innerHTML = data.items.length ? data.items.map(s => `
+          <tr>
+            <td><strong>${escapeHtml(s.name)}</strong></td>
+            <td>${escapeHtml(s.email || '')}</td>
+            <td>${escapeHtml(s.country || '')}</td>
+            <td style="text-transform:capitalize;">${escapeHtml(s.tier || 'community')}</td>
+            <td><span class="status-pill ${s.active ? 'approved' : 'rejected'}">${s.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('station', '${s.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('stations', '${s.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="6">No station managers found.</td></tr>';
+        
+        renderPaginationControls('stations-pagination', data.total, page, paginationState.stations.limit, 'loadStations');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadFlorists(page = 1) {
+      paginationState.florists.page = page;
+      const msgEl = document.getElementById('florists-message');
+      const body = document.getElementById('florists-table-body');
+      if (body) body.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/florists?page=${page}&limit=${paginationState.florists.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.florists.total = data.total;
+        
+        const body = document.getElementById('florists-table-body');
+        body.innerHTML = data.items.length ? data.items.map(f => `
+          <tr>
+            <td><strong>${escapeHtml(f.name)}</strong></td>
+            <td>${escapeHtml(f.email || '')}</td>
+            <td>${escapeHtml(f.country || '')}</td>
+            <td><strong>${escapeHtml(String(f.credit_balance || 0))}</strong> credits</td>
+            <td>${escapeHtml(String(f.low_credit_threshold || 5))} credits</td>
+            <td><span class="status-pill ${f.active ? 'approved' : 'rejected'}">${f.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('florist', '${f.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('florists', '${f.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No florist partners found.</td></tr>';
+        
+        renderPaginationControls('florists-pagination', data.total, page, paginationState.florists.limit, 'loadFlorists');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    // Generic pagination rendering
+    function renderPaginationControls(containerId, totalItems, currentPage, itemsPerPage, onPageChange) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+      const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+      const endItem = Math.min(totalItems, currentPage * itemsPerPage);
+      
+      container.innerHTML = `
+        <div style="font-size: 0.82rem; color: var(--muted); display: flex; align-items: center; gap: 8px;">
+          Showing <strong>${startItem}</strong> to <strong>${endItem}</strong> of <strong>${totalItems}</strong> entries
+        </div>
+        <div class="pagination-buttons" style="display: flex; gap: 6px;">
+          <button class="btn btn-soft btn-sm" type="button" ${currentPage <= 1 ? 'disabled' : ''} onclick="${onPageChange}(${currentPage - 1})">Prev</button>
+          <span style="font-weight: 600; padding: 0 8px; align-self: center; font-size: 0.85rem;">Page ${currentPage} of ${totalPages}</span>
+          <button class="btn btn-soft btn-sm" type="button" ${currentPage >= totalPages ? 'disabled' : ''} onclick="${onPageChange}(${currentPage + 1})">Next</button>
+        </div>
+      `;
     }
 
     /* ── FAMOUS BIRTHDAYS ── */
-    async function loadBirthdays() {
+    async function loadBirthdays(page = 1) {
+      paginationState.birthdays.page = page;
       setMsg(birthdaysMessage, 'Loading famous birthdays…', false);
       try {
         const status = document.getElementById('birthday-status-filter').value;
-        const r = await apiFetch(`/api/admin/famous-birthdays?status=${encodeURIComponent(status)}&limit=50`);
+        const r = await apiFetch(`/api/admin/famous-birthdays?status=${encodeURIComponent(status)}&page=${page}&limit=${paginationState.birthdays.limit}`);
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Unable to load famous birthdays.');
-        state.birthdays = data.birthdays || [];
+        paginationState.birthdays.total = data.total;
+        state.birthdays = data.birthdays || data.items || [];
         renderBirthdays();
+        renderPaginationControls('birthdays-pagination', paginationState.birthdays.total, page, paginationState.birthdays.limit, 'loadBirthdays');
         setMsg(birthdaysMessage, state.birthdays.length ? '' : 'No rows for this filter.', false);
       } catch (err) { setMsg(birthdaysMessage, err.message, true); }
     }
@@ -1534,6 +2103,7 @@
                   <button class="btn btn-soft btn-sm" type="button" onclick="saveBirthday('${b.id}')">💾 Save</button>
                   <button class="btn btn-green btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'approved')">✓ Approve</button>
                   <button class="btn btn-ghost btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'rejected')" style="color:#991b1b;border-color:#fca5a5;">✕ Reject</button>
+                  <button class="btn btn-danger btn-sm" type="button" onclick="deleteEntity('famous-birthdays', '${b.id}')">🗑️ Delete</button>
                 </div>
               </td>
             </tr>
@@ -1688,24 +2258,12 @@
       catch { localStorage.removeItem(PROFILE_KEY); return null; }
     }
 
-    function openUpdatePasswordModal() {
-      document.getElementById('password-modal').style.display = 'flex';
-      document.getElementById('modal-old-password').value = '';
-      document.getElementById('modal-new-password').value = '';
-      document.getElementById('modal-password-error').style.display = 'none';
-      document.getElementById('modal-password-success').style.display = 'none';
-    }
-
-    function closePasswordModal() {
-      document.getElementById('password-modal').style.display = 'none';
-    }
-
     async function submitPasswordUpdate(event) {
       event.preventDefault();
-      const oldPassword = document.getElementById('modal-old-password').value;
-      const newPassword = document.getElementById('modal-new-password').value;
-      const errorDiv = document.getElementById('modal-password-error');
-      const successDiv = document.getElementById('modal-password-success');
+      const oldPassword = document.getElementById('settings-old-password').value;
+      const newPassword = document.getElementById('settings-new-password').value;
+      const errorDiv = document.getElementById('settings-password-error');
+      const successDiv = document.getElementById('settings-password-success');
       
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
@@ -1724,38 +2282,230 @@
           throw new Error(result.error || 'Failed to update password.');
         }
         successDiv.style.display = 'block';
-        setTimeout(() => {
-          closePasswordModal();
-        }, 1500);
+        document.getElementById('settings-old-password').value = '';
+        document.getElementById('settings-new-password').value = '';
       } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
       }
     }
   </script>
+  <!-- ── POPUP MODALS ── -->
 
-  <!-- UPDATE PASSWORD MODAL -->
-  <div id="password-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; padding:20px;">
-    <div style="background:#ffffff; color:#1a1714; width:100%; max-width:400px; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid #e2e8f0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <h3 style="margin-bottom:16px; font-size:1.25rem; font-weight:700;">Change Password</h3>
-      <form onsubmit="submitPasswordUpdate(event)">
-        <div style="margin-bottom:12px; text-align:left;">
-          <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">Current Password</label>
-          <input type="password" id="modal-old-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
+  <!-- Consultant Modal -->
+  <div class="modal-overlay" id="consultant-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="consultant-modal-title">Add Sales Consultant</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('consultant')">&times;</button>
+      </div>
+      <form id="consultant-form" onsubmit="saveConsultant(event)">
+        <input type="hidden" id="consultant-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-consultant-name">Full Name</label>
+            <input id="modal-consultant-name" type="text" placeholder="Sarah Jones" required />
+          </div>
+          <div class="fld">
+            <label for="modal-consultant-email">Email Address</label>
+            <input id="modal-consultant-email" type="email" placeholder="sarah@example.com" required />
+          </div>
         </div>
-        <div style="margin-bottom:16px; text-align:left;">
-          <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">New Password</label>
-          <input type="password" id="modal-new-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
-        </div>
-        <div id="modal-password-error" style="color:#e53e3e; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;"></div>
-        <div id="modal-password-success" style="color:#38a169; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;">Password changed successfully!</div>
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button type="button" onclick="closePasswordModal()" style="padding:10px 16px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#4a5568; font-weight:600; cursor:pointer;">Cancel</button>
-          <button type="submit" style="padding:10px 16px; border:none; border-radius:6px; background:#8b1010; color:#fff; font-weight:600; cursor:pointer;">Update</button>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('consultant')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Promo Code Modal -->
+  <div class="modal-overlay" id="promo-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="promo-modal-title">Add Promo Code</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('promo')">&times;</button>
+      </div>
+      <form id="promo-form" onsubmit="savePromoCode(event)">
+        <input type="hidden" id="promo-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-promo-consultant">Consultant</label>
+            <select id="modal-promo-consultant" required><option value="">— select consultant —</option></select>
+          </div>
+          <div class="fld">
+            <label for="modal-promo-code">Promo Code</label>
+            <input id="modal-promo-code" type="text" placeholder="SARAH5" required />
+          </div>
+          <div class="fld">
+            <label for="modal-promo-limit">Monthly Free Demos</label>
+            <input id="modal-promo-limit" type="number" min="0" value="5" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('promo')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Territory Modal -->
+  <div class="modal-overlay" id="territory-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="territory-modal-title">Add Postcode Territory</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('territory')">&times;</button>
+      </div>
+      <form id="territory-form" onsubmit="saveTerritory(event)">
+        <input type="hidden" id="territory-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-territory-consultant">Consultant</label>
+            <select id="modal-territory-consultant" required><option value="">— select —</option></select>
+          </div>
+          <div class="fld">
+            <label for="modal-territory-name">Territory Name</label>
+            <input id="modal-territory-name" type="text" placeholder="North Auckland" required />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-country">Country</label>
+            <input id="modal-territory-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-match-type">Match Type</label>
+            <select id="modal-territory-match-type" required>
+              <option value="exact">Exact</option>
+              <option value="prefix">Prefix</option>
+              <option value="range">Range</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label for="modal-territory-postcode-start">Postcode / Start</label>
+            <input id="modal-territory-postcode-start" type="text" placeholder="1010" required />
+          </div>
+          <div class="fld" id="modal-territory-postcode-end-wrap">
+            <label for="modal-territory-postcode-end">End (Range only)</label>
+            <input id="modal-territory-postcode-end" type="text" placeholder="1099" />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-priority">Priority</label>
+            <input id="modal-territory-priority" type="number" value="100" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('territory')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Station Manager Modal -->
+  <div class="modal-overlay" id="station-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="station-modal-title">Add Station Manager</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('station')">&times;</button>
+      </div>
+      <form id="station-form" onsubmit="saveStation(event)">
+        <input type="hidden" id="station-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-station-name">Station Name</label>
+            <input id="modal-station-name" type="text" placeholder="River FM" required />
+          </div>
+          <div class="fld">
+            <label for="modal-station-email">Manager Email</label>
+            <input id="modal-station-email" type="email" placeholder="manager@riverfm.co.nz" required />
+          </div>
+          <div class="fld" id="modal-station-password-wrap">
+            <label for="modal-station-password">Temporary Password</label>
+            <input id="modal-station-password" type="text" placeholder="Enter password" />
+          </div>
+          <div class="fld">
+            <label for="modal-station-country">Country</label>
+            <input id="modal-station-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld">
+            <label for="modal-station-tier">Tier</label>
+            <select id="modal-station-tier" required>
+              <option value="community">Community</option>
+              <option value="regional">Regional</option>
+              <option value="city">City</option>
+              <option value="national">National</option>
+            </select>
+          </div>
+          <div class="fld" id="modal-station-active-wrap" style="display:none; flex-direction:row; align-items:center; gap:8px;">
+            <input id="modal-station-active" type="checkbox" checked style="width:auto; margin:0;" />
+            <label for="modal-station-active" style="margin:0; text-transform:none;">Account Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('station')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Florist Partner Modal -->
+  <div class="modal-overlay" id="florist-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-florist-title">Add Florist Partner</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('florist')">&times;</button>
+      </div>
+      <form id="florist-form" onsubmit="saveFlorist(event)">
+        <input type="hidden" id="florist-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-florist-name">Store Name</label>
+            <input id="modal-florist-name" type="text" placeholder="Blossom Florist" required />
+          </div>
+          <div class="fld">
+            <label for="modal-florist-email">Email Address</label>
+            <input id="modal-florist-email" type="email" placeholder="hello@blossom.co.nz" required />
+          </div>
+          <div class="fld" id="modal-florist-password-wrap">
+            <label for="modal-florist-password">Temporary Password</label>
+            <input id="modal-florist-password" type="text" placeholder="Enter password" />
+          </div>
+          <div class="fld">
+            <label for="modal-florist-country">Country</label>
+            <input id="modal-florist-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld">
+            <label for="modal-florist-credits">Initial Credits / Balance</label>
+            <input id="modal-florist-credits" type="number" min="0" value="30" required />
+          </div>
+          <div class="fld" id="modal-florist-threshold-wrap" style="display:none;">
+            <label for="modal-florist-threshold">Low Credit Threshold</label>
+            <input id="modal-florist-threshold" type="number" min="0" value="5" />
+          </div>
+          <div class="fld" id="modal-florist-active-wrap" style="display:none; flex-direction:row; align-items:center; gap:8px;">
+            <input id="modal-florist-active" type="checkbox" checked style="width:auto; margin:0;" />
+            <label for="modal-florist-active" style="margin:0; text-transform:none;">Account Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('florist')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Close modal when clicking on backdrop -->
+  <script>
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) {
+          const type = overlay.id.replace('-modal', '');
+          closeModal(type);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

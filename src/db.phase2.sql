@@ -48,6 +48,116 @@ create table if not exists promo_codes (
 create unique index if not exists idx_promo_codes_code_lower on promo_codes (lower(code));
 create index if not exists idx_promo_codes_consultant on promo_codes(consultant_id);
 
+create table if not exists gcash_payment_requests (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  request_number text not null unique,
+  payment_context text not null default 'public_order'
+    check (payment_context in ('public_order', 'florist_credits', 'station_subscription', 'station_frames')),
+  keepsake_id uuid references keepsakes(id) on delete set null,
+  station_id uuid references stations(id) on delete set null,
+  customer_name text not null,
+  customer_email text not null,
+  recipient_name text,
+  product_tier text
+    check (product_tier in ('digital', 'standard', 'premium')),
+  delivery_option text
+    check (delivery_option in ('standard', '2day', 'overnight')),
+  item_label text,
+  item_code text,
+  quantity int,
+  action_payload jsonb,
+  currency_code text not null default 'NZD',
+  expected_amount_nzd numeric(10,2) not null,
+  expected_amount_php numeric(10,2),
+  exchange_rate_php_per_nzd numeric(12,6),
+  exchange_rate_source text,
+  exchange_rate_date text,
+  exchange_rate_is_live boolean default false,
+  gcash_payee_name text,
+  gcash_mobile_number text,
+  gcash_sender_name text not null,
+  gcash_reference_id text not null,
+  proof_image_path text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected', 'cancelled')),
+  admin_note text,
+  reviewed_by_admin_id uuid references admins(id) on delete set null,
+  reviewed_at timestamptz,
+  generated_promo_code_id uuid references promo_codes(id) on delete set null,
+  applied_at timestamptz,
+  applied_result jsonb
+);
+
+create unique index if not exists idx_gcash_payment_requests_reference
+  on gcash_payment_requests (lower(gcash_reference_id));
+create index if not exists idx_gcash_payment_requests_status_created
+  on gcash_payment_requests(status, created_at desc);
+create index if not exists idx_gcash_payment_requests_email
+  on gcash_payment_requests(lower(customer_email), created_at desc);
+create index if not exists idx_gcash_payment_requests_context_status
+  on gcash_payment_requests(payment_context, status, created_at desc);
+create index if not exists idx_gcash_payment_requests_station
+  on gcash_payment_requests(station_id, created_at desc)
+  where station_id is not null;
+
+alter table gcash_payment_requests
+  add column if not exists payment_context text not null default 'public_order',
+  add column if not exists station_id uuid references stations(id) on delete set null,
+  add column if not exists item_label text,
+  add column if not exists item_code text,
+  add column if not exists quantity int,
+  add column if not exists action_payload jsonb,
+  add column if not exists applied_at timestamptz,
+  add column if not exists applied_result jsonb;
+
+alter table gcash_payment_requests
+  alter column product_tier drop not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'gcash_payment_requests_payment_context_check'
+  ) then
+    alter table gcash_payment_requests
+      add constraint gcash_payment_requests_payment_context_check
+      check (payment_context in ('public_order', 'florist_credits', 'station_subscription', 'station_frames'));
+  end if;
+end $$;
+
+alter table promo_codes
+  add column if not exists code_type text not null default 'consultant_demo',
+  add column if not exists product_tier text,
+  add column if not exists delivery_option text,
+  add column if not exists valid_until timestamptz,
+  add column if not exists max_uses int not null default 0,
+  add column if not exists used_count int not null default 0,
+  add column if not exists locked_customer_email text,
+  add column if not exists source_payment_request_id uuid references gcash_payment_requests(id) on delete set null,
+  add column if not exists used_at timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'promo_codes_code_type_check'
+  ) then
+    alter table promo_codes
+      add constraint promo_codes_code_type_check
+      check (code_type in ('consultant_demo', 'gcash_paid_access'));
+  end if;
+end $$;
+
+create index if not exists idx_promo_codes_gcash_paid_access
+  on promo_codes(code_type, active, valid_until)
+  where code_type = 'gcash_paid_access';
+create index if not exists idx_promo_codes_source_payment_request
+  on promo_codes(source_payment_request_id);
+
 create table if not exists postcode_territories (
   id uuid default gen_random_uuid() primary key,
   created_at timestamptz default now(),
@@ -179,6 +289,9 @@ create index if not exists idx_orders_queue on orders(needs_fulfilment, delivery
 create index if not exists idx_orders_payment_status on orders(payment_status, created_at desc);
 create index if not exists idx_orders_source_portal on orders(source_portal, created_at desc);
 create index if not exists idx_orders_attribution on orders(sales_consultant_id, promo_code_id, territory_id);
+
+alter table promo_codes
+  add column if not exists used_order_id uuid references orders(id) on delete set null;
 
 create table if not exists fulfilment_events (
   id uuid default gen_random_uuid() primary key,
@@ -336,6 +449,14 @@ begin
 end $$;
 
 create index if not exists idx_keepsakes_source_portal on keepsakes(source_portal, created_at desc);
+
+alter table frame_orders
+  add column if not exists payment_provider text default 'stripe',
+  add column if not exists gcash_payment_request_id uuid references gcash_payment_requests(id) on delete set null;
+
+create index if not exists idx_frame_orders_gcash_request
+  on frame_orders(gcash_payment_request_id)
+  where gcash_payment_request_id is not null;
 create index if not exists idx_keepsakes_promo_code on keepsakes(promo_code_id, created_at desc);
 create index if not exists idx_keepsakes_sales_consultant on keepsakes(sales_consultant_id, created_at desc);
 

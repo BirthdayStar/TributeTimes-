@@ -18,9 +18,35 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: STRIPE_VIRAL_SHARE_COUPON_ID
+        sync: false
+      - key: STRIPE_FLORIST_STANDARD_PACK_30_PRICE_ID
+        sync: false
+      - key: STRIPE_FLORIST_STANDARD_PACK_60_PRICE_ID
+        sync: false
+      - key: STRIPE_FLORIST_STANDARD_PACK_120_PRICE_ID
+        sync: false
+      - key: STRIPE_FLORIST_PREMIUM_FLORAL_PACK_30_PRICE_ID
+        sync: false
+      - key: STRIPE_FLORIST_PREMIUM_FLORAL_PACK_60_PRICE_ID
+        sync: false
+      - key: STRIPE_FLORIST_PREMIUM_FLORAL_PACK_120_PRICE_ID
+        sync: false
       - key: RESEND_API_KEY
+        sync: false
+      - key: ADMIN_ALERT_EMAIL
         sync: false
       - key: APP_URL
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: GCASH_ACCOUNT_NAME
+        sync: false
+      - key: GCASH_MOBILE_NUMBER
+        sync: false
+      - key: GCASH_QR_IMAGE_URL
+        sync: false
+      - key: GCASH_PHP_PER_NZD
+        sync: false
+      - key: GCASH_PAYMENT_INSTRUCTIONS
         sync: false

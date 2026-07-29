@@ -913,7 +913,7 @@ body {
     </a>
     <ul class="nav-links">
       <li><a href="/" class="nav-link">HOME</a></li>
-      <li><a href="/florist" class="nav-link">FOR FLORISTS</a></li>
+      <li><a href="/florist" class="nav-link">FOR FLORISTS & GIFT SHOPS</a></li>
       <li><a href="/station" class="nav-link">FOR STATIONS</a></li>
       <li><a href="#contact" class="nav-link">CONTACT</a></li>
     </ul>
@@ -948,7 +948,14 @@ body {
   </section>
 
   <!-- STATS BAR -->
-  <section class="stats-bar" style="grid-template-columns: repeat(3, 1fr);">
+  <section class="stats-bar" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="stat-item">
+      <div class="stat-icon">✨</div>
+      <div class="stat-info">
+        <div class="stat-value" id="keepsakes-created-value" style="font-size:1.65rem;">—</div>
+        <div class="stat-label">Keepsakes Created</div>
+      </div>
+    </div>
     <div class="stat-item">
       <div class="stat-icon">📰</div>
       <div class="stat-info">
@@ -1121,12 +1128,12 @@ body {
     </div>
 
     <div class="partners-grid">
-      <!-- FOR FLORISTS -->
+      <!-- FOR FLORISTS & GIFT SHOPS -->
       <div class="partner-card">
         <div>
-          <h3 class="partner-h3">For Florists</h3>
-          <div class="partner-pitch">Add ₱/$ profit to every bouquet — print keepsakes in-store</div>
-          <p class="partner-desc">Generate, print, and package premium keepsake newspapers directly in your store for inclusion with your floral bouquets.</p>
+          <h3 class="partner-h3">For Florists & Gift Shops</h3>
+          <div class="partner-pitch">Add profit to every sale — print keepsakes in-store</div>
+          <p class="partner-desc">Generate, print, and package premium keepsake newspapers directly in your store alongside your gifts and bouquets.</p>
         </div>
         <div class="partner-actions">
           <a href="mailto:hello@tributetimes.co.nz?subject=Florist%20Partner%20Enquiry" class="btn-partner">Become a Partner</a>
@@ -1204,7 +1211,7 @@ body {
         <p class="footer-tagline">Timeless stories. Beautifully told.</p>
       </div>
       <div class="footer-col">
-        <h4 class="footer-h4">For Florists</h4>
+        <h4 class="footer-h4">For Florists & Gift Shops</h4>
         <ul class="footer-links">
           <li><a href="/florist">Partner Portal</a></li>
           <li><a href="/florist">Login</a></li>
@@ -1314,8 +1321,24 @@ async function submitEnquiry(event) {
   }
 }
 
+// Fetch the live keepsake count for the social-proof stat tile
+async function loadKeepsakesCreatedStat() {
+  const el = document.getElementById('keepsakes-created-value');
+  if (!el) return;
+  try {
+    const response = await fetch('/api/public/stats');
+    if (!response.ok) throw new Error('Failed to load stats');
+    const stats = await response.json();
+    el.textContent = Number(stats.keepsakesCreated || 0).toLocaleString();
+  } catch (err) {
+    console.error(err);
+    el.textContent = '—';
+  }
+}
+
 // Initialise page dropdown
 window.addEventListener('DOMContentLoaded', loadStationsDropdown);
+window.addEventListener('DOMContentLoaded', loadKeepsakesCreatedStat);
 </script>
 
 </body>
