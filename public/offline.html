@@ -4,15 +4,21 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>The Tribute Times - Offline</title>
-<meta name="theme-color" content="#8b1010"/>
+<meta name="theme-color" content="#B08A2E"/>
 <style>
+/*
+  Self-contained on purpose: this page is the PWA offline fallback (see
+  service-worker.js PRECACHE_URLS) and must render correctly with zero network
+  access, so its colors are inlined rather than loaded from theme.css. Values
+  are kept in sync with the tokens in public/theme.css (cream/olive/gold).
+*/
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{
   font-family:Georgia,'Times New Roman',serif;
   background:
-    radial-gradient(circle at top,#f7f1e7 0,#f4f0e8 46%,#e9dfcf 100%);
-  color:#1f1712;
+    radial-gradient(circle at top,#FCF9E8 0,#F4F0DE 46%,#ECE5C8 100%);
+  color:#3D4122;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -20,17 +26,17 @@ body{
 }
 .offline-shell{
   width:min(680px,100%);
-  background:rgba(255,255,255,0.82);
-  border:1px solid #d7c4ac;
-  box-shadow:0 20px 60px rgba(62,34,18,0.15);
+  background:rgba(255,255,255,0.88);
+  border:1px solid #DED9BE;
+  box-shadow:0 20px 60px rgba(61,65,34,0.15);
   border-radius:20px;
   padding:28px;
 }
 .badge{
   display:inline-block;
   padding:8px 12px;
-  background:#8b1010;
-  color:#fffaf1;
+  background:#8A6A1F;
+  color:#FCF9E8;
   border-radius:999px;
   font:700 12px/1.2 system-ui,sans-serif;
   letter-spacing:.18em;
@@ -40,11 +46,12 @@ h1{
   margin:16px 0 8px;
   font-size:clamp(2rem,4vw,3rem);
   line-height:1;
+  color:#3D4122;
 }
 p{
   margin:0 0 14px;
   font:400 1rem/1.6 system-ui,sans-serif;
-  color:#4a3a30;
+  color:#54592F;
 }
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
 .btn{
@@ -52,23 +59,23 @@ p{
   border:none;
   border-radius:999px;
   padding:13px 18px;
-  background:#8b1010;
-  color:#fff;
+  background:#8A6A1F;
+  color:#FCF9E8;
   font:700 .95rem/1 system-ui,sans-serif;
   cursor:pointer;
 }
 .btn.secondary{
-  background:#efe6d8;
-  color:#4a3427;
-  border:1px solid #d3bca2;
+  background:#F4F0DE;
+  color:#3D4122;
+  border:1px solid #DED9BE;
 }
 .tips{
   margin-top:20px;
   padding-top:18px;
-  border-top:1px solid #e1d3c1;
+  border-top:1px solid #DED9BE;
 }
-.tips strong{display:block;margin-bottom:6px;font:700 .95rem/1.4 system-ui,sans-serif}
-ul{margin:0;padding-left:18px;color:#5a473a;font:400 .95rem/1.6 system-ui,sans-serif}
+.tips strong{display:block;margin-bottom:6px;font:700 .95rem/1.4 system-ui,sans-serif;color:#3D4122}
+ul{margin:0;padding-left:18px;color:#54592F;font:400 .95rem/1.6 system-ui,sans-serif}
 </style>
 </head>
 <body>
