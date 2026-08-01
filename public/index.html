@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <meta name="description" content="Create installable keepsake newspapers for radio listeners with historic headlines, music charts, prices, weather, and printable layouts."/>
-<meta name="theme-color" content="#8b1010"/>
+<meta name="theme-color" content="#8A6A1F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
@@ -22,61 +22,65 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --red:#8b1010;--dkred:#6b0808;--yellow:#f5c800;
+  /* NOTE: --ink, --muted, --rule, --yellow belong to the #star / .np-* newspaper
+     PREVIEW output below (renderStar()) — that's the keepsake product design
+     (vintage newsprint look) and is intentionally left untouched. Only the
+     website form chrome (#ui and its children) is rethemed here. */
+  --red:#8A6A1F;--dkred:#6F5418;--yellow:#f5c800;
   --ink:#111;--muted:#555;--rule:#ccc;
-  --screen:#f4f0e8;--border:#c8b89a;
-  --card-bg:#fff;--label-col:#6b5a3e;--input-bg:#faf8f4;
+  --screen:#FCF9E8;--border:#DED9BE;
+  --card-bg:#fff;--label-col:#54592F;--input-bg:#F4F0DE;
 }
-body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min-height:100vh;}
+body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#3D4122;min-height:100vh;}
 
 /* ═══ FORM UI ═══ */
 #ui{max-width:780px;margin:0 auto;padding:24px 16px 60px;}
-.ui-header{text-align:center;padding:24px 0 20px;border-bottom:2px solid #c8b89a;margin-bottom:22px;}
-.ui-title{font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:2rem;color:#1a0e04;}
+.ui-header{text-align:center;padding:24px 0 20px;border-bottom:2px solid var(--border);margin-bottom:22px;}
+.ui-title{font-family:'Playfair Display',serif;font-weight:900;font-style:italic;font-size:2rem;color:#3D4122;}
 .ui-title span{color:var(--red);}
-.ui-sub{font-size:0.7rem;color:#8a7060;letter-spacing:0.25em;margin-top:4px;}
+.ui-sub{font-size:0.7rem;color:var(--label-col);letter-spacing:0.25em;margin-top:4px;}
 
 .logo-row{display:flex;gap:12px;margin-bottom:18px;}
-.logo-slot{flex:1;border:1px dashed #c8b89a;border-radius:3px;padding:12px;text-align:center;background:#fff;position:relative;overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+.logo-slot{flex:1;border:1px dashed var(--border);border-radius:3px;padding:12px;text-align:center;background:#fff;position:relative;overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
 .logo-slot:hover{border-color:var(--red);}
-.logo-slot label{display:block;font-size:0.55rem;letter-spacing:0.3em;color:#8a7060;text-transform:uppercase;margin-bottom:6px;cursor:pointer;}
-.logo-slot .ph{font-size:1.3rem;display:block;color:#c8b89a;}
+.logo-slot label{display:block;font-size:0.55rem;letter-spacing:0.3em;color:var(--label-col);text-transform:uppercase;margin-bottom:6px;cursor:pointer;}
+.logo-slot .ph{font-size:1.3rem;display:block;color:var(--border);}
 .logo-slot img.preview{max-height:46px;max-width:100%;object-fit:contain;display:none;margin:0 auto;}
 .logo-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.logo-slot .rm{display:none;position:absolute;top:3px;right:5px;background:none;border:none;color:#8a7060;cursor:pointer;font-size:0.8rem;z-index:2;}
+.logo-slot .rm{display:none;position:absolute;top:3px;right:5px;background:none;border:none;color:var(--label-col);cursor:pointer;font-size:0.8rem;z-index:2;}
 
-.card{background:var(--card-bg);border:1px solid #d8c8b0;border-radius:3px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:3px;padding:22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(61,65,34,0.08);}
 .card h2{font-family:'Playfair Display',serif;font-style:italic;font-size:1rem;color:var(--red);margin-bottom:16px;}
 .frow{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
 .fg{flex:1;min-width:148px;display:flex;flex-direction:column;gap:4px;}
 .fg.wide{flex:2;min-width:230px;}
-.fg label{font-size:0.54rem;letter-spacing:0.3em;color:#8a7060;text-transform:uppercase;}
-.fg input,.fg select,.fg textarea{background:var(--input-bg);border:1px solid #d8c8b0;border-radius:2px;color:#1a0e04;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 10px;outline:none;transition:border-color 0.18s;width:100%;}
+.fg label{font-size:0.54rem;letter-spacing:0.3em;color:var(--label-col);text-transform:uppercase;}
+.fg input,.fg select,.fg textarea{background:var(--input-bg);border:1px solid var(--border);border-radius:2px;color:#3D4122;font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 10px;outline:none;transition:border-color 0.18s;width:100%;}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--red);}
 .fg textarea{resize:vertical;min-height:54px;}
 .fg select option{background:#fff;}
 
-.dob-wrap{display:flex;align-items:center;gap:3px;background:var(--input-bg);border:1px solid #d8c8b0;border-radius:2px;padding:5px 10px;transition:border-color 0.18s;}
+.dob-wrap{display:flex;align-items:center;gap:3px;background:var(--input-bg);border:1px solid var(--border);border-radius:2px;padding:5px 10px;transition:border-color 0.18s;}
 .dob-wrap:focus-within{border-color:var(--red);}
-.dob-wrap.err{border-color:#8b1515;}
-.dp{background:transparent;border:none;outline:none;color:#1a0e04;font-family:'DM Sans',sans-serif;font-size:0.85rem;text-align:center;padding:3px 1px;width:2em;}
+.dob-wrap.err{border-color:#A1442A;}
+.dp{background:transparent;border:none;outline:none;color:#3D4122;font-family:'DM Sans',sans-serif;font-size:0.85rem;text-align:center;padding:3px 1px;width:2em;}
 .dp.yr{width:3.2em;}
-.dp::placeholder{color:#c8b89a;}
-.dsep{color:#c8b89a;user-select:none;}
+.dp::placeholder{color:#8A9160;}
+.dsep{color:#8A9160;user-select:none;}
 .dob-hint{font-size:0.54rem;margin-top:3px;min-height:13px;font-style:italic;}
-.dob-hint.ok{color:#3a7a3a;}
-.dob-hint.er{color:#9a4040;}
+.dob-hint.ok{color:#4C7A3D;}
+.dob-hint.er{color:#A1442A;}
 
-.gen-btn{width:100%;padding:14px;background:var(--red);border:none;border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.88rem;letter-spacing:0.3em;color:#fff;cursor:pointer;transition:opacity 0.18s;}
+.gen-btn{width:100%;padding:14px;background:var(--red);border:none;border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.88rem;letter-spacing:0.3em;color:#FCF9E8;cursor:pointer;transition:opacity 0.18s;}
 .gen-btn:hover{opacity:0.85;}
 .gen-btn:disabled{opacity:0.3;cursor:not-allowed;}
-.status{text-align:center;font-size:0.68rem;color:#8a7060;letter-spacing:0.15em;margin-top:12px;min-height:16px;}
+.status{text-align:center;font-size:0.68rem;color:var(--label-col);letter-spacing:0.15em;margin-top:12px;min-height:16px;}
 .retry-inline{
   display:none;
   margin:10px auto 0;
   padding:9px 20px;
   background:transparent;
-  border:1px solid #c8b89a;
+  border:1px solid var(--border);
   border-radius:2px;
   font-family:'Playfair Display SC',serif;
   font-size:0.62rem;
@@ -85,10 +89,10 @@ body{background:var(--screen);font-family:'DM Sans',sans-serif;color:#2a1e10;min
   cursor:pointer;
   transition:all 0.18s;
 }
-.retry-inline:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.retry-inline:hover{background:var(--red);border-color:var(--red);color:#FCF9E8;}
 .act-row{display:flex;gap:10px;justify-content:center;margin-top:16px;}
-.act-btn{padding:9px 24px;background:transparent;border:1px solid #c8b89a;border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.62rem;letter-spacing:0.25em;color:var(--red);cursor:pointer;transition:all 0.18s;display:none;}
-.act-btn:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.act-btn{padding:9px 24px;background:transparent;border:1px solid var(--border);border-radius:2px;font-family:'Playfair Display SC',serif;font-size:0.62rem;letter-spacing:0.25em;color:var(--red);cursor:pointer;transition:all 0.18s;display:none;}
+.act-btn:hover{background:var(--red);border-color:var(--red);color:#FCF9E8;}
 
 /* ═══ NEWSPAPER OUTPUT ═══ */
 #star{

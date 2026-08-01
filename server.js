@@ -302,13 +302,13 @@ app.post('/api/public/stations/inquiry', async (req, res) => {
       to: station.email,
       subject: `New Station Inquiry from ${senderName}`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <h2 style="color: #8b1010; margin-top: 0;">New Listener Inquiry</h2>
+        <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #DED9BE; border-radius: 8px;">
+          <h2 style="color: #8A6A1F; margin-top: 0;">New Listener Inquiry</h2>
           <p>You have received a new message regarding your Tribute Times station edition:</p>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <hr style="border: 0; border-top: 1px solid #DED9BE; margin: 20px 0;" />
           <p><strong>From:</strong> ${senderName} (${senderEmail})</p>
           <p><strong>Message:</strong></p>
-          <p style="background: #f7fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #8b1010; white-space: pre-wrap;">${message}</p>
+          <p style="background: #F4F0DE; padding: 15px; border-radius: 6px; border-left: 4px solid #8A6A1F; white-space: pre-wrap;">${message}</p>
         </div>
       `
     });
@@ -711,24 +711,24 @@ function getFloristCreditPack(packTypeValue, packSizeValue) {
 
 function djWelcomeEmail(name, email, password) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Your Tribute Times DJ Account</h1>
+    <h1 style="color:#8A6A1F;">Your Tribute Times DJ Account</h1>
     <p>Hi ${name},</p>
     <p>Your station manager has set up your DJ account on The Tribute Times.</p>
     <p><strong>Login:</strong> <a href="https://tributetimes.co.nz/dj">tributetimes.co.nz/dj</a><br/>
     <strong>Email:</strong> ${email}<br/>
     <strong>Password:</strong> ${password}</p>
     <p>Please change your password after first login.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
 function subscriptionActiveEmail(name, tier) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Subscription Active</h1>
+    <h1 style="color:#8A6A1F;">Subscription Active</h1>
     <p>Hi ${name},</p>
     <p>Your <strong>${TIERS[tier]?.label}</strong> plan is now active. You can generate up to ${TIERS[tier]?.keepsakes} keepsakes per month.</p>
     <p>Log in at <a href="https://tributetimes.co.nz/dashboard">tributetimes.co.nz/dashboard</a></p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 

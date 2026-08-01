@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <meta name="description" content="Create personalised keepsake newspapers in radio, florist, or public editions and install The Tribute Times as an app."/>
-<meta name="theme-color" content="#8b1010"/>
+<meta name="theme-color" content="#8A6A1F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
@@ -24,11 +24,11 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
-  background: radial-gradient(circle at top right, #381212, #180d0b 60%);
+  background: radial-gradient(circle at top right, #F4F0DE, #FCF9E8 60%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height:100vh;
   padding:28px 20px 60px;
-  color:#fff;
+  color:#3D4122;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -46,13 +46,13 @@ body.result-mode .result-section {
 .header {
   text-align:center;
   padding:24px 0 32px;
-  border-bottom:1px solid rgba(255,255,255,0.08);
+  border-bottom:1px solid rgba(61,65,34,0.12);
   margin-bottom:32px;
 }
 .header-title {
   font-size:2.4rem;
   font-weight:800;
-  color:#fff;
+  color:#3D4122;
   letter-spacing:-0.03em;
   line-height:1.1;
 }
@@ -60,7 +60,7 @@ body.result-mode .result-section {
   font-size:0.72rem;
   letter-spacing:5px;
   text-transform:uppercase;
-  color:rgba(255,255,255,0.5);
+  color:rgba(61,65,34,0.55);
   margin-top:8px;
   font-weight:600;
 }
@@ -70,7 +70,7 @@ body.result-mode .result-section {
   font-size:0.75rem;
   letter-spacing:3px;
   text-transform:uppercase;
-  color:rgba(255,255,255,0.4);
+  color:rgba(61,65,34,0.50);
   margin-bottom:12px;
   font-weight:700;
 }
@@ -88,16 +88,16 @@ body.result-mode .result-section {
   transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border:1.5px solid transparent;
   user-select:none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(61,65,34,0.15);
 }
 .tile:hover {
   transform:translateY(-3px);
   filter:brightness(1.15);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 8px 20px rgba(61,65,34,0.22);
 }
 .tile.selected {
-  border-color:#fff;
-  box-shadow:0 0 0 4px rgba(255,255,255,0.2);
+  border-color:#8A6A1F;
+  box-shadow:0 0 0 4px rgba(138,106,31,0.30);
 }
 .tile-icon {
   font-size:1.8rem;
@@ -108,7 +108,7 @@ body.result-mode .result-section {
 .tile-label {
   font-size:0.65rem;
   line-height:1.4;
-  color:#fff;
+  color:#FCF9E8;
   text-transform:uppercase;
   font-weight:700;
   letter-spacing:0.5px;
@@ -138,9 +138,9 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   border-radius:18px;
   padding:28px;
   margin-top:24px;
-  color:#1a1714;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
+  color:#3D4122;
+  box-shadow: 0 10px 30px rgba(61,65,34,0.15);
+  border: 1px solid #DED9BE;
 }
 .form-section.visible { display:block; }
 .form-banner {
@@ -162,24 +162,24 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-weight:700;
   letter-spacing:1px;
   text-transform:uppercase;
-  color:#6b6259;
+  color:#54592F;
   margin-bottom:8px;
 }
 .field input, .field select, .field textarea {
   width:100%;
   padding:12px 16px;
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   border-radius:10px;
   font-size:0.95rem;
-  color:#1a1714;
-  background:#faf8f4;
+  color:#3D4122;
+  background:#F4F0DE;
   outline:none;
   font-family:inherit;
   transition: border-color var(--transition, 0.2s), box-shadow var(--transition, 0.2s);
 }
 .field input:focus, .field select:focus, .field textarea:focus {
-  border-color:#8b1010;
-  box-shadow: 0 0 0 3px rgba(139,16,16,0.1);
+  border-color:#8A6A1F;
+  box-shadow: 0 0 0 3px rgba(138,106,31,0.15);
   background:#fff;
 }
 .field textarea { height:90px; resize:vertical; }
@@ -189,31 +189,31 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 .generate-btn {
   width:100%;
   padding:16px;
-  background:#8b1010;
+  background:#8A6A1F;
   border:none;
   border-radius:10px;
   font-size:0.9rem;
   font-weight:700;
   letter-spacing:2px;
-  color:#fff;
+  color:#FCF9E8;
   cursor:pointer;
   transition:all 0.2s;
   text-transform:uppercase;
   margin-top:10px;
-  box-shadow: 0 4px 12px rgba(139,16,16,0.3);
+  box-shadow: 0 4px 12px rgba(138,106,31,0.30);
 }
-.generate-btn:hover { background:#700d0d; transform:translateY(-1px); }
-.generate-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; box-shadow:none; }
+.generate-btn:hover { background:#6F5418; transform:translateY(-1px); }
+.generate-btn:disabled { background:#D8D2BE; cursor:not-allowed; transform:none; box-shadow:none; }
 
-.error { color:#b91c1c; font-size:0.85rem; margin-top:12px; text-align:center; font-weight:600; }
-.loading { text-align:center; padding:20px; color:#888; font-size:0.85rem; }
+.error { color:#A1442A; font-size:0.85rem; margin-top:12px; text-align:center; font-weight:600; }
+.loading { text-align:center; padding:20px; color:#8A9160; font-size:0.85rem; }
 .retry-btn {
   width:100%;
   margin-top:12px;
   padding:12px 16px;
   background:#fff;
-  color:#8b1010;
-  border:1.5px solid #8b1010;
+  color:#8A6A1F;
+  border:1.5px solid #8A6A1F;
   border-radius:10px;
   font-size:0.8rem;
   font-weight:700;
@@ -223,7 +223,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   display:none;
   transition:all 0.2s;
 }
-.retry-btn:hover { background:#8b1010; color:#fff; }
+.retry-btn:hover { background:#8A6A1F; color:#FCF9E8; }
 
 /* RESULT */
 .result-section {
@@ -248,12 +248,12 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   cursor:pointer; transition:all 0.2s;
   font-family:inherit;
 }
-.print-btn { background:#fff; color:#1a1714; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.secondary-btn { background:#8b1010; color:#fff; box-shadow: 0 4px 12px rgba(139,16,16,0.2); }
-.new-btn { background:#2d2824; color:#fff; }
-.print-btn:hover { background:#f5f0e8; transform:translateY(-1px); }
-.secondary-btn:hover { background:#700d0d; transform:translateY(-1px); }
-.new-btn:hover { background:#1e1a17; transform:translateY(-1px); }
+.print-btn { background:#fff; color:#3D4122; box-shadow: 0 4px 12px rgba(61,65,34,0.10); }
+.secondary-btn { background:#8A6A1F; color:#FCF9E8; box-shadow: 0 4px 12px rgba(138,106,31,0.25); }
+.new-btn { background:#3D4122; color:#FCF9E8; }
+.print-btn:hover { background:#F4F0DE; transform:translateY(-1px); }
+.secondary-btn:hover { background:#6F5418; transform:translateY(-1px); }
+.new-btn:hover { background:#2A2D18; transform:translateY(-1px); }
 #newspaper-container {
   width: 100%;
   display: flex;
@@ -287,9 +287,9 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   background:#ffffff;
   border-radius:18px;
   padding:24px;
-  color:#1a1714;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.1);
+  color:#3D4122;
+  box-shadow: 0 10px 30px rgba(61,65,34,0.15);
+  border: 1px solid #DED9BE;
 }
 #radio-auth-panel, #florist-auth-panel {
   max-width: 560px;
@@ -301,7 +301,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-weight:700;
   letter-spacing:2px;
   text-transform:uppercase;
-  color:#8b1010;
+  color:#8A6A1F;
   margin-bottom:10px;
 }
 .purchase-title {
@@ -311,13 +311,13 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   letter-spacing:-0.01em;
 }
 .purchase-copy {
-  color:#6b6259;
+  color:#54592F;
   font-size:0.92rem;
   line-height:1.55;
   margin-bottom:20px;
 }
 .purchase-fields {
-  border-top:1.5px solid #ece5db;
+  border-top:1.5px solid #DED9BE;
   padding-top:20px;
   margin-bottom:20px;
 }
@@ -326,7 +326,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-weight:800;
   letter-spacing:1.5px;
   text-transform:uppercase;
-  color:#8b1010;
+  color:#8A6A1F;
   margin:4px 0 16px;
 }
 .tier-grid {
@@ -336,21 +336,21 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   margin-bottom:20px;
 }
 .tier-card {
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   border-radius:12px;
   padding:16px;
-  background:#faf8f4;
+  background:#F4F0DE;
   cursor:pointer;
   transition:all 0.2s;
 }
 .tier-card:hover {
-  border-color:#8b1010;
+  border-color:#8A6A1F;
   transform:translateY(-2px);
   background:#fff;
 }
 .tier-card.selected {
-  border-color:#8b1010;
-  box-shadow:0 0 0 3px rgba(139,16,16,0.12);
+  border-color:#8A6A1F;
+  box-shadow:0 0 0 3px rgba(138,106,31,0.14);
   background:#fffcf9;
 }
 .tier-card.primary {
@@ -372,12 +372,12 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-size:1.4rem;
   font-weight:800;
   margin-bottom:8px;
-  color:#8b1010;
+  color:#8A6A1F;
 }
 .tier-copy {
   display:block;
   font-size:0.8rem;
-  color:#6b6259;
+  color:#54592F;
   line-height:1.45;
 }
 .delivery-grid {
@@ -390,19 +390,19 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   display:flex;
   align-items:center;
   gap:10px;
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   border-radius:10px;
   padding:12px 14px;
-  background:#faf8f4;
+  background:#F4F0DE;
   font-size:0.85rem;
-  color:#1a1714;
+  color:#3D4122;
   cursor:pointer;
   transition:all 0.2s;
 }
-.delivery-option:hover { background:#fff; border-color:#8b1010; }
+.delivery-option:hover { background:#fff; border-color:#8A6A1F; }
 .delivery-option input {
   width:auto;
-  accent-color:#8b1010;
+  accent-color:#8A6A1F;
 }
 .purchase-actions {
   display:flex;
@@ -414,35 +414,35 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   padding:14px;
   border:none;
   border-radius:10px;
-  background:#8b1010;
-  color:#fff;
+  background:#8A6A1F;
+  color:#FCF9E8;
   font-size:0.85rem;
   font-weight:800;
   letter-spacing:1px;
   text-transform:uppercase;
   cursor:pointer;
   transition:all 0.2s;
-  box-shadow: 0 4px 12px rgba(139,16,16,0.3);
+  box-shadow: 0 4px 12px rgba(138,106,31,0.30);
 }
 .pay-btn:disabled {
-  background:#dcd7d2;
-  color:#a59c94;
+  background:#D8D2BE;
+  color:#8A9160;
   cursor:not-allowed;
   box-shadow:none;
 }
 .pay-btn:hover:not(:disabled) {
-  background:#700d0d;
+  background:#6F5418;
 }
 .purchase-note {
   font-size:0.82rem;
-  color:#6b6259;
+  color:#54592F;
   line-height:1.45;
   margin-top:6px;
 }
 .generate-notice {
   font-size:0.82rem;
   font-style:italic;
-  color:#6b6259;
+  color:#54592F;
   line-height:1.45;
   text-align:center;
   margin:2px 0 14px;
@@ -461,18 +461,18 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 .share-banner-copy strong {
   display:block;
   font-size:0.9rem;
-  color:#8b1010;
+  color:#8A6A1F;
 }
 .share-banner-copy span {
   display:block;
   font-size:0.78rem;
-  color:#6b6259;
+  color:#54592F;
   margin-top:2px;
 }
 .btn-share {
   flex-shrink:0;
-  background:#8b1010;
-  color:#fff;
+  background:#8A6A1F;
+  color:#FCF9E8;
   border:none;
   border-radius:8px;
   padding:9px 14px;
@@ -481,8 +481,8 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   cursor:pointer;
   white-space:nowrap;
 }
-.btn-share:hover { background:#700d0d; }
-.btn-share:disabled { background:#ccc; cursor:not-allowed; }
+.btn-share:hover { background:#6F5418; }
+.btn-share:disabled { background:#D8D2BE; cursor:not-allowed; }
 .share-links {
   display:flex;
   gap:8px;
@@ -493,14 +493,14 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-size:0.8rem;
   padding:7px 12px;
   border-radius:8px;
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   background:#fff;
-  color:#1a1714;
+  color:#3D4122;
   text-decoration:none;
   cursor:pointer;
   font-family:inherit;
 }
-.share-links a:hover, .share-links button:hover { background:#faf8f4; }
+.share-links a:hover, .share-links button:hover { background:#F4F0DE; }
 .payment-grid {
   grid-template-columns:repeat(2,1fr);
 }
@@ -512,7 +512,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   align-items:center;
   justify-content:center;
   padding:20px;
-  background:rgba(16,10,9,0.74);
+  background:rgba(61,65,34,0.55);
   backdrop-filter:blur(3px);
   -webkit-backdrop-filter:blur(3px);
   animation:gcashOverlayIn 0.18s ease-out;
@@ -535,9 +535,9 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   scrollbar-width:none;
   -ms-overflow-style:none;
   background:#ffffff;
-  color:#1a1714;
+  color:#3D4122;
   border-radius:20px;
-  box-shadow:0 24px 64px rgba(0,0,0,0.42);
+  box-shadow:0 24px 64px rgba(61,65,34,0.28);
   border-top:4px solid #0b5fff;
   animation:gcashCardIn 0.22s cubic-bezier(0.16,1,0.3,1);
 }
@@ -550,7 +550,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   justify-content:space-between;
   gap:16px;
   padding:22px 24px 14px;
-  border-bottom:1.5px solid #ece5db;
+  border-bottom:1.5px solid #DED9BE;
 }
 .gcash-modal-header h3 {
   margin:0;
@@ -560,10 +560,10 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 .gcash-modal-close {
   width:34px;
   height:34px;
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   border-radius:8px;
   background:#fff;
-  color:#1a1714;
+  color:#3D4122;
   cursor:pointer;
   font-size:1.2rem;
   line-height:1;
@@ -571,23 +571,23 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   transition:background 0.15s ease, transform 0.15s ease;
 }
 .gcash-modal-close:hover {
-  background:#faf0f0;
+  background:#F4F0DE;
   transform:scale(1.05);
 }
 .gcash-modal-body {
   padding:20px 24px 24px;
 }
 .gcash-summary {
-  border:1.5px solid #ece5db;
+  border:1.5px solid #DED9BE;
   border-radius:12px;
-  background:#faf8f4;
+  background:#F4F0DE;
   padding:14px;
   font-size:0.88rem;
   line-height:1.55;
   margin-bottom:16px;
 }
 .gcash-amount {
-  color:#8b1010;
+  color:#8A6A1F;
   font-weight:800;
   font-size:1.05rem;
 }
@@ -613,7 +613,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   object-fit:contain;
   border-radius:10px;
   background:#fff;
-  border:1px solid #ece5db;
+  border:1px solid #DED9BE;
   cursor:pointer;
   transition:transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -631,20 +631,20 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 }
 .gcash-qr-copy {
   font-size:0.86rem;
-  color:#3d3730;
+  color:#54592F;
   line-height:1.55;
 }
 .gcash-proof-message {
   min-height:20px;
   font-size:0.84rem;
   font-weight:700;
-  color:#6b6259;
+  color:#54592F;
 }
 .gcash-proof-message.error {
-  color:#b91c1c;
+  color:#A1442A;
 }
 .gcash-proof-message.ok {
-  color:#166534;
+  color:#4C7A3D;
 }
 .qr-lightbox-overlay {
   position:fixed;
@@ -654,7 +654,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   align-items:center;
   justify-content:center;
   padding:32px;
-  background:rgba(8,6,5,0.9);
+  background:rgba(61,65,34,0.75);
   backdrop-filter:blur(4px);
   -webkit-backdrop-filter:blur(4px);
   animation:gcashOverlayIn 0.15s ease-out;
@@ -677,7 +677,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   border-radius:18px;
   background:#fff;
   padding:18px;
-  box-shadow:0 30px 70px rgba(0,0,0,0.55);
+  box-shadow:0 30px 70px rgba(61,65,34,0.32);
 }
 .qr-lightbox-close {
   position:absolute;
@@ -686,20 +686,20 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   width:40px;
   height:40px;
   border-radius:50%;
-  border:1.5px solid #ece5db;
+  border:1.5px solid #DED9BE;
   background:#fff;
-  color:#1a1714;
+  color:#3D4122;
   font-size:1.3rem;
   line-height:1;
   cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:0 6px 18px rgba(0,0,0,0.35);
+  box-shadow:0 6px 18px rgba(61,65,34,0.30);
   transition:background 0.15s ease, transform 0.15s ease;
 }
 .qr-lightbox-close:hover {
-  background:#faf0f0;
+  background:#F4F0DE;
   transform:scale(1.06);
 }
 @media (max-width:480px) {
@@ -712,18 +712,18 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   margin-top:10px;
 }
 .radio-order-row {
-  border:1.5px solid #ddd5c8;
+  border:1.5px solid #DED9BE;
   border-radius:10px;
-  background:#faf8f4;
+  background:#F4F0DE;
   padding:14px;
   font-size:0.85rem;
   line-height:1.5;
-  color:#3d3730;
-  box-shadow:0 1px 3px rgba(0,0,0,0.02);
+  color:#54592F;
+  box-shadow:0 1px 3px rgba(61,65,34,0.05);
 }
 .radio-order-row strong {
   display:block;
-  color:#1a1714;
+  color:#3D4122;
   margin-bottom:4px;
   font-size:0.9rem;
 }
@@ -732,24 +732,24 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   margin-bottom:16px;
   padding:14px 16px;
   border-radius:10px;
-  background:#f5efe6;
-  color:#3d3730;
+  background:#F4F0DE;
+  color:#54592F;
   font-size:0.88rem;
   line-height:1.5;
-  border-left:4px solid #8b1010;
+  border-left:4px solid #8A6A1F;
 }
 .result-status.visible {
   display:block;
 }
 .result-status.error {
-  background:#fff1f1;
-  color:#b91c1c;
-  border-left-color:#b91c1c;
+  background:#F5E4DD;
+  color:#A1442A;
+  border-left-color:#A1442A;
 }
 .result-status.status-loading {
   background:#ffffff !important;
   border-left:none !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 10px 30px rgba(61,65,34,0.15) !important;
   border-radius: 18px !important;
   padding: 30px 24px !important;
   max-width: 600px !important;
@@ -759,8 +759,8 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 .loader-spinner {
   width:40px;
   height:40px;
-  border:3.5px solid #ece5db;
-  border-top-color:#8b1010;
+  border:3.5px solid #DED9BE;
+  border-top-color:#8A6A1F;
   border-radius:50%;
   animation:spinner-rotate 0.8s linear infinite;
   margin:0 auto;
@@ -787,7 +787,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   font-weight:900;
   line-height:1.4;
   letter-spacing:2px;
-  color:rgba(139,16,16,0.15);
+  color:rgba(138,106,31,0.18);
   pointer-events:none;
   transform:rotate(-20deg);
   text-transform:uppercase;
@@ -819,7 +819,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   overflow:hidden;
 }
 
-.divider { height:1px; background:rgba(255,255,255,0.08); margin:24px 0; }
+.divider { height:1px; background:rgba(61,65,34,0.12); margin:24px 0; }
 
 @media (max-width:960px) {
   .occasion-grid { grid-template-columns:repeat(4,1fr); }
@@ -1055,40 +1055,40 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 <!-- STEP 1: OCCASION -->
 <div class="section-label radio-hidden">Step 1 — Choose the occasion</div>
 <div class="occasion-grid radio-hidden" id="occasion-grid">
-  <div class="tile" onclick="selectOccasion(this,'Birthday','Happy Birthday','#8b1010')" style="background:#8b1010;">
+  <div class="tile" onclick="selectOccasion(this,'Birthday','Happy Birthday','#8A6A1F')" style="background:#8A6A1F;">
     <span class="tile-icon">🎂</span><span class="tile-label">Happy<br/>Birthday</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Anniversary','Happy Anniversary','#8b1010')" style="background:#8b1010;">
+  <div class="tile" onclick="selectOccasion(this,'Anniversary','Happy Anniversary','#6F5418')" style="background:#6F5418;">
     <span class="tile-icon">💍</span><span class="tile-label">Happy<br/>Anniversary</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Fifty Golden Years Together.','#8a6a00')" style="background:#8a6a00;">
+  <div class="tile" onclick="selectOccasion(this,'Golden Anniversary','Fifty Golden Years Together.','#54592F')" style="background:#54592F;">
     <span class="tile-icon">🥇</span><span class="tile-label">Golden<br/>Anniversary</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Valentine\'s Day','I Love You','#9b1a2a')" style="background:#9b1a2a;">
+  <div class="tile" onclick="selectOccasion(this,'Valentine\'s Day','I Love You','#3D4122')" style="background:#3D4122;">
     <span class="tile-icon">❤️</span><span class="tile-label">I Love<br/>You</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'New Baby','Welcome to the World','#1a4a6a')" style="background:#1a4a6a;">
+  <div class="tile" onclick="selectOccasion(this,'New Baby','Welcome to the World','#4A5025')" style="background:#4A5025;">
     <span class="tile-icon">👶</span><span class="tile-label">New<br/>Baby</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Mother\'s Day','Happy Mother\'s Day','#8a2a3a')" style="background:#8a2a3a;">
+  <div class="tile" onclick="selectOccasion(this,'Mother\'s Day','Happy Mother\'s Day','#7A5C1C')" style="background:#7A5C1C;">
     <span class="tile-icon">🌸</span><span class="tile-label">Mother's<br/>Day</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Father\'s Day','Happy Father\'s Day','#1a2a5a')" style="background:#1a2a5a;">
+  <div class="tile" onclick="selectOccasion(this,'Father\'s Day','Happy Father\'s Day','#5C4A1A')" style="background:#5C4A1A;">
     <span class="tile-icon">👔</span><span class="tile-label">Father's<br/>Day</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Graduation','Congratulations Graduate','#1a4a2a')" style="background:#1a4a2a;">
+  <div class="tile" onclick="selectOccasion(this,'Graduation','Congratulations Graduate','#656A38')" style="background:#656A38;">
     <span class="tile-icon">🎓</span><span class="tile-label">Gradu-<br/>ation</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Retirement','Happy Retirement','#8a6a00')" style="background:#8a6a00;">
+  <div class="tile" onclick="selectOccasion(this,'Retirement','Happy Retirement','#48401C')" style="background:#48401C;">
     <span class="tile-icon">🏖️</span><span class="tile-label">Retire-<br/>ment</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Wedding Day','Wedding Day Special Edition','#8b1010')" style="background:#8b1010;">
+  <div class="tile" onclick="selectOccasion(this,'Wedding Day','Wedding Day Special Edition','#715E22')" style="background:#715E22;">
     <span class="tile-icon">💒</span><span class="tile-label">Wedding<br/>Day</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'In Loving Memory','In Loving Memory','#111')" style="background:#111;">
+  <div class="tile" onclick="selectOccasion(this,'In Loving Memory','In Loving Memory','#3F4A28')" style="background:#3F4A28;">
     <span class="tile-icon">🕊️</span><span class="tile-label">In Loving<br/>Memory</span>
   </div>
-  <div class="tile" onclick="selectOccasion(this,'Custom','A Special Edition','#2a2a3a')" style="background:#2a2a3a;">
+  <div class="tile" onclick="selectOccasion(this,'Custom','A Special Edition','#6B5220')" style="background:#6B5220;">
     <span class="tile-icon">⭐</span><span class="tile-label">Custom<br/>Edition</span>
   </div>
 </div>
@@ -1514,7 +1514,7 @@ function setStatusMessage(message, isError) {
     status.innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; width:100%;">
         <div class="loader-spinner"></div>
-        <div style="margin-top:14px; font-weight:800; font-family:'PB',sans-serif; text-transform:uppercase; letter-spacing:1px; color:#8b1010; font-size:0.85rem;">${message}</div>
+        <div style="margin-top:14px; font-weight:800; font-family:'PB',sans-serif; text-transform:uppercase; letter-spacing:1px; color:#8A6A1F; font-size:0.85rem;">${message}</div>
       </div>
     `;
   } else {
@@ -1831,7 +1831,7 @@ function applyRadioFormMode() {
 
   selectedOccasion = 'Birthday';
   selectedBanner = 'Happy Birthday';
-  selectedBg = '#8b1010';
+  selectedBg = '#8A6A1F';
 
   document.getElementById('form-section').classList.add('visible');
   document.getElementById('form-banner').textContent = selectedBanner;
@@ -2749,7 +2749,7 @@ function updateShareBannerStatus(message, isError) {
   const el = document.getElementById('share-banner-status');
   if (!el) return;
   el.textContent = message;
-  el.style.color = isError ? '#b91c1c' : '#6b6259';
+  el.style.color = isError ? '#A1442A' : '#54592F';
 }
 
 function copyShareLink() {
@@ -3178,23 +3178,23 @@ async function submitPasswordUpdate(event) {
 </script>
 
 <!-- UPDATE PASSWORD MODAL -->
-<div id="password-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; padding:20px;">
-  <div style="background:#ffffff; color:#1a1714; width:100%; max-width:400px; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid #e2e8f0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+<div id="password-modal" style="position:fixed; inset:0; background:rgba(61,65,34,0.55); display:none; align-items:center; justify-content:center; z-index:9999; padding:20px;">
+  <div style="background:#ffffff; color:#3D4122; width:100%; max-width:400px; padding:24px; border-radius:12px; box-shadow:0 10px 25px rgba(61,65,34,0.20); border:1px solid #DED9BE; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
     <h3 style="margin-bottom:16px; font-size:1.25rem; font-weight:700;">Change Password</h3>
     <form onsubmit="submitPasswordUpdate(event)">
       <div style="margin-bottom:12px; text-align:left;">
-        <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">Current Password</label>
-        <input type="password" id="modal-old-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
+        <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#54592F; margin-bottom:4px;">Current Password</label>
+        <input type="password" id="modal-old-password" required style="width:100%; padding:10px; border:1px solid #DED9BE; border-radius:6px; font-size:0.9rem; background:#fff; color:#3D4122;" />
       </div>
       <div style="margin-bottom:16px; text-align:left;">
-        <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#718096; margin-bottom:4px;">New Password</label>
-        <input type="password" id="modal-new-password" required style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; font-size:0.9rem; background:#fff; color:#000;" />
+        <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#54592F; margin-bottom:4px;">New Password</label>
+        <input type="password" id="modal-new-password" required style="width:100%; padding:10px; border:1px solid #DED9BE; border-radius:6px; font-size:0.9rem; background:#fff; color:#3D4122;" />
       </div>
-      <div id="modal-password-error" style="color:#e53e3e; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;"></div>
-      <div id="modal-password-success" style="color:#38a169; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;">Password changed successfully!</div>
+      <div id="modal-password-error" style="color:#A1442A; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;"></div>
+      <div id="modal-password-success" style="color:#4C7A3D; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;">Password changed successfully!</div>
       <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button type="button" onclick="closePasswordModal()" style="padding:10px 16px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; color:#4a5568; font-weight:600; cursor:pointer;">Cancel</button>
-        <button type="submit" style="padding:10px 16px; border:none; border-radius:6px; background:#8b1010; color:#fff; font-weight:600; cursor:pointer;">Update</button>
+        <button type="button" onclick="closePasswordModal()" style="padding:10px 16px; border:1px solid #DED9BE; border-radius:6px; background:#fff; color:#54592F; font-weight:600; cursor:pointer;">Cancel</button>
+        <button type="submit" style="padding:10px 16px; border:none; border-radius:6px; background:#8A6A1F; color:#FCF9E8; font-weight:600; cursor:pointer;">Update</button>
       </div>
     </form>
   </div>

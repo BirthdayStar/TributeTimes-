@@ -56,35 +56,35 @@ function normalizeAttachment(attachment) {
 
 function buildStationWelcomeEmail(name, tier) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Welcome to The Tribute Times</h1>
+    <h1 style="color:#8A6A1F;">Welcome to The Tribute Times</h1>
     <p>Hi ${escapeHtml(name)},</p>
     <p>Your <strong>${escapeHtml(tierLabel(tier))}</strong> station account is ready. You have a 14-day free trial — no card required.</p>
     <p>Log in at <a href="https://tributetimes.co.nz/login">tributetimes.co.nz</a> to set up your station branding, add your DJs, and start creating your first birthday keepsakes.</p>
     <p>Questions? Reply to this email — we're here to help.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
 function buildDjWelcomeEmail(name, email, password) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Your Tribute Times DJ Account</h1>
+    <h1 style="color:#8A6A1F;">Your Tribute Times DJ Account</h1>
     <p>Hi ${escapeHtml(name)},</p>
     <p>Your station manager has set up your DJ account on The Tribute Times.</p>
     <p><strong>Login:</strong> <a href="https://tributetimes.co.nz/dj">tributetimes.co.nz/dj</a><br/>
     <strong>Email:</strong> ${escapeHtml(email)}<br/>
     <strong>Password:</strong> ${escapeHtml(password)}</p>
     <p>Please change your password after first login.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
 function buildSubscriptionActiveEmail(name, tier) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Subscription Active</h1>
+    <h1 style="color:#8A6A1F;">Subscription Active</h1>
     <p>Hi ${escapeHtml(name)},</p>
     <p>Your <strong>${escapeHtml(tierLabel(tier))}</strong> plan is now active. You can generate up to ${escapeHtml(tierKeepsakes(tier))} keepsakes per month.</p>
     <p>Log in at <a href="https://tributetimes.co.nz/dashboard">tributetimes.co.nz/dashboard</a></p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
@@ -125,14 +125,14 @@ function buildGcashPromoApprovedEmail({ request, promoCode, appUrl }) {
   const publicUrl = appUrl ? `${String(appUrl).replace(/\/$/, '')}/public` : '/public';
 
   return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
-    <h1 style="color:#8b1010;">Your GCash payment is approved</h1>
+    <h1 style="color:#8A6A1F;">Your GCash payment is approved</h1>
     <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
     <p>Your GCash payment for <strong>${escapeHtml(product)}${escapeHtml(delivery)}</strong> has been verified.</p>
     <p><strong>Approved amount:</strong> NZ$${escapeHtml(totalNzd)}${escapeHtml(phpAmount)}</p>
     <p style="font-size:1.15rem;"><strong>Your one-time promo code:</strong> ${escapeHtml(promoCode?.code || '')}</p>
     <p>This code works only once, is valid until <strong>${escapeHtml(expiry)}</strong>, and can only be used for the same product and delivery option you paid for.</p>
     <p>Return to <a href="${escapeHtml(publicUrl)}">The Tribute Times public checkout</a>, select the same product, enter this code in the promo code field, and continue to payment. The site will unlock your paid order without charging your card.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
@@ -142,12 +142,12 @@ function buildGcashPaymentRejectedEmail({ request }) {
     : '';
 
   return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
-    <h1 style="color:#8b1010;">GCash payment could not be verified</h1>
+    <h1 style="color:#8A6A1F;">GCash payment could not be verified</h1>
     <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
     <p>We could not verify the GCash payment details submitted for request ${escapeHtml(request?.request_number || '')}.</p>
     ${note}
     <p>Please reply with the correct GCash sender name, transaction/reference ID, and payment screenshot if available.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
@@ -160,13 +160,13 @@ function buildGcashManualPaymentApprovedEmail({ request, result }) {
   const outcome = manualPaymentOutcomeText(request, result);
 
   return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
-    <h1 style="color:#8b1010;">Your GCash payment is approved</h1>
+    <h1 style="color:#8A6A1F;">Your GCash payment is approved</h1>
     <p>Hi ${escapeHtml(request?.customer_name || 'there')},</p>
     <p>Your GCash payment for <strong>${escapeHtml(item)}</strong> has been verified.</p>
     <p><strong>Payment type:</strong> ${escapeHtml(context)}</p>
     <p><strong>Approved amount:</strong> NZ$${Number(request?.expected_amount_nzd || 0).toFixed(2)}${escapeHtml(phpAmount)}</p>
     <p>${escapeHtml(outcome)}</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
@@ -192,11 +192,11 @@ function buildRadioOrderAdminEmail(order) {
 
 function buildFloristLowCreditEmail(station, repEmail) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Florist credits running low</h1>
+    <h1 style="color:#8A6A1F;">Florist credits running low</h1>
     <p>Hi ${escapeHtml(station?.name || 'there')},</p>
     <p>Your florist credit balance is down to ${escapeHtml(String(station?.florist_credit_balance ?? 0))} credits.</p>
     <p>Purchase another pack to top up your balance. The current low-credit threshold is ${escapeHtml(String(station?.florist_low_credit_threshold ?? PHASE2_CONFIG.floristLowCreditThreshold))} credits.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
@@ -208,7 +208,7 @@ function buildPostedOrderCustomerEmail() {
 
 function buildAnthropicSpendAlertEmail({ usageDate, totalUsd, thresholdUsd }) {
   return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
-    <h1 style="color:#8b1010;">Anthropic Spend Alert</h1>
+    <h1 style="color:#8A6A1F;">Anthropic Spend Alert</h1>
     <p>The estimated Anthropic spend on ${escapeHtml(usageDate)} has reached US$${Number(totalUsd || 0).toFixed(2)}.</p>
     <p>The current alert threshold is US$${Number(thresholdUsd || PHASE2_CONFIG.anthropicDailyAlertThresholdUsd).toFixed(2)}.</p>
   </div>`;

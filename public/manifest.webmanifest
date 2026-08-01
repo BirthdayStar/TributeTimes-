@@ -11,8 +11,8 @@
     "standalone",
     "browser"
   ],
-  "background_color": "#f4f0e8",
-  "theme_color": "#8b1010",
+  "background_color": "#FCF9E8",
+  "theme_color": "#8A6A1F",
   "orientation": "any",
   "lang": "en-NZ",
   "dir": "ltr",
