@@ -129,6 +129,17 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
     }
   });
 
+  // Lets the frontend confirm a ?ref= code is real BEFORE telling the visitor
+  // "10% off applied" — the checkout-session route below re-validates this
+  // same code server-side regardless, this is purely so the UI never claims
+  // a discount that won't actually show up at Stripe checkout.
+  app.get('/api/public/share/validate', async (req, res) => {
+    const code = String(req.query.code || '').trim();
+    if (!code) return res.json({ valid: false });
+    const row = await resolveViralShareRow(supabase, code);
+    return res.json({ valid: Boolean(row) });
+  });
+
   // Viral share loop (Tasks 1.7/1.8). Pre-payment shares unlock 10% off
   // immediately for the sharer; post-purchase shares create a link that
   // gives the next visitor 10% off at their own checkout.
