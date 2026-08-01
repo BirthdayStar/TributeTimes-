@@ -2672,16 +2672,40 @@ function copyPostPurchaseShareLink() {
   }
 }
 
-function initViralShareBanner() {
+async function initViralShareBanner() {
   const statusEl = document.getElementById('share-banner-status');
   const btn = document.getElementById('share-unlock-btn');
   if (!statusEl || !btn) return;
-  // Arrived via a friend's share link — discount is already active for
-  // this checkout, no need to click "share" to unlock it.
-  if (activeReferralCode && new URLSearchParams(window.location.search).get('ref')) {
-    statusEl.textContent = "You've got 10% off from a friend's share — it'll apply automatically at checkout.";
-    btn.textContent = 'Discount Applied';
-    btn.disabled = true;
+  if (!(activeReferralCode && new URLSearchParams(window.location.search).get('ref'))) return;
+
+  // Arrived via a friend's share link. Confirm the code is actually real
+  // BEFORE claiming the discount is active — showing "Discount Applied" on
+  // trust alone meant an expired/invalid link still told the customer they
+  // had 10% off, right up until the real, silent check at Stripe checkout
+  // came back empty and the discount just never appeared.
+  statusEl.textContent = 'Checking your friend\'s discount link...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch(`/api/public/share/validate?code=${encodeURIComponent(activeReferralCode)}`);
+    const result = await response.json();
+    if (result.valid) {
+      statusEl.textContent = "You've got 10% off from a friend's share — it'll apply automatically at checkout.";
+      btn.textContent = 'Discount Applied';
+      btn.disabled = true;
+    } else {
+      activeReferralCode = '';
+      sessionStorage.removeItem('tt_referral_code');
+      statusEl.textContent = "That referral link has expired or isn't valid, so it won't give you a discount — but you can still share your own keepsake below to save 10%.";
+      btn.textContent = 'Share & Save 10%';
+      btn.disabled = false;
+    }
+  } catch (error) {
+    // Network hiccup checking the link — don't claim a discount we haven't confirmed.
+    activeReferralCode = '';
+    statusEl.textContent = "Couldn't confirm that referral link right now — share your own keepsake below to save 10% instead.";
+    btn.textContent = 'Share & Save 10%';
+    btn.disabled = false;
   }
 }
 
