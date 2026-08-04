@@ -721,6 +721,7 @@
         <button class="nav-item" type="button" onclick="navigateTo('orders')">📬 Order Queue</button>
         <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Consultants</button>
         <button class="nav-item" type="button" onclick="navigateTo('promo-codes')">🏷️ Promo Codes</button>
+        <button class="nav-item" type="button" onclick="navigateTo('campaign-codes')">🎟️ Campaign Codes</button>
         <button class="nav-item" type="button" onclick="navigateTo('territories')">🗺️ Territories</button>
         <button class="nav-item" type="button" onclick="navigateTo('stations')">📻 Station Managers</button>
         <button class="nav-item" type="button" onclick="navigateTo('florists')">🌸 Florist Partners</button>
@@ -958,6 +959,44 @@
         </div>
       </div>
 
+      <!-- ── VIEW: CAMPAIGN CODES ── -->
+      <div id="view-campaign-codes" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🎟️ Campaign Codes — single-use discount codes</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openCampaignBatchModal()">+ Create Codes</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px;">
+              Single-use, batch-generated discount codes for campaigns (e.g. a Facebook promo like <code>WELCOME20</code>) — each code works exactly once. This is separate from the reusable, consultant-quota Promo Codes above.
+            </p>
+            <div class="msg" id="campaign-codes-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Batch / Campaign</th>
+                    <th>Discount</th>
+                    <th>Country</th>
+                    <th>Used</th>
+                    <th>Valid Until</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="campaign-code-body">
+                  <tr class="empty-row"><td colspan="8">No campaign codes yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="campaign-codes-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── VIEW: TERRITORIES ── -->
       <div id="view-territories" class="page-view">
         <div class="section">
@@ -1165,6 +1204,7 @@
       consultants: { page: 1, limit: 10, total: 0 },
       gcashPayments: { page: 1, limit: 10, total: 0 },
       promos: { page: 1, limit: 10, total: 0 },
+      campaignCodes: { page: 1, limit: 10, total: 0 },
       territories: { page: 1, limit: 10, total: 0 },
       stations: { page: 1, limit: 10, total: 0 },
       florists: { page: 1, limit: 10, total: 0 },
@@ -1207,6 +1247,8 @@
         loadConsultants(1);
       } else if (viewId === 'promo-codes') {
         loadPromos(1);
+      } else if (viewId === 'campaign-codes') {
+        loadCampaignCodes(1);
       } else if (viewId === 'territories') {
         loadTerritories(1);
       } else if (viewId === 'stations') {
@@ -1549,8 +1591,18 @@
           document.getElementById('modal-florist-name').value = data.name || '';
           document.getElementById('modal-florist-email').value = data.email || '';
           document.getElementById('modal-florist-country').value = data.country || 'New Zealand';
-          document.getElementById('modal-florist-credits').value = data.initial_credit_balance || data.credit_balance || 30;
-          
+
+          // Editing an existing florist: show Current/New/Total instead of the
+          // single "Initial Credits" field (that field only makes sense when
+          // there's no existing balance yet, i.e. creating a brand new florist).
+          const initialWrap = document.getElementById('modal-florist-initial-credits-wrap');
+          if (initialWrap) initialWrap.style.display = 'none';
+          const creditEditWrap = document.getElementById('modal-florist-credit-edit-wrap');
+          if (creditEditWrap) creditEditWrap.style.display = 'block';
+          document.getElementById('modal-florist-current-credits').value = data.credit_balance || 0;
+          document.getElementById('modal-florist-new-credits').value = 0;
+          updateFloristCreditTotalPreview();
+
           const pwWrap = document.getElementById('modal-florist-password-wrap');
           if (pwWrap) pwWrap.style.display = 'none';
           const actWrap = document.getElementById('modal-florist-active-wrap');
@@ -1592,8 +1644,23 @@
         if (actWrap) actWrap.style.display = 'none';
         const thWrap = document.getElementById(`modal-${type}-threshold-wrap`);
         if (thWrap) thWrap.style.display = 'none';
+        if (type === 'florist') {
+          // Adding a brand new florist: restore the single "Initial Credits"
+          // field and hide the Current/New/Total group (which only applies
+          // when editing a florist that already has a balance).
+          const initialWrap = document.getElementById('modal-florist-initial-credits-wrap');
+          if (initialWrap) initialWrap.style.display = 'block';
+          const creditEditWrap = document.getElementById('modal-florist-credit-edit-wrap');
+          if (creditEditWrap) creditEditWrap.style.display = 'none';
+        }
       }
       modal.style.display = 'flex';
+    }
+
+    function updateFloristCreditTotalPreview() {
+      const current = Number(document.getElementById('modal-florist-current-credits').value || 0);
+      const toAdd = Number(document.getElementById('modal-florist-new-credits').value || 0);
+      document.getElementById('modal-florist-total-credits').value = current + toAdd;
     }
 
     function closeModal(type) {
@@ -1715,13 +1782,20 @@
         name: document.getElementById('modal-florist-name').value.trim(),
         email: document.getElementById('modal-florist-email').value.trim(),
         country: document.getElementById('modal-florist-country').value.trim(),
-        initial_credit_balance: Number(document.getElementById('modal-florist-credits').value || 30)
       };
+      let creditsBeingAdded = 0;
+      let floristNameForConfirmation = payload.name;
       if (!id) {
         payload.password = document.getElementById('modal-florist-password').value;
+        // New florist: no existing balance yet, so this is an absolute starting value.
+        payload.initial_credit_balance = Number(document.getElementById('modal-florist-credits').value || 30);
       } else {
         payload.active = document.getElementById('modal-florist-active').checked;
         payload.low_credit_threshold = Number(document.getElementById('modal-florist-threshold').value || 5);
+        // Existing florist: send the amount to ADD, not an absolute total — the
+        // server computes the new balance from its own current value.
+        creditsBeingAdded = Number(document.getElementById('modal-florist-new-credits').value || 0);
+        payload.creditsToAdd = creditsBeingAdded;
       }
       const method = id ? 'PUT' : 'POST';
       const endpoint = id ? `/api/admin/florists/${id}` : '/api/admin/florists';
@@ -1734,7 +1808,15 @@
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
         closeModal('florist');
-        loadFlorists(paginationState.florists.page);
+        await loadFlorists(paginationState.florists.page);
+        if (id && creditsBeingAdded) {
+          const msgEl = document.getElementById('florists-message');
+          if (msgEl) {
+            msgEl.textContent = `Added ${creditsBeingAdded} credits — ${floristNameForConfirmation} now has ${data.newCreditBalance} credits.`;
+            msgEl.classList.remove('error');
+            msgEl.classList.add('ok');
+          }
+        }
       } catch (err) { alert(`Error: ${err.message}`); }
     }
 
@@ -1957,6 +2039,108 @@
         `).join('') : '<tr class="empty-row"><td colspan="7">No promo codes found.</td></tr>';
         
         renderPaginationControls('promos-pagination', data.total, page, paginationState.promos.limit, 'loadPromos');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    // ── CAMPAIGN CODES (single-use batch discount codes) ──
+    function openCampaignBatchModal() {
+      const form = document.getElementById('campaign-batch-form');
+      if (form) form.reset();
+      document.getElementById('campaign-batch-modal').style.display = 'flex';
+    }
+
+    async function createCampaignBatch(e) {
+      e.preventDefault();
+      const payload = {
+        label: document.getElementById('modal-campaign-label').value.trim(),
+        code: document.getElementById('modal-campaign-single-code').value.trim(),
+        quantity: Number(document.getElementById('modal-campaign-quantity').value || 1),
+        codePrefix: document.getElementById('modal-campaign-prefix').value.trim(),
+        discountType: document.getElementById('modal-campaign-discount-type').value,
+        discountValue: Number(document.getElementById('modal-campaign-discount-value').value || 0),
+        country: document.getElementById('modal-campaign-country').value.trim(),
+        validUntil: document.getElementById('modal-campaign-valid-until').value || null,
+      };
+      try {
+        const r = await apiFetch('/api/admin/campaign-codes/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to create campaign codes.');
+        closeModal('campaign-batch');
+        await loadCampaignCodes(1);
+        const msgEl = document.getElementById('campaign-codes-message');
+        if (msgEl) {
+          const count = (data.codes || []).length;
+          msgEl.textContent = `Created ${count} code${count === 1 ? '' : 's'} for "${data.label}".`;
+          msgEl.classList.remove('error');
+          msgEl.classList.add('ok');
+        }
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    function formatCampaignDiscount(code) {
+      if (code.discount_type === 'fixed') return `NZ$${Number(code.discount_value).toFixed(2)} off`;
+      return `${Number(code.discount_value)}% off`;
+    }
+
+    async function toggleCampaignCodeActive(id, nextActive) {
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: nextActive })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to update.');
+        loadCampaignCodes(paginationState.campaignCodes.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function deleteCampaignCode(id) {
+      if (!confirm('Delete this campaign code? This only works for codes that have never been used.')) return;
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes/${id}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to delete.');
+        loadCampaignCodes(paginationState.campaignCodes.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    async function loadCampaignCodes(page = 1) {
+      paginationState.campaignCodes.page = page;
+      const msgEl = document.getElementById('campaign-codes-message');
+      const body = document.getElementById('campaign-code-body');
+      if (body) body.innerHTML = loadingRow(8);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes?page=${page}&limit=${paginationState.campaignCodes.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.campaignCodes.total = data.total;
+
+        body.innerHTML = data.items.length ? data.items.map(code => `
+          <tr>
+            <td><strong>${escapeHtml(code.code)}</strong></td>
+            <td>${escapeHtml(code.batch_label || '—')}</td>
+            <td>${escapeHtml(formatCampaignDiscount(code))}</td>
+            <td>${escapeHtml(code.country || 'All')}</td>
+            <td>${escapeHtml(String(code.used_count || 0))}/${escapeHtml(String(code.max_uses || 1))}</td>
+            <td>${code.valid_until ? escapeHtml(formatDate(code.valid_until)) : '—'}</td>
+            <td><span class="status-pill ${code.active ? 'approved' : 'rejected'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="toggleCampaignCodeActive('${code.id}', ${code.active ? 'false' : 'true'})">${code.active ? '⏸ Deactivate' : '▶ Activate'}</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCampaignCode('${code.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="8">No campaign codes yet.</td></tr>';
+
+        renderPaginationControls('campaign-codes-pagination', data.total, page, paginationState.campaignCodes.limit, 'loadCampaignCodes');
         setMsg(msgEl, '', false);
       } catch (err) { setMsg(msgEl, err.message, true); }
     }
@@ -2382,6 +2566,59 @@
     </div>
   </div>
 
+  <!-- Campaign Codes Batch Modal -->
+  <div class="modal-overlay" id="campaign-batch-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create Campaign Codes</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('campaign-batch')">&times;</button>
+      </div>
+      <form id="campaign-batch-form" onsubmit="createCampaignBatch(event)">
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-campaign-label">Campaign / Batch Label</label>
+            <input id="modal-campaign-label" type="text" placeholder="Jhe-Ann Facebook Promo — Aug 2026" required />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-single-code">Single Code (optional — leave blank to generate a batch instead)</label>
+            <input id="modal-campaign-single-code" type="text" placeholder="e.g. WELCOME20" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-quantity">Quantity (ignored if a single code is set above)</label>
+            <input id="modal-campaign-quantity" type="number" min="1" max="500" value="1" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-prefix">Code Prefix (optional, for generated batches)</label>
+            <input id="modal-campaign-prefix" type="text" placeholder="e.g. WELCOME" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-discount-type">Discount Type</label>
+            <select id="modal-campaign-discount-type">
+              <option value="percent">Percentage off</option>
+              <option value="fixed">Fixed amount off (NZ$)</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-discount-value">Discount Value</label>
+            <input id="modal-campaign-discount-value" type="number" min="0.01" step="0.01" placeholder="e.g. 20" required />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-country">Country (optional — leave blank for all countries)</label>
+            <input id="modal-campaign-country" type="text" placeholder="e.g. Philippines" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-valid-until">Valid Until (optional)</label>
+            <input id="modal-campaign-valid-until" type="date" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('campaign-batch')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Territory Modal -->
   <div class="modal-overlay" id="territory-modal">
     <div class="modal-card">
@@ -2507,9 +2744,23 @@
             <label for="modal-florist-country">Country</label>
             <input id="modal-florist-country" type="text" value="New Zealand" required />
           </div>
-          <div class="fld">
+          <div class="fld" id="modal-florist-initial-credits-wrap">
             <label for="modal-florist-credits">Initial Credits / Balance</label>
             <input id="modal-florist-credits" type="number" min="0" value="30" required />
+          </div>
+          <div id="modal-florist-credit-edit-wrap" style="display:none;">
+            <div class="fld">
+              <label for="modal-florist-current-credits">Current Credits</label>
+              <input id="modal-florist-current-credits" type="number" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
+            </div>
+            <div class="fld">
+              <label for="modal-florist-new-credits">New Credits (amount to add)</label>
+              <input id="modal-florist-new-credits" type="number" value="0" oninput="updateFloristCreditTotalPreview()" />
+            </div>
+            <div class="fld">
+              <label for="modal-florist-total-credits">Total Credits (after save)</label>
+              <input id="modal-florist-total-credits" type="number" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
+            </div>
           </div>
           <div class="fld" id="modal-florist-threshold-wrap" style="display:none;">
             <label for="modal-florist-threshold">Low Credit Threshold</label>

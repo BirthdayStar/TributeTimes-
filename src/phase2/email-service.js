@@ -112,6 +112,23 @@ function buildPublicOrderAdminEmail(order) {
   `;
 }
 
+function buildSecondPurchaseDiscountEmail({ customerName, code, discountPercent, validUntil, appUrl }) {
+  const expiry = validUntil
+    ? new Date(validUntil).toLocaleDateString('en-NZ', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '90 days from today';
+  const publicUrl = appUrl ? `${String(appUrl).replace(/\/$/, '')}/public` : '/public';
+
+  return `<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;color:#1f1f1f;line-height:1.6">
+    <h1 style="color:#8A6A1F;">Thank you for your Tribute Times keepsake</h1>
+    <p>Hi ${escapeHtml(customerName || 'there')},</p>
+    <p>We hope your keepsake newspaper brought a smile. As a thank-you, here's <strong>${escapeHtml(String(discountPercent))}% off</strong> your next Tribute Times keepsake.</p>
+    <p style="font-size:1.15rem;"><strong>Your discount code:</strong> ${escapeHtml(code)}</p>
+    <p>This code works once and is valid until <strong>${escapeHtml(expiry)}</strong>.</p>
+    <p>Create another keepsake at <a href="${escapeHtml(publicUrl)}">The Tribute Times</a> and enter this code at checkout.</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
+  </div>`;
+}
+
 function buildGcashPromoApprovedEmail({ request, promoCode, appUrl }) {
   const expiry = promoCode?.valid_until
     ? new Date(promoCode.valid_until).toLocaleDateString('en-NZ', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -299,6 +316,7 @@ module.exports = {
   buildDjWelcomeEmail,
   buildSubscriptionActiveEmail,
   buildPublicOrderAdminEmail,
+  buildSecondPurchaseDiscountEmail,
   buildGcashPromoApprovedEmail,
   buildGcashPaymentRejectedEmail,
   buildGcashManualPaymentApprovedEmail,

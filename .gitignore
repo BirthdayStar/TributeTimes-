@@ -15,3 +15,6 @@ pnpm-debug.log*
 
 # ── Scratch / test / one-off scripts ──
 scratch_*.js
+
+# ── Personal Claude Code overrides (not shared with the team) ──
+.claude/settings.local.json

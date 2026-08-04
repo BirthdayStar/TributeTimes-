@@ -14,9 +14,11 @@ const { PHASE2_CONFIG } = require('./config');
 const { getNextOrderNumber } = require('./order-number');
 const { saveKeepsakeRecord, updateKeepsakeRecord } = require('./save-keepsake');
 const { generatePdfFromHtml } = require('./pdf-service');
-const { buildPublicOrderAdminEmail } = require('./email-service');
+const { buildPublicOrderAdminEmail, buildSecondPurchaseDiscountEmail } = require('./email-service');
 const { resolvePaidOrderAttribution } = require('./attribution');
 const { tryRedeemGcashPaidPromoCode } = require('./gcash-payment-requests');
+const { issueSecondPurchaseDiscountCode, SECOND_PURCHASE_DISCOUNT_PERCENT } = require('./second-purchase-discount');
+const { captureMarketingContact } = require('./marketing-contacts');
 
 function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
   if (!app) throw new Error('Express app is required.');
@@ -60,6 +62,9 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
 
       const lineItems = buildLineItems(tier, delivery);
       const viralShare = payload.referralCode ? await resolveViralShareRow(supabase, payload.referralCode) : null;
+      const campaignCode = payload.promoCode
+        ? await resolveCampaignPromoCode(supabase, payload.promoCode, payload.shippingCountry || payload.country)
+        : null;
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -67,7 +72,9 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
         customer_email: payload.customerEmail,
         billing_address_collection: 'auto',
         line_items: lineItems,
-        ...(viralShare && process.env.STRIPE_VIRAL_SHARE_COUPON_ID
+        ...(campaignCode
+          ? { discounts: [{ coupon: campaignCode.stripe_coupon_id }] }
+          : viralShare && process.env.STRIPE_VIRAL_SHARE_COUPON_ID
           ? { discounts: [{ coupon: process.env.STRIPE_VIRAL_SHARE_COUPON_ID }] }
           : {}),
         success_url: `${baseUrl}/public?checkout=success&order=${orderRecord.id}`,
@@ -85,6 +92,8 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
           sales_consultant_id: orderRecord.sales_consultant_id || '',
           territory_id: orderRecord.territory_id || '',
           viral_share_code: viralShare ? payload.referralCode.toUpperCase() : '',
+          campaign_code: campaignCode ? campaignCode.code : '',
+          marketing_consent: payload.marketingConsent ? '1' : '0',
         },
       });
 
@@ -98,6 +107,13 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
           .from('viral_shares')
           .update({ redeemed_count: (viralShare.redeemed_count || 0) + 1 })
           .eq('id', viralShare.id);
+      }
+
+      if (campaignCode) {
+        // Same atomic, self-verifying consume pattern as the GCash-generated
+        // codes (Step 2) — a conditional update guarded on used_count/active/
+        // expiry, checked for zero-row failure, not a blind increment.
+        await consumeCampaignPromoCode(supabase, campaignCode, orderRecord.id);
       }
 
       return res.json({
@@ -214,6 +230,71 @@ async function resolveViralShareRow(supabase, referralCode) {
   return data;
 }
 
+// Single-use, batch-generated campaign codes (Step 5, new_changes.md — the
+// Philippines florist/GCash single-use promo code system). Distinct from
+// resolveViralShareRow (referral codes) and the gcash_paid_access codes
+// handled in gcash-payment-requests.js.
+async function resolveCampaignPromoCode(supabase, code, customerCountry) {
+  const normalized = String(code || '').trim().toUpperCase();
+  if (!normalized) return null;
+
+  const { data, error } = await supabase
+    .from('promo_codes')
+    .select('id, code, used_count, max_uses, active, valid_until, country, stripe_coupon_id')
+    .ilike('code', normalized)
+    .eq('code_type', 'campaign_single_use')
+    .maybeSingle();
+  // Not a campaign code at all (wrong code_type or genuinely doesn't exist) —
+  // return null quietly and let the earlier attribution lookup in
+  // attribution.js handle "this code doesn't exist anywhere" with its own
+  // error. But once we've found a row that IS a campaign code, every
+  // remaining failure reason below throws a specific, honest error instead
+  // of silently letting checkout proceed at full price — the same principle
+  // as the referral-discount fix: never let a customer submit a code and
+  // have it silently not apply with no explanation.
+  if (error || !data) return null;
+
+  if (!data.active || Number(data.used_count || 0) >= Number(data.max_uses || 1)) {
+    throwStatus(400, 'This promo code has already been used.');
+  }
+  if (data.valid_until && new Date(data.valid_until) < new Date()) {
+    throwStatus(400, 'This promo code has expired.');
+  }
+  if (data.country && customerCountry && data.country.toLowerCase() !== String(customerCountry).toLowerCase()) {
+    throwStatus(400, `This promo code is only valid for customers in ${data.country}.`);
+  }
+  if (!data.stripe_coupon_id) {
+    throwStatus(500, 'This promo code is misconfigured — no discount is attached. Please contact support.');
+  }
+
+  return data;
+}
+
+async function consumeCampaignPromoCode(supabase, promo, orderId) {
+  const { data, error } = await supabase
+    .from('promo_codes')
+    .update({
+      used_count: Number(promo.used_count || 0) + 1,
+      used_at: new Date().toISOString(),
+      used_order_id: orderId,
+      active: Number(promo.used_count || 0) + 1 >= Number(promo.max_uses || 1) ? false : true,
+    })
+    .eq('id', promo.id)
+    .eq('active', true)
+    .lt('used_count', Number(promo.max_uses || 1))
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    // Lost the race (redeemed by someone else a moment earlier) — the
+    // discount has already been applied to this Stripe session, which is
+    // the same acceptable tradeoff the existing viral-share codes make
+    // (consumed at session-creation time, not at confirmed-payment time).
+    // Logged, not thrown, so a rare double-attempt doesn't break checkout.
+    console.warn('Campaign promo code consume race or already used:', promo.code);
+  }
+}
+
 function getBaseUrl(req) {
   const host = req.get('host') || '';
   const forwardedProto = req.get('x-forwarded-proto');
@@ -276,9 +357,11 @@ function normalizePayload(body, requestIp) {
     referralCode,
     customerName: String(body.customerName).trim(),
     customerEmail: String(body.customerEmail).trim(),
+    marketingConsent: body.marketingConsent !== false,
     recipientName,
     dateOfBirth,
     country,
+    residenceCountry: String(body.residenceCountry || '').trim() || null,
     occasion: String(body.occasion || 'Birthday').trim(),
     senderName: String(body.senderName || '').trim() || null,
     stationName: String(body.stationName || '').trim() || null,
@@ -354,6 +437,7 @@ async function createKeepsakeIfNeeded(supabase, payload, attribution = {}) {
     recipientName: payload.recipientName,
     dateOfBirth: payload.dateOfBirth,
     country: payload.country,
+    residenceCountry: payload.residenceCountry,
     senderName: payload.senderName,
     stationName: payload.stationName,
     customerName: payload.customerName,
@@ -505,7 +589,7 @@ async function resolvePublicOrderStatus({ stripe, supabase, sendEmail, order }) 
   const session = await stripe.checkout.sessions.retrieve(order.stripe_checkout_session_id);
 
   if (session.payment_status === 'paid') {
-    return reconcilePublicOrderPaymentFromSession({ supabase, sendEmail, session });
+    return reconcilePublicOrderPaymentFromSession({ stripe, supabase, sendEmail, session });
   }
 
   if (session.status === 'expired') {
@@ -521,7 +605,7 @@ async function resolvePublicOrderStatus({ stripe, supabase, sendEmail, order }) 
   return order;
 }
 
-async function reconcilePublicOrderPaymentFromSession({ supabase, sendEmail, session }) {
+async function reconcilePublicOrderPaymentFromSession({ stripe, supabase, sendEmail, session }) {
   if (!session?.metadata || session.metadata.type !== 'public_order') {
     return null;
   }
@@ -597,6 +681,46 @@ async function reconcilePublicOrderPaymentFromSession({ supabase, sendEmail, ses
       });
     } catch (emailError) {
       console.error('Public order admin email failed:', emailError);
+    }
+  }
+
+  // ── MAILING LIST CAPTURE (new_changes.md Step 8) ──
+  // Consent comes from the checkout-time checkbox, carried through on the
+  // Stripe session metadata (no new database column needed) rather than
+  // defaulting to true unconditionally, now that the Privacy Policy this
+  // checkbox links to actually exists (Step 18).
+  if (updatedOrder.customer_email) {
+    await captureMarketingContact(supabase, {
+      email: updatedOrder.customer_email,
+      name: updatedOrder.customer_name,
+      source: 'public_checkout',
+      consented: session.metadata?.marketing_consent !== '0',
+    });
+  }
+
+  // ── SECOND-PURCHASE DISCOUNT (new_changes.md Step 7) ──
+  // Every completed direct-consumer purchase automatically gets a
+  // follow-up discount code for a second keepsake. This block only ever
+  // runs once per order: reaching this point already required the atomic
+  // `payment_status = 'pending' -> 'paid'` update above to have won, so a
+  // retried status check for an already-paid order returns early at the
+  // top of this function and never reaches here again.
+  if (stripe && sendEmail && updatedOrder.customer_email) {
+    try {
+      const discountCode = await issueSecondPurchaseDiscountCode({ supabase, stripe });
+      await sendEmail({
+        to: updatedOrder.customer_email,
+        subject: 'A thank-you discount for your next Tribute Times keepsake',
+        html: buildSecondPurchaseDiscountEmail({
+          customerName: updatedOrder.customer_name,
+          code: discountCode.code,
+          discountPercent: SECOND_PURCHASE_DISCOUNT_PERCENT,
+          validUntil: discountCode.valid_until,
+          appUrl: process.env.APP_URL || '',
+        }),
+      });
+    } catch (discountError) {
+      console.error('Second-purchase discount email failed:', discountError);
     }
   }
 

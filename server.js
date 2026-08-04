@@ -80,7 +80,7 @@ app.use((req, res, next) => {
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
 require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
-registerAdminFulfilmentRoutes(app, { supabase, sendEmail });
+registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe });
 registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail });
 registerGcashPaymentRoutes(app, {
   supabase,
@@ -749,6 +749,17 @@ app.get(['/radio', '/florist', '/public'], (req, res) => {
 
 app.get(['/station', '/dashboard'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public/station.html'));
+});
+
+// Terms & Conditions / Privacy Policy (new_changes.md Step 18) — general,
+// standard terms for a NZ-based personalised-keepsake business, per the
+// client's instruction to proceed with standard terms rather than wait.
+// Worth a quick read-through, but not blocking further work on it.
+app.get('/legal/:slug', (req, res) => {
+  const files = { terms: 'terms.html', privacy: 'privacy.html' };
+  const file = files[req.params.slug];
+  if (!file) return res.status(404).send('Not found');
+  res.sendFile(path.join(__dirname, 'public/legal', file));
 });
 
 app.get('/admin', (req, res) => {
