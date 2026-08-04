@@ -11,6 +11,12 @@ const { buildPostedOrderCustomerEmail } = require('./email-service');
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
 const ADMIN_TOKEN_EXPIRY = '30d';
 
+function throwStatus(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+}
+
 // ── OFFLINE IN-MEMORY FALLBACK DATABASE ──
 const mockDb = {
   sales_consultants: [
@@ -49,25 +55,9 @@ function paginateArray(array, page, limit) {
   };
 }
 
-function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
+function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
   if (!app) throw new Error('Express app is required.');
   if (!supabase) throw new Error('Supabase client is required.');
-
-  app.get('/api/test/reset-admin-pwd', async (req, res) => {
-    try {
-      const hash = await bcrypt.hash('admin', 12);
-      const { data, error } = await supabase
-        .from('admins')
-        .update({ password_hash: hash, active: true })
-        .eq('email', 'colindavidmccabe@gmail.com')
-        .select();
-
-      if (error) throw error;
-      return res.json({ success: true, data });
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
 
   app.post('/api/admin/auth/login', async (req, res) => {
     try {
@@ -78,31 +68,21 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
         return res.status(400).json({ error: 'Email and password are required.' });
       }
 
-      let admin;
-      try {
-        const { data, error } = await supabase
-          .from('admins')
-          .select('id, display_name, email, password_hash, active, last_login')
-          .ilike('email', email)
-          .single();
+      // No fallback here on purpose: a session must always be backed by a real
+      // `admins` row. A previous version of this route issued a working login
+      // for one hardcoded email whenever this lookup failed for any reason,
+      // using a fabricated id ('mock-admin-id') that doesn't exist in the
+      // database. That worked fine for browsing, but any admin action that
+      // writes the logged-in admin's id into a foreign-key-constrained column
+      // (e.g. approving a GCash payment) failed with a constraint violation,
+      // since Postgres correctly rejected an id that isn't a real admin.
+      const { data: admin, error } = await supabase
+        .from('admins')
+        .select('id, display_name, email, password_hash, active, last_login')
+        .ilike('email', email)
+        .single();
 
-        if (error) throw error;
-        admin = data;
-      } catch (err) {
-        if (email === 'colindavidmccabe@gmail.com') {
-          admin = {
-            id: 'mock-admin-id',
-            email: 'colindavidmccabe@gmail.com',
-            display_name: 'Colin McCabe',
-            password_hash: await bcrypt.hash('admin', 12),
-            active: true
-          };
-        } else {
-          return res.status(401).json({ error: 'Invalid admin credentials.' });
-        }
-      }
-
-      if (!admin || !admin.active) {
+      if (error || !admin || !admin.active) {
         return res.status(401).json({ error: 'Invalid admin credentials.' });
       }
 
@@ -615,6 +595,163 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
     }
   });
 
+  // ── CAMPAIGN PROMO CODES (single-use, batch-generated, country-scoped) ──
+  // Distinct from the two other code_type values already in this table:
+  //   - 'consultant_demo'   — reusable monthly free-demo quota per consultant
+  //   - 'gcash_paid_access' — auto-generated codes unlocking an already-paid
+  //                           GCash order (see Step 2, new_changes.md)
+  // This is the system requested for the Philippines florist/GCash model —
+  // e.g. WELCOME20 for Jhe-Ann's Facebook campaign — a single code or a
+  // batch of codes, each usable exactly once, for a real percentage or fixed
+  // discount at checkout, optionally restricted to one country.
+  //
+  // Requires src/db.phase4.sql to have been run (adds discount_type,
+  // discount_value, country, batch_id, batch_label, stripe_coupon_id columns
+  // and allows 'campaign_single_use' in the code_type check constraint).
+
+  function generateCampaignCode(prefix) {
+    const suffix = require('crypto').randomBytes(3).toString('hex').toUpperCase();
+    const cleanPrefix = String(prefix || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return (cleanPrefix ? cleanPrefix + '-' : '') + suffix;
+  }
+
+  app.get('/api/admin/campaign-codes', authAdmin, async (req, res) => {
+    try {
+      const page = Math.max(Number(req.query.page) || 1, 1);
+      const limit = Math.max(Number(req.query.limit) || 20, 1);
+      const start = (page - 1) * limit;
+      const end = start + limit - 1;
+
+      const { data, count, error } = await supabase
+        .from('promo_codes')
+        .select('*', { count: 'exact' })
+        .eq('code_type', 'campaign_single_use')
+        .order('created_at', { ascending: false })
+        .range(start, end);
+
+      if (error) throw error;
+      return res.json({ items: data || [], total: count || 0, page, limit });
+    } catch (err) {
+      console.error('Admin GET campaign-codes error:', err);
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/campaign-codes/batch', authAdmin, async (req, res) => {
+    try {
+      const label = String(req.body?.label || '').trim();
+      const discountType = req.body?.discountType === 'fixed' ? 'fixed' : 'percent';
+      const discountValue = Number(req.body?.discountValue);
+      const country = String(req.body?.country || '').trim() || null;
+      const quantity = Math.min(Math.max(Number(req.body?.quantity) || 1, 1), 500);
+      const singleCode = String(req.body?.code || '').trim().toUpperCase();
+      const codePrefix = String(req.body?.codePrefix || '').trim();
+      const validUntil = req.body?.validUntil ? new Date(req.body.validUntil).toISOString() : null;
+
+      if (!label) throwStatus(400, 'A label for this batch/campaign is required.');
+      if (!discountValue || discountValue <= 0) throwStatus(400, 'A discount amount greater than zero is required.');
+      if (discountType === 'percent' && discountValue > 100) throwStatus(400, 'A percentage discount cannot exceed 100.');
+      if (!stripe) throwStatus(500, 'Stripe is not configured on this server.');
+
+      // One Stripe coupon per batch — every code in the batch shares it,
+      // rather than creating a new coupon per individual code.
+      const coupon = await stripe.coupons.create(
+        discountType === 'percent'
+          ? { percent_off: discountValue, duration: 'once', name: label.slice(0, 40) }
+          : { amount_off: Math.round(discountValue * 100), currency: 'nzd', duration: 'once', name: label.slice(0, 40) }
+      );
+
+      const batchId = require('crypto').randomUUID();
+      const codesToCreate = singleCode
+        ? [singleCode]
+        : Array.from({ length: quantity }, () => generateCampaignCode(codePrefix));
+
+      const rows = codesToCreate.map(code => ({
+        code,
+        code_type: 'campaign_single_use',
+        active: true,
+        monthly_free_demo_limit: 0,
+        max_uses: 1,
+        used_count: 0,
+        discount_type: discountType,
+        discount_value: discountValue,
+        country,
+        valid_until: validUntil,
+        batch_id: batchId,
+        batch_label: label,
+        stripe_coupon_id: coupon.id,
+      }));
+
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .insert(rows)
+        .select('*');
+
+      if (error) {
+        // Roll back the Stripe coupon if the codes themselves failed to save,
+        // so a failed batch doesn't leave an orphaned coupon behind.
+        await stripe.coupons.del(coupon.id).catch(() => {});
+        if (error.code === '23505') {
+          throwStatus(409, `Code "${singleCode}" already exists. Choose a different code.`);
+        }
+        throw error;
+      }
+
+      return res.json({ batchId, label, stripeCouponId: coupon.id, codes: data });
+    } catch (error) {
+      console.error('Admin create campaign-codes batch error:', error);
+      return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to create campaign codes.' });
+    }
+  });
+
+  app.patch('/api/admin/campaign-codes/:id', authAdmin, async (req, res) => {
+    try {
+      const patch = {};
+      if (req.body?.active !== undefined) patch.active = Boolean(req.body.active);
+      if (req.body?.validUntil !== undefined) {
+        patch.valid_until = req.body.validUntil ? new Date(req.body.validUntil).toISOString() : null;
+      }
+      if (!Object.keys(patch).length) throwStatus(400, 'Nothing to update.');
+
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .update(patch)
+        .eq('id', req.params.id)
+        .eq('code_type', 'campaign_single_use')
+        .select('*')
+        .single();
+
+      if (error || !data) return res.status(404).json({ error: 'Campaign code not found.' });
+      return res.json({ promoCode: data });
+    } catch (error) {
+      console.error('Admin PATCH campaign-code error:', error);
+      return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to update campaign code.' });
+    }
+  });
+
+  app.delete('/api/admin/campaign-codes/:id', authAdmin, async (req, res) => {
+    try {
+      // Only ever delete a code that's never been used — a redeemed code is
+      // part of the order history and must not disappear from the audit trail.
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .delete()
+        .eq('id', req.params.id)
+        .eq('code_type', 'campaign_single_use')
+        .eq('used_count', 0)
+        .select('id')
+        .single();
+
+      if (error || !data) {
+        return res.status(409).json({ error: 'This code has already been used and cannot be deleted, or was not found.' });
+      }
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Admin DELETE campaign-code error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
   // ── POSTCODE TERRITORIES ──
   app.get('/api/admin/postcode-territories', authAdmin, async (req, res) => {
     try {
@@ -968,6 +1105,19 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
   });
 
   // ── FLORISTS & GIFT SHOPS ──
+  // The `stations` table stores these as florist_credit_balance /
+  // florist_low_credit_threshold, but admin.html's florist views read
+  // credit_balance / low_credit_threshold. The single-florist GET below
+  // already normalised this; the list GET didn't, so the dashboard table
+  // showed the fallback defaults (0 credits / 5 credits) for every florist
+  // regardless of their real balance.
+  function normalizeFloristCreditFields(florist) {
+    if (!florist) return florist;
+    florist.credit_balance = florist.florist_credit_balance ?? florist.credit_balance ?? 0;
+    florist.low_credit_threshold = florist.florist_low_credit_threshold ?? florist.low_credit_threshold ?? 5;
+    return florist;
+  }
+
   app.get('/api/admin/florists', authAdmin, async (req, res) => {
     try {
       const page = Math.max(Number(req.query.page) || 1, 1);
@@ -995,6 +1145,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
         items = result.items;
         total = result.total;
       }
+      items = (items || []).map(normalizeFloristCreditFields);
       return res.json({ items, total: total || 0, page, limit });
     } catch (err) {
       console.error('Admin GET florists error:', err);
@@ -1086,11 +1237,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
         florist = mockDb.stations.find(s => s.id === req.params.id && s.account_type === 'florist');
         if (!florist) return res.status(404).json({ error: 'Florist not found' });
       }
-      // Normalise field name used by admin.html
-      if (florist) {
-        florist.credit_balance = florist.florist_credit_balance ?? florist.credit_balance ?? 0;
-        florist.low_credit_threshold = florist.florist_low_credit_threshold ?? florist.low_credit_threshold ?? 5;
-      }
+      normalizeFloristCreditFields(florist);
       return res.json(florist);
     } catch (err) {
       console.error('Admin GET florists/:id error:', err);
@@ -1100,7 +1247,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
 
   app.put('/api/admin/florists/:id', authAdmin, async (req, res) => {
     try {
-      const { name, email, password, country, floristCreditBalance, floristLowCreditThreshold, active,
+      const { name, email, password, country, creditsToAdd, floristLowCreditThreshold, active,
               low_credit_threshold } = req.body;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
@@ -1109,10 +1256,32 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
         patch.password_hash = await bcrypt.hash(password, 12);
       }
       if (country !== undefined) patch.country = String(country).trim();
-      if (floristCreditBalance !== undefined) {
-        patch.florist_credit_balance = Number(floristCreditBalance);
+
+      // Credits are edited as a delta (creditsToAdd), never as a client-submitted
+      // absolute total — the new balance is always computed here from the
+      // database's current value, so two admins editing the same florist close
+      // together can't silently overwrite one another's change. (This route
+      // previously destructured a `floristCreditBalance` field that admin.html
+      // never actually sent — it sent `initial_credit_balance` instead, so this
+      // update always silently no-opped on the credit balance. Fixed by aligning
+      // the field name and moving to an explicit add-amount instead of an
+      // absolute value the client would otherwise have to compute itself.)
+      let creditsAddedAmount = 0;
+      if (creditsToAdd !== undefined && Number(creditsToAdd) !== 0) {
+        const { data: currentFlorist, error: fetchError } = await supabase
+          .from('stations')
+          .select('florist_credit_balance')
+          .eq('id', req.params.id)
+          .eq('account_type', 'florist')
+          .single();
+        if (fetchError || !currentFlorist) {
+          return res.status(404).json({ error: 'Florist partner not found' });
+        }
+        creditsAddedAmount = Number(creditsToAdd);
+        patch.florist_credit_balance = Number(currentFlorist.florist_credit_balance || 0) + creditsAddedAmount;
         patch.florist_credit_updated_at = new Date().toISOString();
       }
+
       // Accept both naming conventions from admin.html
       const thresholdVal = floristLowCreditThreshold !== undefined ? floristLowCreditThreshold
                          : low_credit_threshold !== undefined ? low_credit_threshold : undefined;
@@ -1138,7 +1307,12 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail }) {
         florist = { ...mockDb.stations[idx], ...patch };
         mockDb.stations[idx] = florist;
       }
-      return res.json({ florist });
+      normalizeFloristCreditFields(florist);
+      return res.json({
+        florist,
+        creditsAdded: creditsAddedAmount || undefined,
+        newCreditBalance: creditsAddedAmount ? florist.credit_balance : undefined,
+      });
     } catch (err) {
       console.error('Admin PUT florist error:', err);
       return res.status(400).json({ error: err.message });

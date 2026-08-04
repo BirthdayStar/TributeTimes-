@@ -775,7 +775,15 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   position:relative;
 }
 .sample-frame::after {
-  content:'YOUR TRIB\A WILL BE DELIVERED\A AFTER PAYMENT IS RECEIVED';
+  /* Was 'YOUR TRIB\A WILL BE DELIVERED\A AFTER PAYMENT IS RECEIVED' — the
+     first line was a genuine mid-word typo ("TRIB", not a truncation
+     artifact), and 3 lines of very large (2.8rem), steeply rotated (-20deg)
+     text routinely overflowed the frame and split awkwardly, which is the
+     layout problem the client reported. Fixed: corrected the word, reduced
+     to 2 shorter lines, a gentler rotation, and a responsive font size (via
+     clamp) so it scales down on narrower preview widths instead of
+     overflowing. */
+  content:'YOUR KEEPSAKE\A DELIVERED\A AFTER PAYMENT';
   white-space:pre-wrap;
   position:absolute;
   inset:0;
@@ -783,16 +791,16 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   align-items:center;
   justify-content:center;
   text-align:center;
-  font-size:2.8rem;
+  font-size:clamp(1.4rem, 5vw, 2.2rem);
   font-weight:900;
-  line-height:1.4;
-  letter-spacing:2px;
+  line-height:1.35;
+  letter-spacing:1px;
   color:rgba(138,106,31,0.18);
   pointer-events:none;
-  transform:rotate(-20deg);
+  transform:rotate(-14deg);
   text-transform:uppercase;
   z-index:3;
-  padding:60px;
+  padding:32px;
 }
 .seal-frame {
   position:relative;
@@ -1102,10 +1110,19 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
     <input type="text" id="recipientName" placeholder="e.g. Margaret Wilson" />
   </div>
 
+  <div class="field is-hidden" id="partner-name-field">
+    <label>Partner's Full Name</label>
+    <input type="text" id="partnerName" placeholder="e.g. James Wilson" />
+  </div>
+
   <div class="field-row">
     <div class="field">
       <label id="date-label">Date of Birth</label>
       <input type="date" id="dateOfBirth" min="1920-01-01" />
+    </div>
+    <div class="field is-hidden" id="date-of-passing-field">
+      <label>Date of Passing</label>
+      <input type="date" id="dateOfPassing" min="1920-01-01" />
     </div>
     <div class="field">
       <label>Country</label>
@@ -1121,6 +1138,27 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
         <option value="Singapore">🇸🇬 Singapore</option>
       </select>
     </div>
+  </div>
+
+  <div class="field">
+    <label>Country of Residence (optional, if different)</label>
+    <select id="residenceCountry">
+      <option value="">Same as above</option>
+      <option value="New Zealand">🇳🇿 New Zealand</option>
+      <option value="Australia">🇦🇺 Australia</option>
+      <option value="United Kingdom">🇬🇧 United Kingdom</option>
+      <option value="Ireland">🇮🇪 Ireland</option>
+      <option value="United States">🇺🇸 United States</option>
+      <option value="Philippines">🇵🇭 Philippines</option>
+      <option value="South Africa">🇿🇦 South Africa</option>
+      <option value="Canada">🇨🇦 Canada</option>
+      <option value="Singapore">🇸🇬 Singapore</option>
+    </select>
+  </div>
+
+  <div class="field is-hidden" id="relationship-field">
+    <label>Relationship (optional)</label>
+    <input type="text" id="relationship" placeholder="e.g. Beloved Mother" />
   </div>
 
   <div class="field" id="sender-field">
@@ -1212,6 +1250,12 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
           <label>Customer Email</label>
           <input type="email" id="checkoutCustomerEmail" placeholder="you@example.com" />
         </div>
+      </div>
+      <div class="field" style="display:flex; align-items:flex-start; gap:8px;">
+        <input type="checkbox" id="marketingConsent" checked style="margin-top:3px; flex-shrink:0;" />
+        <label for="marketingConsent" style="font-weight:normal; font-size:0.82rem; cursor:pointer;">
+          Send me occasional emails about new products and offers (see our <a href="/legal/privacy" target="_blank" style="color:#8A6A1F;">Privacy Policy</a>). You can unsubscribe anytime.
+        </label>
       </div>
       <div class="field" id="delivery-option-field">
         <label>Delivery Speed</label>
@@ -2210,6 +2254,21 @@ function selectOccasion(tile, occasion, banner, bg) {
   };
   document.getElementById('date-label').textContent = dateLabels[occasion] || 'Date of Birth';
 
+  const isMemorial = occasion === 'In Loving Memory';
+  document.getElementById('date-of-passing-field').classList.toggle('is-hidden', !isMemorial);
+  document.getElementById('relationship-field').classList.toggle('is-hidden', !isMemorial);
+  if (!isMemorial) {
+    document.getElementById('dateOfPassing').value = '';
+    document.getElementById('relationship').value = '';
+  }
+
+  const coupleOccasions = ['Anniversary', 'Golden Anniversary', 'Silver Anniversary', 'Diamond Anniversary', 'Wedding Day'];
+  const isCoupleOccasion = coupleOccasions.includes(occasion);
+  document.getElementById('partner-name-field').classList.toggle('is-hidden', !isCoupleOccasion);
+  if (!isCoupleOccasion) {
+    document.getElementById('partnerName').value = '';
+  }
+
   const isRadio = isRadioEdition();
   const isFlorist = isFloristEdition();
   document.getElementById('sender-field').style.display = isFlorist ? 'none' : 'block';
@@ -2229,6 +2288,7 @@ function buildCheckoutPayload() {
   const recipientName = document.getElementById('recipientName').value.trim();
   const dateOfBirth = document.getElementById('dateOfBirth').value;
   const country = document.getElementById('country').value;
+  const residenceCountry = document.getElementById('residenceCountry').value;
   const customerName = document.getElementById('checkoutCustomerName').value.trim();
   const customerEmail = document.getElementById('checkoutCustomerEmail').value.trim();
   const senderName = document.getElementById('senderName').value.trim();
@@ -2236,6 +2296,7 @@ function buildCheckoutPayload() {
   const personalMessage = document.getElementById('personalMessage').value.trim();
   const promoCode = document.getElementById('checkoutPromoCode').value.trim()
     || document.getElementById('publicPromoCode').value.trim();
+  const marketingConsent = document.getElementById('marketingConsent').checked;
 
   if (!latestGeneratedHtml && !latestPublicKeepsakeId) {
     throw new Error('Generate the keepsake preview before checkout.');
@@ -2260,9 +2321,11 @@ function buildCheckoutPayload() {
     promoCode,
     customerName,
     customerEmail,
+    marketingConsent,
     recipientName,
     dateOfBirth,
     country,
+    residenceCountry,
     occasion: selectedOccasion || 'Birthday',
     senderName: senderName || 'The Tribute Times',
     stationName,
@@ -2797,11 +2860,18 @@ async function generateKeepsake() {
   const name = document.getElementById('recipientName').value.trim();
   const dob = document.getElementById('dateOfBirth').value;
   const country = document.getElementById('country').value;
+  const residenceCountry = document.getElementById('residenceCountry').value;
   const sender = document.getElementById('senderName').value.trim();
   const station = document.getElementById('stationName').value.trim();
   const listenerPostalAddress = document.getElementById('listenerPostalAddress').value.trim();
   const message = document.getElementById('personalMessage').value.trim();
   const publicPromoCode = document.getElementById('publicPromoCode').value.trim();
+  const isMemorial = selectedOccasion === 'In Loving Memory';
+  const dateOfPassing = document.getElementById('dateOfPassing').value;
+  const relationship = document.getElementById('relationship').value.trim();
+  const coupleOccasions = ['Anniversary', 'Golden Anniversary', 'Silver Anniversary', 'Diamond Anniversary', 'Wedding Day'];
+  const isCoupleOccasion = coupleOccasions.includes(selectedOccasion);
+  const partnerName = document.getElementById('partnerName').value.trim();
   const errorEl = document.getElementById('error-msg');
 
   errorEl.textContent = '';
@@ -2809,6 +2879,9 @@ async function generateKeepsake() {
   if (!selectedOccasion) { errorEl.textContent = 'Please choose an occasion first.'; return; }
   if (!name) { errorEl.textContent = 'Please enter the recipient\'s name.'; return; }
   if (!dob) { errorEl.textContent = 'Please enter the date.'; return; }
+  if (isMemorial && !dateOfPassing) { errorEl.textContent = 'Please enter the date of passing.'; return; }
+  if (isMemorial && dateOfPassing < dob) { errorEl.textContent = 'Date of passing cannot be before the date of birth.'; return; }
+  if (isCoupleOccasion && !partnerName) { errorEl.textContent = 'Please enter the partner\'s name.'; return; }
   if (isRadioEdition() && !isRadioAuthenticated()) {
     errorEl.textContent = 'Please sign in with the DJ account before generating a radio keepsake.';
     return;
@@ -2844,6 +2917,7 @@ async function generateKeepsake() {
         recipientName: name,
         dateOfBirth: dob,
         country,
+        residenceCountry,
         occasion: selectedOccasion,
         senderName: isFloristEdition() ? (floristProfile?.name || 'The Tribute Times') : (sender || 'The Tribute Times'),
         stationName: isFloristEdition() ? '' : station,
@@ -2853,6 +2927,9 @@ async function generateKeepsake() {
         djId: radioProfile?.id || '',
         listenerPostalAddress: isRadioEdition() ? listenerPostalAddress : '',
         promoCode: isPublicEdition() ? publicPromoCode : '',
+        dateOfPassing: isMemorial ? dateOfPassing : '',
+        relationship: isMemorial ? relationship : '',
+        partnerName: isCoupleOccasion ? partnerName : '',
       })
     });
 
@@ -2973,6 +3050,14 @@ function startAgain() {
   document.getElementById('newspaper-container').className = '';
   document.getElementById('recipientName').value = '';
   document.getElementById('dateOfBirth').value = '';
+  document.getElementById('dateOfPassing').value = '';
+  document.getElementById('relationship').value = '';
+  document.getElementById('date-of-passing-field').classList.add('is-hidden');
+  document.getElementById('relationship-field').classList.add('is-hidden');
+  document.getElementById('partnerName').value = '';
+  document.getElementById('partner-name-field').classList.add('is-hidden');
+  document.getElementById('residenceCountry').value = '';
+  document.getElementById('marketingConsent').checked = true;
   document.getElementById('senderName').value = '';
   document.getElementById('stationName').value = '';
   document.getElementById('listenerPostalAddress').value = '';
@@ -3198,6 +3283,11 @@ async function submitPasswordUpdate(event) {
       </div>
     </form>
   </div>
+</div>
+
+<div style="text-align:center; padding:16px 12px 24px; font-size:0.75rem; color:#8A8368;">
+  <a href="/legal/terms" style="color:inherit; text-decoration:underline; margin-right:14px;">Terms &amp; Conditions</a>
+  <a href="/legal/privacy" style="color:inherit; text-decoration:underline;">Privacy Policy</a>
 </div>
 
 </body>

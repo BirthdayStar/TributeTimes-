@@ -8,6 +8,18 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { buildPrompt, getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
 const { renderNewspaper } = require('./tribute-times-renderer');
+const { buildMemorialPrompt } = require('./tribute-times-memorial-prompt');
+const { renderMemorialNewspaper } = require('./tribute-times-memorial-renderer');
+const { buildAnniversaryPrompt } = require('./tribute-times-anniversary-prompt');
+const { renderAnniversaryNewspaper } = require('./tribute-times-anniversary-renderer');
+
+// Couple-based occasions get their own genuinely separate template path
+// (second name field, wedding framing, "years married" counter) rather
+// than the birthday template with a name swapped in — see
+// new_changes.md Step 13.
+const COUPLE_OCCASIONS = new Set([
+  'Anniversary', 'Golden Anniversary', 'Silver Anniversary', 'Diamond Anniversary', 'Wedding Day',
+]);
 const { saveKeepsakeRecord } = require('./src/phase2/save-keepsake');
 const { getNextOrderNumber } = require('./src/phase2/order-number');
 const { resolveFreeDemoAttribution } = require('./src/phase2/attribution');
@@ -80,6 +92,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         recipientName,
         dateOfBirth,        // "1963-04-11"
         country,
+        residenceCountry,    // optional metadata only — never drives content sourcing
         occasion,
         senderName,
         stationName,
@@ -89,8 +102,16 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         djId,
         listenerPostalAddress,
         promoCode,
+        dateOfPassing,       // "In Loving Memory" only — "2024-02-03"
+        relationship,        // "In Loving Memory" only, optional — "Beloved Mother"
+        partnerName,         // couple occasions only — second name
       } = req.body;
       const normalizedEdition = String(edition || '').trim().toLowerCase();
+      const isMemorial = occasion === 'In Loving Memory';
+      const isCouple = COUPLE_OCCASIONS.has(occasion);
+      if (isCouple && !String(partnerName || '').trim()) {
+        return res.status(400).json({ error: 'Partner\'s name is required for this occasion.' });
+      }
       let floristAccount = null;
       let freeDemoAttribution = null;
 
@@ -115,6 +136,31 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         return res.status(400).json({ error: 'Date must be between 1st January 1920 and 7 days ago.' });
       }
 
+      // ── IN LOVING MEMORY: DATE OF PASSING (required, own validation) ──
+      // Kept as its own explicit block rather than folded into the DOB
+      // validation above, since a memorial keepsake requires two dates in
+      // the right order, not one.
+      let datePassing = null;
+      let datePassingFormatted = null;
+      let yearsLived = null;
+      if (isMemorial) {
+        if (!dateOfPassing) {
+          return res.status(400).json({ error: 'Date of passing is required for an In Loving Memory keepsake.' });
+        }
+        datePassing = new Date(dateOfPassing);
+        if (Number.isNaN(datePassing.getTime()) || datePassing > maxDate) {
+          return res.status(400).json({ error: 'Date of passing must be a valid date no later than 7 days ago.' });
+        }
+        if (datePassing < dob) {
+          return res.status(400).json({ error: 'Date of passing cannot be before the date of birth.' });
+        }
+        const passingDay = datePassing.getDate();
+        const passingMonth = datePassing.getMonth() + 1;
+        const passingYear = datePassing.getFullYear();
+        datePassingFormatted = `${ordinals(passingDay)} ${months[passingMonth - 1]} ${passingYear}`;
+        yearsLived = passingYear - year - ((passingMonth < month || (passingMonth === month && passingDay < day)) ? 1 : 0);
+      }
+
       // ── CURRENCY ──
       const currencyData = CURRENCIES[country] || { symbol: '$', name: 'Dollars' };
       // Pre-euro Ireland
@@ -133,6 +179,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
       const data = {
         recipientName, day, month, year, dayName,
         dateFormatted, dateLong, country,
+        residenceCountry: String(residenceCountry || '').trim() || null,
         countryCode: getCountryCode(country),
         occasion, bannerText,
         dateLabel: dateContext.label,
@@ -146,6 +193,22 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         age,
         personalMessage: personalMessage || '',
       };
+
+      if (isMemorial) {
+        data.relationship = (relationship || '').trim();
+        data.dateOfPassing = dateOfPassing;
+        data.datePassingFormatted = datePassingFormatted;
+        data.yearsLived = yearsLived;
+      }
+
+      if (isCouple) {
+        data.partnerName = String(partnerName || '').trim();
+        // "years married" counts wedding date -> today, which is exactly
+        // what an anniversary measures (unlike the birthday "days old"
+        // counter, counting to today here would be a bug). This is the
+        // same wedding-date-to-today math already computed above as `age`.
+        data.yearsMarried = age;
+      }
 
       if (normalizedEdition === SOURCE_PORTALS.florist && supabase) {
         const florist = await loadAuthenticatedFlorist(req, supabase);
@@ -183,8 +246,13 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
           data.curatedBirthdays = await loadCuratedBirthdays(supabase, day, month, country);
         }
 
-        // ── BUILD PROMPT ──
-        const prompt = buildPrompt(data);
+        // ── BUILD PROMPT ── (In Loving Memory and couple occasions each
+        // use their own dedicated prompt builder — see new_changes.md
+        // Steps 12-13 — rather than the birthday prompt with occasion
+        // conditionals bolted on)
+        const prompt = isMemorial ? buildMemorialPrompt(data)
+          : isCouple ? buildAnniversaryPrompt(data)
+          : buildPrompt(data);
 
         try {
           const aiResponse = await client.messages.create({
@@ -216,8 +284,11 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         }
       }
 
-      // ── RENDER HTML ──
-      const html = renderNewspaper(data, content, FONTS);
+      // ── RENDER HTML ── (In Loving Memory and couple occasions each use
+      // their own dedicated renderer — see new_changes.md Steps 12-13)
+      const html = isMemorial ? renderMemorialNewspaper(data, content, FONTS)
+        : isCouple ? renderAnniversaryNewspaper(data, content, FONTS)
+        : renderNewspaper(data, content, FONTS);
 
       // ── RETURN ──
       const generatedResponse = { html, data, content };
@@ -240,6 +311,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
           recipientName,
           dateOfBirth,
           country,
+          residenceCountry: data.residenceCountry,
           senderName: senderName || null,
           stationName: stationName || null,
           customerName: recipientName,
@@ -324,6 +396,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
           recipientName,
           dateOfBirth,
           country,
+          residenceCountry: data.residenceCountry,
           senderName: floristAccount.name || senderName || null,
           stationName: null,
           customerName: recipientName,
@@ -387,6 +460,7 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
           recipientName,
           dateOfBirth,
           country,
+          residenceCountry: data.residenceCountry,
           senderName: senderName || null,
           stationName: stationName || null,
           customerName: recipientName,
@@ -606,6 +680,27 @@ function getOccasionDateContext(occasion) {
       intro: 'born on',
     };
   }
+  // Was defaulting Graduation and Retirement to "date of birth" / "born on"
+  // like every other occasion — factually wrong, since their date field is
+  // labelled "Graduation Date" / "Last Day of Work" in the form, not a
+  // birth date. This sent an incorrect framing straight into the AI
+  // prompt (see tribute-times-occasion-prompt.js Step 14), which is
+  // exactly the kind of birth-announcement-flavoured copy this occasion
+  // shouldn't have.
+  if (occasion === 'Graduation') {
+    return {
+      label: 'Graduation Date',
+      meaning: 'graduation date',
+      intro: 'graduated on',
+    };
+  }
+  if (occasion === 'Retirement') {
+    return {
+      label: 'Last Day of Work',
+      meaning: 'last day of work / retirement date',
+      intro: 'retired on',
+    };
+  }
   return {
     label: 'Date of Birth',
     meaning: 'date of birth',
@@ -716,12 +811,15 @@ function buildFallbackContent(data) {
 // cached entry is date/country-invariant, but the personal message
 // names a specific sender and must never be reused across recipients.
 function buildFallbackMessage(data) {
-  const { recipientName, senderName, occasion, edition } = data;
+  const { recipientName, partnerName, senderName, occasion, edition } = data;
+  const coupleNames = partnerName ? `${recipientName} & ${partnerName}` : recipientName;
   return edition === 'radio'
     ? `From ${senderName || 'your DJ'} with love.`
     : occasion === 'Golden Anniversary'
-      ? `Fifty Golden Years Together, ${recipientName}!`
+      ? `Fifty Golden Years Together, ${coupleNames}!`
       : occasion === 'In Loving Memory'
         ? `Remembering ${recipientName} with love.`
-        : `Happy ${occasion.toLowerCase()}, ${recipientName}!`;
+        : COUPLE_OCCASIONS.has(occasion)
+          ? `Happy ${occasion.toLowerCase()}, ${coupleNames}!`
+          : `Happy ${occasion.toLowerCase()}, ${recipientName}!`;
 }
