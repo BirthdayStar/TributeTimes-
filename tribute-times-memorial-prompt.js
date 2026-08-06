@@ -64,18 +64,19 @@ The newspaper shows real historical events that happened on ${day}th ${monthName
 STRICT CONTENT RULES (historical record — neutral tone, same as any occasion)
 ════════════════════════════════════════
 
-WORLD NEWS — On This Day (any year):
-- 3 stories from different years, all on ${day}th ${monthName(month)}
-- Stories must be REAL verified historical events on this exact date
+WORLD NEWS — On This Day:
+- Return exactly 3 stories, in this exact order, each with its own rule:
+  1. THE LEAD STORY (index 0 — this becomes the "News of the Day" headline, presented as what happened on the actual date of birth): its "year" field MUST be exactly ${year} — no other year is acceptable. It must be a REAL, verified historical event that genuinely happened on ${day}th ${monthName(month)} ${year}. If nothing globally famous happened on that exact date, use the most notable REAL, verifiable event from that exact date instead — a smaller but real story is correct; a famous story from the wrong year is a critical error. Do NOT guess or approximate the exact day if unsure — if you are not fully confident an event happened on this precise day AND year, choose a different, well-documented event you ARE confident about, rather than fabricating a plausible-sounding date for a real event.
+  2 & 3. TWO "ON THIS DAY IN HISTORY" STORIES (index 1 and 2 — an explicitly separate, secondary trivia feature): real verified historical events from ${day}th ${monthName(month)} in any OTHER years, vary the years dramatically (e.g. 1945, 1969, 1815) — intentional and desired for these two only, NOT for the lead story above.
 - Each story: year, headline (max 10 words), byline
 - LEAD story: body (no more than 220 characters total, ending on a complete sentence). Do NOT exceed 220 characters.
 - Second story: body (no more than 145 characters, ending on a complete sentence). Do NOT exceed 145 characters.
 - Third story: body (no more than 105 characters, ending on a complete sentence). Do NOT exceed 105 characters.
 - Headlines must vary in size — lead is biggest, third is smallest
-- Vary the years dramatically — e.g. 1945, 1969, 1815
 
-${country.toUpperCase()} NEWS — On This Day (any year):
-- 3-4 short items from different years, all on ${day}th ${monthName(month)}
+${country.toUpperCase()} NEWS — On This Day:
+- Return 3-4 items. The FIRST item's "year" field MUST be exactly ${year} (same hard rule as the world news lead story above). If nothing globally notable happened in ${country} on that exact date, use a smaller but REAL, verifiable local event from that exact date instead — never substitute a different year.
+- The remaining items (index 1 onward) are "on this day in history" trivia from different years — intentional for these only.
 - Must be genuinely relevant to ${country} — local events, not international
 - Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence)
 
@@ -135,7 +136,7 @@ Write a warm memorial tribute message from ${senderName} in memory of ${recipien
 - Past/reflective tense throughout — no present-tense language about ${recipientName} being alive today.
 - Reference 1-2 specific things from the On This Day content as a gentle "the world you knew" touch (e.g. "in the same year that...").
 - May reference both the date of birth and the date of passing if it reads naturally.
-- Maximum 240 characters, ending on a complete sentence. This is a hard layout limit — write a complete, warm tribute well inside it rather than one that has to be cut.
+- Maximum 240 characters, ending on a complete sentence. Aim to use most of that space (200-240 characters) rather than a short tribute that leaves visible empty space in the printed layout — but never let it run over 240 or get cut off mid-sentence.
 - End with an appropriate memorial closing (e.g. "Forever in our hearts.", "Loved always, never forgotten.") — never "Happy [occasion]" or any birthday-style closing.
 
 ════════════════════════════════════════

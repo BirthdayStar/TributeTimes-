@@ -74,6 +74,36 @@ function cleanTruncate(text, maxLength) {
   return sliced.trim() + '...';
 }
 
+// Client-reported bug (new_changes.md, 6 Aug 2026): a keepsake generated
+// for 17th June 1959 showed "Watergate Burglars Caught Inside Democratic
+// Headquarters" as the lead headline — a real event, but from 17th June
+// 1972, thirteen years after the actual birth date. Root cause: the AI
+// prompt asked for "3 stories from different years" with no distinction
+// between the lead story (presented as this exact date's real news) and
+// the two secondary "on this day in history" trivia items (which are
+// *meant* to be from other years). The prompt has been fixed to require
+// the lead story's year to match exactly (see tribute-times-ai-prompt.js),
+// but that alone means trusting the AI to comply every time — not a real
+// guarantee. This function is the actual enforcement: it verifies the
+// first entry's year against the real birth/wedding year and, if it
+// doesn't match, searches the rest of the array for one that does and
+// promotes it to the front — so a wrong-year story can never become the
+// lead even if the AI still occasionally gets it wrong. If nothing in the
+// array matches at all (rare — no verifiable event AI could find for that
+// exact date), the array is left as-is rather than fabricating a match.
+function enforceExactYearLead(newsArray, year) {
+  if (!Array.isArray(newsArray) || newsArray.length === 0) return newsArray;
+  if (Number(newsArray[0]?.year) === Number(year)) return newsArray;
+
+  const exactIdx = newsArray.findIndex(item => Number(item?.year) === Number(year));
+  if (exactIdx <= 0) return newsArray;
+
+  const reordered = [...newsArray];
+  const [match] = reordered.splice(exactIdx, 1);
+  reordered.unshift(match);
+  return reordered;
+}
+
 function getVintageHoroscope(signName) {
   const horoscopes = {
     Aries: "The stars align to grant you immense energy and pioneering spirit. Your natural leadership will shine in professional endeavors. Avoid rash decisions in financial matters; patience yields the greatest rewards. In personal relationships, a warm gesture from an old friend brings unexpected joy. Keep your focus on long-term goals.",
@@ -102,11 +132,17 @@ function renderNewspaper(data, content, fonts) {
   const cleanedRecipientName = titleCase(recipientName);
 
   const {
-    worldNews, localNews, sport, business,
+    worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
     chart, prices, weather, ticker,
     worldInNumbers, books, cinema, birthdays,
     astro, message
   } = content;
+
+  // See enforceExactYearLead above — guarantees the lead "News of the Day"
+  // stories are actually from the recipient's birth year, not just any
+  // year that happens to fall on the same calendar day.
+  const worldNews = enforceExactYearLead(rawWorldNews, year);
+  const localNews = enforceExactYearLead(rawLocalNews, year);
 
   // "You are X days old today" only makes sense where the date field is a
   // genuine date of birth being counted to today — Birthday, and New Baby
@@ -444,6 +480,14 @@ function renderNewspaper(data, content, fonts) {
     flex: 1 1 auto; min-height: 0;
     display: grid;
     grid-template-columns: 1fr 1.15fr 1fr;
+    /* Without this, the single implicit row sizes to its content (auto) —
+       once sections below became content-sized instead of fixed-height,
+       that row shrank too, stranding the leftover space below all three
+       columns instead of letting them stretch to fill it. Locking the row
+       to 1fr makes it consume .cols' full flex-grown height, so each .col
+       (grid items default to align-items:stretch) fills that height again,
+       and the flex:1 section inside each column has real room to grow into. */
+    grid-template-rows: minmax(0, 1fr);
     gap: 0 4mm;
     border-top: .25mm solid #1a1712;
     padding-top: 2mm; margin-top: 2mm;
@@ -452,6 +496,20 @@ function renderNewspaper(data, content, fonts) {
   .col { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
   .col + .col { border-left: .2mm solid #b9b09a; padding-left: 4mm; }
 
+  /* Client-reported bug (new_changes.md, Aug 2026): "uneven blank gaps in
+     columns... content isn't reflowing to fill the page." Root cause: every
+     section had a FIXED height sized for the longest content it could ever
+     receive, so any generation whose actual text ran shorter than that
+     budget left visible dead space below the text but still inside the
+     section's box — plus the AI prompt explicitly asks for text "well
+     inside" its character limit, meaning under-filling is the common case,
+     not an edge case. Changed from a fixed height property (always reserved,
+     whether used or not) to a max-height ceiling (never exceeded, so the
+     single-page overflow guarantee is unchanged) with content-driven
+     sizing below that ceiling — a section now only takes the room its
+     actual text needs. See flex:1 on the last section per column below,
+     which absorbs any leftover column space so the page still reads as
+     filled rather than ending early with one large gap at the bottom. */
   section { overflow: hidden; flex: 0 0 auto; }
   section h3 {
     font-family: 'Playfair Display', serif; font-weight: 700;
@@ -469,23 +527,26 @@ function renderNewspaper(data, content, fonts) {
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
 
-  /* fixed section heights — the budget that guarantees one page */
-  /* Section heights were rebalanced against actual measured content need
-     (prices/weather were carrying ~2x the height their content ever uses,
-     leaving visible empty gaps, while news/message/horoscope were tight
-     enough to invite overflow). Each column's total is unchanged so the
-     single-page budget still holds. */
-  .s-news1     { height: 70mm; }
-  .s-news2     { height: 58mm; margin-top: 3mm; }
-  .s-prices    { height: 50mm; margin-top: 3mm; }
-  .s-onthisday { height: 54mm; }
-  .s-message   { height: 72mm; margin-top: 3mm; }
-  .s-birthdays { height: 52mm; margin-top: 3mm; }
-  .s-charts    { height: 44mm; }
-  .s-weather   { height: 16mm; margin-top: 3mm; }
-  .s-horoscope { height: 40mm; margin-top: 3mm; }
-  .s-sport     { height: 22mm; margin-top: 3mm; }
-  .s-starmap   { height: 50mm; margin-top: 3mm; text-align: center; }
+  /* max-height ceilings — the same budget as before, guaranteeing one page,
+     but now a ceiling rather than a fixed reservation (see comment above).
+     The last section in each column gets flex:1 so it grows to absorb any
+     leftover column space instead of leaving one large gap at the bottom. */
+  /* flex:1 on every section (not just the last) — spreads any leftover
+     column space as modest, roughly-equal breathing room after each
+     section instead of concentrating it as one large void at the very
+     bottom of the column, which read as a rendering mistake rather than
+     intentional whitespace. */
+  .s-news1     { max-height: 70mm; flex: 1 1 auto; }
+  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 1 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
+  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-onthisday { max-height: 54mm; flex: 1 1 auto; }
+  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-charts    { max-height: 44mm; flex: 1 1 auto; }
+  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 1 auto; }
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -648,4 +709,4 @@ function renderNewspaper(data, content, fonts) {
 </html>`;
 }
 
-module.exports = { renderNewspaper, titleCase, cleanTruncate };
+module.exports = { renderNewspaper, titleCase, cleanTruncate, enforceExactYearLead };

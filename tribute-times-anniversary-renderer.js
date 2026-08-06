@@ -13,7 +13,7 @@
 // read as a birth-specific panel.
 // ============================================================
 
-const { titleCase, cleanTruncate } = require('./tribute-times-renderer');
+const { titleCase, cleanTruncate, enforceExactYearLead } = require('./tribute-times-renderer');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
 
 function vintageAnniversaryHoroscope(signName) {
@@ -46,10 +46,16 @@ function renderAnniversaryNewspaper(data, content, fonts) {
   const coupleDisplayName = cleanedPartnerName ? `${cleanedRecipientName} & ${cleanedPartnerName}` : cleanedRecipientName;
 
   const {
-    worldNews, localNews, sport, business,
+    worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
     chart, prices, weather, ticker,
     birthdays, astro, message,
   } = content;
+
+  // See tribute-times-renderer.js enforceExactYearLead — guarantees the
+  // "News of the Day" lead stories are from the actual wedding year, not
+  // just any year on the same calendar day.
+  const worldNews = enforceExactYearLead(rawWorldNews, year);
+  const localNews = enforceExactYearLead(rawLocalNews, year);
 
   // ── YEARS MARRIED (wedding date -> today, unlike birthday's day-count,
   // this is exactly what an anniversary measures, so counting to today is

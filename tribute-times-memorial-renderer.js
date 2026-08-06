@@ -12,7 +12,7 @@
 // birthday fields with values swapped in.
 // ============================================================
 
-const { titleCase, cleanTruncate } = require('./tribute-times-renderer');
+const { titleCase, cleanTruncate, enforceExactYearLead } = require('./tribute-times-renderer');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
 
 function getVintageMemorialReflection() {
@@ -29,10 +29,16 @@ function renderMemorialNewspaper(data, content, fonts) {
   const cleanedRecipientName = titleCase(recipientName);
 
   const {
-    worldNews, localNews, sport, business,
+    worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
     chart, prices, weather, ticker,
     birthdays, astro, message,
   } = content;
+
+  // See tribute-times-renderer.js enforceExactYearLead — guarantees the
+  // "News of the Day" lead stories are from the person's actual birth
+  // year, not just any year on the same calendar day.
+  const worldNews = enforceExactYearLead(rawWorldNews, year);
+  const localNews = enforceExactYearLead(rawLocalNews, year);
 
   // ── YEARS LIVED (birth -> passing, never to today) ──
   const yearsLivedStr = Number.isFinite(yearsLived)
