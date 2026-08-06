@@ -71,19 +71,20 @@ ${occasion === 'Golden Anniversary' ? 'For Golden Anniversary, the entered date 
 STRICT CONTENT RULES
 ════════════════════════════════════════
 
-WORLD NEWS — On This Day (any year):
-- 3 stories from different years, all on ${day}th ${monthName(month)}
-- Stories must be REAL verified historical events on this exact date
+WORLD NEWS — On This Day:
+- Return exactly 3 stories, in this exact order, each with its own rule:
+  1. THE LEAD STORY (index 0 — this becomes the keepsake's main front-page headline, presented as "what happened on the day you were born"): its "year" field MUST be exactly ${year} — no other year is acceptable here under any circumstances. It must be a REAL, verified historical event that genuinely happened on ${day}th ${monthName(month)} ${year}. If you cannot find a major globally-famous event on that exact date, use the most notable REAL event you can verify happened somewhere in the world on that exact date in ${year} — a smaller but real and verifiable story is correct; a famous story from the wrong year is NOT acceptable and is a critical error. Do NOT guess or approximate the exact day if unsure — if you are not fully confident an event happened on this precise day AND year, choose a different, well-documented event you ARE confident about, rather than fabricating a plausible-sounding date for a real event.
+  2 & 3. TWO "ON THIS DAY IN HISTORY" STORIES (index 1 and 2 — these are explicitly a different, secondary trivia feature, clearly not claimed to be from the birth year): real verified historical events from ${day}th ${monthName(month)} in any OTHER years, vary the years dramatically (e.g. 1945, 1969, 1815) — this is intentional and desired for these two only, NOT for the lead story above.
 - Each story: year, headline (max 10 words), byline
 - LEAD story: body (no more than 220 characters total, ending on a complete sentence). Do NOT exceed 220 characters.
 - Second story: body (no more than 145 characters, ending on a complete sentence). Do NOT exceed 145 characters.
 - Third story: body (no more than 105 characters, ending on a complete sentence). Do NOT exceed 105 characters.
-- These limits are hard layout constraints, not targets to fill — write a complete, satisfying sentence well inside the limit rather than a long sentence that has to be cut.
+- These limits are hard maximums, not suggestions to undershoot — aim to use at least 80-90% of each character limit (write 2-3 complete sentences where the limit allows it, not one short one), while still always ending on a complete sentence rather than being cut off mid-word. Text that comes in far short of the limit leaves visible empty space in the printed layout — write substantively, not minimally.
 - Headlines must vary in size — lead is biggest, third is smallest
-- Vary the years dramatically — e.g. 1945, 1969, 1815
 
-${country.toUpperCase()} NEWS — On This Day (any year):
-- 3-4 short items from different years, all on ${day}th ${monthName(month)}
+${country.toUpperCase()} NEWS — On This Day:
+- Return 3-4 items. The FIRST item's "year" field MUST be exactly ${year} (same hard rule as the world news lead story above — this is displayed directly under the main headline as more of "the day you were born" reporting, not trivia). If nothing globally notable happened in ${country} on that exact date, use a smaller but REAL, verifiable local event from that exact date instead — never substitute a different year.
+- The remaining items (index 1 onward) are "on this day in history" trivia from different years, all on ${day}th ${monthName(month)} — this varied-year trivia format is intentional for these only.
 - Must be genuinely relevant to ${country} — local events, not international
 - Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence)
 - If ${country} is a smaller nation, include regional/Commonwealth events that affected it
@@ -164,7 +165,7 @@ DJ/SENDER MESSAGE:
 Write a warm personal message from ${senderName}${stationName ? ` at ${stationName}` : ''} to ${recipientName}.
 - Reference 2-3 specific things from the On This Day content
 - Warm, personal, radio-ready tone (for radio edition) or warm gift tone (florist/public)
-- Maximum 240 characters, ending on a complete sentence. This is a hard layout limit — write a complete, warm message well inside it rather than one that has to be cut.
+- Maximum 240 characters, ending on a complete sentence. Aim to use most of that space (200-240 characters) rather than a short message that leaves visible empty space in the printed layout — but never let it run over 240 or get cut off mid-sentence.
 - End with ${occasion === 'Golden Anniversary' ? '"Fifty Golden Years Together."' : occasion === 'In Loving Memory' ? 'an appropriate memorial closing' : `"Happy ${occasion}" or appropriate closing`}
 
 ════════════════════════════════════════
