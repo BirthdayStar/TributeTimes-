@@ -8,8 +8,72 @@ const { normalizePromoCode } = require('./attribution');
 const { normalizeCountry } = require('./famous-birthdays');
 const { buildPostedOrderCustomerEmail } = require('./email-service');
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+// Security fix (Col McCabe, 7 Aug 2026 — "Admin session token exposed on
+// public site"): admin auth previously fell back to sharing JWT_SECRET
+// with every other token type (station/DJ/florist/checkout — see
+// server.js and tribute-times-server-update.js), so rotating one secret
+// to invalidate a leak would have force-logged-out the entire site, not
+// just admin. Requiring a dedicated ADMIN_JWT_SECRET means admin sessions
+// can be rotated independently, and a missing value fails loudly instead
+// of silently reusing a secret meant for a different trust boundary.
+if (!process.env.ADMIN_JWT_SECRET) {
+  throw new Error('ADMIN_JWT_SECRET is not set. Admin auth must use its own dedicated secret, not the shared JWT_SECRET.');
+}
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const ADMIN_TOKEN_EXPIRY = '30d';
+const ADMIN_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const ADMIN_COOKIE_NAME = 'adminToken';
+
+// The root cause of the exposure report: the admin token was stored in
+// localStorage and sent via an Authorization header the client JS chose
+// to attach. localStorage is scoped to the whole origin, not to a single
+// page — any page served from the same domain (including the public
+// checkout page) can run `localStorage.getItem('phase2AdminToken')` in
+// its own JS and read it, and so can any XSS payload landing on ANY page
+// of the site, not just admin.html. Moving the token into an httpOnly
+// cookie removes it from JS reach entirely (on every page, including
+// admin.html itself) — only the browser attaches it, automatically, only
+// to same-site requests. `secure` is conditional on NODE_ENV since local
+// HTTP development has no TLS to require; `sameSite: 'strict'` is the
+// CSRF defence here (the admin panel is never embedded or linked from
+// another origin, so this has no functional cost) in place of a separate
+// CSRF token scheme.
+function setAdminAuthCookie(res, token) {
+  res.cookie(ADMIN_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: ADMIN_TOKEN_MAX_AGE_MS,
+    path: '/',
+  });
+}
+
+function clearAdminAuthCookie(res) {
+  res.clearCookie(ADMIN_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+}
+
+// No cookie-parser dependency in this project — this is the one cookie
+// the admin panel ever reads, so a tiny manual parse avoids adding a new
+// package for a single value.
+function getAdminTokenFromRequest(req) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    const name = part.slice(0, eq).trim();
+    if (name === ADMIN_COOKIE_NAME) {
+      return decodeURIComponent(part.slice(eq + 1).trim());
+    }
+  }
+  return null;
+}
 
 function throwStatus(statusCode, message) {
   const error = new Error(message);
@@ -111,8 +175,13 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         { expiresIn: ADMIN_TOKEN_EXPIRY }
       );
 
+      // Token no longer goes in the JSON body at all — see the cookie
+      // comment above. If it isn't in the response, it can't end up in
+      // localStorage (or anywhere else client JS decides to put it) by
+      // mistake, on this page or any future one.
+      setAdminAuthCookie(res, token);
+
       return res.json({
-        token,
         admin: {
           id: admin.id,
           displayName: admin.display_name,
@@ -123,6 +192,14 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       console.error('Admin login error:', error);
       return res.status(500).json({ error: 'Unable to log in.' });
     }
+  });
+
+  // The client can't clear an httpOnly cookie itself (that's the whole
+  // point of httpOnly) — logout has to be a real server round-trip that
+  // clears it, not just a local state reset.
+  app.post('/api/admin/auth/logout', (req, res) => {
+    clearAdminAuthCookie(res);
+    return res.json({ ok: true });
   });
 
   app.get('/api/admin/me', authAdmin, async (req, res) => {
@@ -1502,7 +1579,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
 }
 
 function authAdmin(req, res, next) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
+  const token = getAdminTokenFromRequest(req);
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
   try {

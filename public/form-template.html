@@ -261,7 +261,18 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   margin: 0 auto;
+  /* This box is intentionally scrollable (the keepsake is shown at true A4
+     size for pinch-zoom reading on mobile — see adjustNewspaperPreviewScale
+     below) — styled here so the scrollbar reads as an intentional part of
+     the page instead of a raw, unstyled system control. */
+  scrollbar-width: thin;
+  scrollbar-color: #B9AE7F #F4EFDD;
 }
+#newspaper-container::-webkit-scrollbar { width: 10px; height: 10px; }
+#newspaper-container::-webkit-scrollbar-track { background: #F4EFDD; }
+#newspaper-container::-webkit-scrollbar-thumb { background: #B9AE7F; border-radius: 6px; border: 2px solid #F4EFDD; }
+#newspaper-container::-webkit-scrollbar-thumb:hover { background: #8A6A1F; }
+#newspaper-container::-webkit-scrollbar-corner { background: #F4EFDD; }
 /* Below the native A4 preview width (~794px), the generated keepsake HTML's
    own #wrap { justify-content:center } would center a flex-shrink:0 child
    wider than its container, pushing half the overflow into negative scroll
@@ -1107,22 +1118,22 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 
   <div class="field">
     <label id="recipient-name-label">Recipient's Full Name</label>
-    <input type="text" id="recipientName" placeholder="e.g. Margaret Wilson" />
+    <input type="text" id="recipientName" placeholder="e.g. Margaret Wilson" autocomplete="off" />
   </div>
 
   <div class="field is-hidden" id="partner-name-field">
     <label>Partner's Full Name</label>
-    <input type="text" id="partnerName" placeholder="e.g. James Wilson" />
+    <input type="text" id="partnerName" placeholder="e.g. James Wilson" autocomplete="off" />
   </div>
 
   <div class="field-row">
     <div class="field">
       <label id="date-label">Date of Birth</label>
-      <input type="date" id="dateOfBirth" min="1920-01-01" />
+      <input type="date" id="dateOfBirth" min="1920-01-01" autocomplete="off" />
     </div>
     <div class="field is-hidden" id="date-of-passing-field">
       <label>Date of Passing</label>
-      <input type="date" id="dateOfPassing" min="1920-01-01" />
+      <input type="date" id="dateOfPassing" min="1920-01-01" autocomplete="off" />
     </div>
     <div class="field">
       <label>Country</label>
@@ -1158,33 +1169,42 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 
   <div class="field is-hidden" id="relationship-field">
     <label>Relationship (optional)</label>
-    <input type="text" id="relationship" placeholder="e.g. Beloved Mother" />
+    <input type="text" id="relationship" placeholder="e.g. Beloved Mother" autocomplete="off" />
+  </div>
+
+  <!-- Spec decision (new_changes.md, Custom Edition): replaces the
+       generic "A Special Edition" banner with whatever the customer
+       describes here, so the headline is dynamic instead of a fixed
+       placeholder. Only shown for the Custom occasion. -->
+  <div class="field is-hidden" id="custom-edition-type-field">
+    <label>Type of Edition</label>
+    <input type="text" id="customEditionType" placeholder="e.g. Get Well Soon" maxlength="40" autocomplete="off" />
   </div>
 
   <div class="field" id="sender-field">
     <label id="sender-label">Your Name / DJ Name</label>
-    <input type="text" id="senderName" placeholder="e.g. Big Dave" />
+    <input type="text" id="senderName" placeholder="e.g. Big Dave" autocomplete="off" />
   </div>
 
   <div class="field" id="station-field" style="display:none;">
     <label>Station Name</label>
-    <input type="text" id="stationName" placeholder="e.g. Classic Hits Radio 97.4 FM" />
+    <input type="text" id="stationName" placeholder="e.g. Classic Hits Radio 97.4 FM" autocomplete="off" />
   </div>
 
   <div class="field is-hidden" id="listener-postal-address-field">
     <label>Listener Postal Address</label>
-    <textarea id="listenerPostalAddress" placeholder="Street, suburb, city, postcode"></textarea>
+    <textarea id="listenerPostalAddress" placeholder="Street, suburb, city, postcode" autocomplete="off"></textarea>
   </div>
 
   <div class="field">
     <label id="personal-message-label">Personal Message (optional)</label>
-    <textarea id="personalMessage" maxlength="300" placeholder="Write your message here (up to 300 characters)...&#10;&#10;Example:&#10;Dear Mum, Happy 70th Birthday! Thank you for all your love and support. Hope you have a wonderful day! Love, Sarah & family."></textarea>
+    <textarea id="personalMessage" maxlength="300" autocomplete="off" placeholder="Write your message here (up to 300 characters)...&#10;&#10;Example:&#10;Dear Mum, Happy 70th Birthday! Thank you for all your love and support. Hope you have a wonderful day! Love, Sarah & family."></textarea>
     <div id="personalMessageCounter" style="text-align: right; font-size: 0.78rem; color: rgba(255,255,255,0.45); margin-top: 4px;">0 / 300 characters</div>
   </div>
 
   <div class="field public-only">
     <label>Promo Code (optional)</label>
-    <input type="text" id="publicPromoCode" placeholder="Enter promo code for a free demo" />
+    <input type="text" id="publicPromoCode" placeholder="Enter promo code for a free demo" autocomplete="off" />
   </div>
 
   <div class="error" id="error-msg" role="alert" aria-live="assertive"></div>
@@ -1221,19 +1241,26 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   <div class="purchase-panel" id="purchase-panel">
     <div class="purchase-eyebrow">Public Preview</div>
     <div class="purchase-title">Choose your keepsake option</div>
-    <div class="purchase-copy" id="purchase-copy">Your public preview shows a SAMPLE watermark until payment. Select a product and choose card or GCash below.</div>
+    <div class="purchase-copy" id="purchase-copy">Your public preview shows a SAMPLE watermark until payment. Choose card or GCash below.</div>
+    <!-- Standard ($24.95) and Premium ($34.95) printed tiers dropped per
+         client decision (new_changes.md bug #12, 7 Aug 2026) — public
+         portal is Digital-only at $14.95 for now. Hidden rather than
+         deleted so this is a fast, safe revert if printed tiers come
+         back later — see selectProductTier() and orderPrintedCopy(),
+         which now both hard-enforce digital-only regardless of this
+         markup, so this hiding isn't the only thing preventing a sale. -->
     <div class="tier-grid" id="tier-grid">
       <div class="tier-card primary selected" data-tier="digital" onclick="selectProductTier('digital')">
         <span class="tier-name">Digital</span>
         <span class="tier-price">NZ$14.95</span>
         <span class="tier-copy">Instant clean PDF access after payment.</span>
       </div>
-      <div class="tier-card" data-tier="standard" onclick="selectProductTier('standard')">
+      <div class="tier-card is-hidden" data-tier="standard" onclick="selectProductTier('standard')">
         <span class="tier-name">Standard</span>
         <span class="tier-price">NZ$24.95</span>
         <span class="tier-copy">Printed and posted in a plain cream envelope.</span>
       </div>
-      <div class="tier-card" data-tier="premium" onclick="selectProductTier('premium')">
+      <div class="tier-card is-hidden" data-tier="premium" onclick="selectProductTier('premium')">
         <span class="tier-name">Premium</span>
         <span class="tier-price">NZ$34.95</span>
         <span class="tier-copy">Printed, posted, floral envelope, and frame included.</span>
@@ -1252,8 +1279,8 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
         </div>
       </div>
       <div class="field" style="display:flex; align-items:flex-start; gap:8px;">
-        <input type="checkbox" id="marketingConsent" checked style="margin-top:3px; flex-shrink:0;" />
-        <label for="marketingConsent" style="font-weight:normal; font-size:0.82rem; cursor:pointer;">
+        <input type="checkbox" id="marketingConsent" checked style="margin-top:3px; flex-shrink:0; width:16px; height:16px; padding:0; border:none;" />
+        <label for="marketingConsent" style="flex:1 1 auto; min-width:0; text-transform:none; letter-spacing:normal; font-weight:normal; font-size:0.82rem; color:#3d3730; cursor:pointer;">
           Send me occasional emails about new products and offers (see our <a href="/legal/privacy" target="_blank" style="color:#8A6A1F;">Privacy Policy</a>). You can unsubscribe anytime.
         </label>
       </div>
@@ -1276,7 +1303,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
       </div>
       <div class="field">
         <label>Promo Code (optional)</label>
-        <input type="text" id="checkoutPromoCode" placeholder="Enter promo code if you have one" oninput="updatePurchaseNote()" />
+        <input type="text" id="checkoutPromoCode" placeholder="Enter promo code if you have one" autocomplete="off" oninput="updatePurchaseNote()" />
       </div>
       <div class="field public-only" id="payment-method-field">
         <label>Payment Method</label>
@@ -1396,7 +1423,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
           </div>
           <div class="field">
             <label>GCash Transaction / Reference ID</label>
-            <input type="text" id="gcashReferenceId" placeholder="Reference number from GCash receipt" required />
+            <input type="text" id="gcashReferenceId" placeholder="Reference number from GCash receipt" autocomplete="off" required />
           </div>
           <div class="purchase-actions">
             <button class="pay-btn" id="gcash-submit-btn" type="submit">Submit Payment Proof</button>
@@ -1634,15 +1661,18 @@ function getPaidPublicSuccessMessage(order) {
     return `Payment complete.${orderNumber} Your ${tierLabel.toLowerCase()} printed keepsake is in the delivery queue. Delivery: ${deliveryLabel}. You can download the clean PDF here too.`;
   }
 
-  return 'Payment complete. Your clean keepsake is ready. Use Download PDF to save it, or Order Printed Copy to place a separate printed order.';
+  return 'Payment complete. Your clean keepsake is ready. Use Download PDF to save it.';
 }
 
 function getPurchaseCopyText() {
+  // 'printed-reorder' mode is unreachable now that orderPrintedCopy() is
+  // disabled (new_changes.md bug #12) — branch kept only so this function
+  // degrades sensibly rather than throwing if that ever changes.
   if (publicCheckoutMode === 'printed-reorder') {
     return 'This starts a separate new printed order. Your paid keepsake stays available for download.';
   }
 
-  return 'Your public preview shows a SAMPLE watermark until payment. Select a product and choose card or GCash below.';
+  return 'Your public preview shows a SAMPLE watermark until payment. Choose card or GCash below.';
 }
 
 function updatePurchaseNote(extraMessage) {
@@ -1742,7 +1772,9 @@ function updatePurchaseModeUi() {
   if (publicCleanAccessGranted) {
     const paidPrintedOrder = isPaidPrintedPublicOrder();
     resultActions.classList.remove('hidden');
-    secondaryAction.classList.toggle('is-hidden', paidPrintedOrder || publicCheckoutMode === 'printed-reorder');
+    // Always hidden — printed reorder disabled along with Standard/Premium
+    // (new_changes.md bug #12). Was: toggle('is-hidden', paidPrintedOrder || publicCheckoutMode === 'printed-reorder')
+    secondaryAction.classList.add('is-hidden');
     primaryAction.textContent = 'Download PDF';
     restartAction.textContent = 'New Keepsake';
     purchasePanel.classList.toggle('visible', publicCheckoutMode === 'printed-reorder');
@@ -2196,6 +2228,12 @@ function selectProductTier(tier) {
   if (publicCheckoutMode === 'printed-reorder' && tier === 'digital') {
     return;
   }
+  // Digital-only for the public portal (new_changes.md bug #12) — the
+  // Standard/Premium cards are hidden in the markup, but this blocks
+  // selection regardless of markup state (e.g. a stale cached page).
+  if (isPublicEdition() && tier !== 'digital') {
+    return;
+  }
 
   selectedProductTier = tier;
   document.querySelectorAll('.tier-card').forEach(card => {
@@ -2260,6 +2298,12 @@ function selectOccasion(tile, occasion, banner, bg) {
   if (!isMemorial) {
     document.getElementById('dateOfPassing').value = '';
     document.getElementById('relationship').value = '';
+  }
+
+  const isCustomEdition = occasion === 'Custom';
+  document.getElementById('custom-edition-type-field').classList.toggle('is-hidden', !isCustomEdition);
+  if (!isCustomEdition) {
+    document.getElementById('customEditionType').value = '';
   }
 
   const coupleOccasions = ['Anniversary', 'Golden Anniversary', 'Silver Anniversary', 'Diamond Anniversary', 'Wedding Day'];
@@ -2872,6 +2916,8 @@ async function generateKeepsake() {
   const coupleOccasions = ['Anniversary', 'Golden Anniversary', 'Silver Anniversary', 'Diamond Anniversary', 'Wedding Day'];
   const isCoupleOccasion = coupleOccasions.includes(selectedOccasion);
   const partnerName = document.getElementById('partnerName').value.trim();
+  const isCustomEdition = selectedOccasion === 'Custom';
+  const customEditionType = document.getElementById('customEditionType').value.trim();
   const errorEl = document.getElementById('error-msg');
 
   errorEl.textContent = '';
@@ -2882,6 +2928,7 @@ async function generateKeepsake() {
   if (isMemorial && !dateOfPassing) { errorEl.textContent = 'Please enter the date of passing.'; return; }
   if (isMemorial && dateOfPassing < dob) { errorEl.textContent = 'Date of passing cannot be before the date of birth.'; return; }
   if (isCoupleOccasion && !partnerName) { errorEl.textContent = 'Please enter the partner\'s name.'; return; }
+  if (isCustomEdition && !customEditionType) { errorEl.textContent = 'Please describe the occasion for this Custom Edition.'; return; }
   if (isRadioEdition() && !isRadioAuthenticated()) {
     errorEl.textContent = 'Please sign in with the DJ account before generating a radio keepsake.';
     return;
@@ -2930,6 +2977,7 @@ async function generateKeepsake() {
         dateOfPassing: isMemorial ? dateOfPassing : '',
         relationship: isMemorial ? relationship : '',
         partnerName: isCoupleOccasion ? partnerName : '',
+        customEditionType: isCustomEdition ? customEditionType : '',
       })
     });
 
@@ -3026,6 +3074,11 @@ function printKeepsake() {
 }
 
 function orderPrintedCopy() {
+  // Printed reorder disabled along with the Standard/Premium tiers it
+  // depends on (new_changes.md bug #12) — client confirmed digital-only
+  // for now, no printed products offered anywhere in the public portal.
+  return;
+  // eslint-disable-next-line no-unreachable
   if (!isPublicEdition() || !publicCleanAccessGranted) {
     return;
   }
@@ -3056,6 +3109,8 @@ function startAgain() {
   document.getElementById('relationship-field').classList.add('is-hidden');
   document.getElementById('partnerName').value = '';
   document.getElementById('partner-name-field').classList.add('is-hidden');
+  document.getElementById('customEditionType').value = '';
+  document.getElementById('custom-edition-type-field').classList.add('is-hidden');
   document.getElementById('residenceCountry').value = '';
   document.getElementById('marketingConsent').checked = true;
   document.getElementById('senderName').value = '';

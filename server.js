@@ -735,6 +735,14 @@ function subscriptionActiveEmail(name, tier) {
 // 3-edition front-end form (radio / florist / public)
 function sendEditionTemplate(res, edition) {
   const template = fs.readFileSync(path.join(__dirname, 'public/form-template.html'), 'utf8');
+  // Always read fresh from disk (above), but without this the browser can
+  // still serve a stale cached copy of the page itself on a normal
+  // navigation/reload — causing genuine, already-fixed bugs to appear
+  // "still broken" simply because the tester's browser never re-fetched
+  // the updated HTML. This has caused confusion multiple times during
+  // testing (new_changes.md, Aug 2026) — explicit no-store removes that
+  // whole class of false negative going forward.
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.send(template.replace('{{EDITION}}', edition));
 }
 

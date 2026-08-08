@@ -6,6 +6,7 @@
 
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
+const { daysElapsedToNzToday } = require('./src/phase2/nz-time');
 
 function titleCase(value) {
   return String(value || '')
@@ -25,6 +26,14 @@ const SENTENCE_ABBREVIATIONS = new Set([
   'dr', 'mr', 'mrs', 'ms', 'prof', 'st', 'sr', 'jr', 'rev', 'capt', 'gen',
   'sgt', 'lt', 'col', 'sen', 'gov', 'rep', 'no', 'vol', 'vs', 'etc', 'ft',
   'ave', 'blvd', 'inc', 'ltd', 'co', 'approx',
+]);
+
+// Occasions where the date field genuinely represents, and should be
+// framed as, a birth date being counted to today — see the "days old"
+// counter comment near daysOldStr below for why this exists and why it's
+// deliberately not every occasion that happens to reuse the same date input.
+const BIRTHDAY_FAMILY_OCCASIONS = new Set([
+  'Birthday', '21st Birthday', '30th Birthday', '40th Birthday', '50th Birthday', 'Milestone Birthday', 'New Baby',
 ]);
 
 function cleanTruncate(text, maxLength) {
@@ -104,6 +113,38 @@ function enforceExactYearLead(newsArray, year) {
   return reordered;
 }
 
+// Found during testing (7 Aug 2026, not client-reported but a genuine
+// display gap): a real BC/BCE event (e.g. Julius Caesar's assassination,
+// 44 BC) rendered as "World, 44:" — a correct year value with no
+// indication it's BC, indistinguishable from an AD year of the same
+// number. The AI prompt now asks for BC years as negative numbers (e.g.
+// -44); this formats that back into a readable "44 BC" for display.
+// Positive years pass through unchanged.
+function formatDisplayYear(year) {
+  const num = Number(year);
+  if (!Number.isFinite(num)) return year;
+  return num < 0 ? `${Math.abs(num)} BC` : String(num);
+}
+
+// Client-reported bug (7 Aug 2026 QA session): US-based keepsakes showed
+// "DOW JONES" twice in the market ticker, with the same value but
+// conflicting up/down arrows. Root cause: for the United States, the
+// "local index" genuinely is a different real index (S&P 500 / Dow Jones
+// Transportation Average, depending on era — see
+// src/phase2/market-index-data.js) from the ticker's own hardcoded first
+// slot (Dow Jones Industrial Average) — but the AI didn't reliably follow
+// the prompt's explicit instruction to use that distinct label, and just
+// repeated "Dow Jones" for both. Same principle as enforceExactYearLead
+// above: don't just ask the AI nicely and hope, verify and correct
+// afterward. This forces the ticker's second slot to the real,
+// pre-computed label regardless of what the AI actually returned.
+function enforceLocalIndexLabel(ticker, localIndexLabel) {
+  if (!Array.isArray(ticker) || ticker.length < 2 || !localIndexLabel) return ticker;
+  const corrected = [...ticker];
+  corrected[1] = { ...corrected[1], label: localIndexLabel.toUpperCase() };
+  return corrected;
+}
+
 function getVintageHoroscope(signName) {
   const horoscopes = {
     Aries: "The stars align to grant you immense energy and pioneering spirit. Your natural leadership will shine in professional endeavors. Avoid rash decisions in financial matters; patience yields the greatest rewards. In personal relationships, a warm gesture from an old friend brings unexpected joy. Keep your focus on long-term goals.",
@@ -126,14 +167,14 @@ function renderNewspaper(data, content, fonts) {
   const {
     recipientName, dateFormatted, dateLong, day, month, year,
     country, occasion, bannerText, senderName, stationName,
-    edition, currency, age, personalMessage
+    edition, currency, age, personalMessage, localIndexLabel
   } = data;
 
   const cleanedRecipientName = titleCase(recipientName);
 
   const {
     worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
-    chart, prices, weather, ticker,
+    chart, prices, weather, ticker: rawTicker,
     worldInNumbers, books, cinema, birthdays,
     astro, message
   } = content;
@@ -143,6 +184,9 @@ function renderNewspaper(data, content, fonts) {
   // year that happens to fall on the same calendar day.
   const worldNews = enforceExactYearLead(rawWorldNews, year);
   const localNews = enforceExactYearLead(rawLocalNews, year);
+  // See enforceLocalIndexLabel above — guarantees the ticker's second slot
+  // is the real local index, not a repeat of the first "Dow Jones" slot.
+  const ticker = enforceLocalIndexLabel(rawTicker, localIndexLabel);
 
   // "You are X days old today" only makes sense where the date field is a
   // genuine date of birth being counted to today — Birthday, and New Baby
@@ -153,12 +197,26 @@ function renderNewspaper(data, content, fonts) {
   // worse, implying someone being memorialised is still alive and aging)
   // doesn't make sense — those now have their own dedicated counters
   // ("years married" / "years lived", Steps 12-13).
-  const daysOldStr = (occasion === 'Birthday' || occasion === 'New Baby')
+  // Uses NZ time for "today," not the server process's own timezone — see
+  // src/phase2/nz-time.js. Same root cause as the "years married"
+  // off-by-one bug: a raw `new Date()` reflects wherever the server
+  // happens to be running, not the customer's actual New Zealand day.
+  //
+  // Found during a full occasion-type sweep (8 Aug 2026, not
+  // client-reported but a genuine gap): the counter only ever checked for
+  // the literal occasion "Birthday," silently excluding the numbered
+  // birthday special editions (21st/30th/40th/50th/Milestone) even though
+  // they are exactly as much a real birthday as plain "Birthday" — same
+  // date field, same meaning, just a different banner. Expanded to cover
+  // the whole birthday family (see BIRTHDAY_FAMILY_OCCASIONS below).
+  // Deliberately NOT expanded to Valentine's Day, Adoption, or
+  // Citizenship — their date field is collected the same way but doesn't
+  // represent the same "count the days since birth" meaning (same
+  // principle as bug #8's fix: a date being technically a birth date
+  // doesn't mean every occasion using it should be framed as one).
+  const daysOldStr = BIRTHDAY_FAMILY_OCCASIONS.has(occasion)
     ? (() => {
-        const dobDate = new Date(year, month - 1, day);
-        const today = new Date();
-        const diffMs = today.getTime() - dobDate.getTime();
-        const daysOldVal = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const daysOldVal = daysElapsedToNzToday(year, month, day);
         return `You are ${daysOldVal.toLocaleString()} days old today`;
       })()
     : '';
@@ -210,19 +268,39 @@ function renderNewspaper(data, content, fonts) {
   // business/science one) showing up under "Science." Labels now reflect
   // whichever source actually supplied the text, so a label is never applied
   // to content it doesn't describe.
-  const otd1Source = worldNews[1]
-    ? { label: 'World', body: worldNews[1].body }
-    : { label: 'Business', body: business[0]?.body || '' };
-  const otd2Source = worldNews[2]
-    ? { label: 'World', body: worldNews[2].body }
-    : { label: 'Business', body: business[1]?.body || '' };
-  const otd3Source = localNews[1]
-    ? { label: country, body: localNews[1].body }
-    : { label: 'Business', body: business[2]?.body || '' };
+  // Client-reported bug (7 Aug 2026 QA session, bug #5): "Also On This
+  // Day" trivia items never showed which year each story happened in —
+  // undermining the "verified historical facts" premise, since a reader
+  // has no idea when the event actually took place. The year was always
+  // present in the underlying data (worldNews[n].year etc.) but was never
+  // included in the displayed label — just dropped on the floor.
+  // Found during final delivery re-check (8 Aug 2026, not client-reported):
+  // this checked only whether worldNews[n]/localNews[1] *existed*, not
+  // whether it actually had a body — the AI occasionally returns a story
+  // with a year/headline/byline but no body field at all (schema
+  // non-compliance, same category of gap as the exact-year and ticker
+  // fixes above). That rendered as "World, 1969:" with nothing after the
+  // colon — a visibly broken-looking box. `business[]` is never displayed
+  // anywhere else on the page (confirmed — it exists solely as this
+  // fallback pool), so falling through to it whenever the body is missing
+  // is safe: no risk of duplicating content shown elsewhere. As a last
+  // resort — both the primary item AND its business[] fallback missing a
+  // body, which would need two independent AI omissions at once — falls
+  // back to whichever headline is actually available, since a headline is
+  // still a real, readable line rather than a blank box.
+  const otd1Source = worldNews[1]?.body
+    ? { label: 'World', year: worldNews[1].year, body: worldNews[1].body }
+    : { label: 'Business', year: business[0]?.year, body: business[0]?.body || worldNews[1]?.headline || business[0]?.headline || '' };
+  const otd2Source = worldNews[2]?.body
+    ? { label: 'World', year: worldNews[2].year, body: worldNews[2].body }
+    : { label: 'Business', year: business[1]?.year, body: business[1]?.body || worldNews[2]?.headline || business[1]?.headline || '' };
+  const otd3Source = localNews[1]?.body
+    ? { label: country, year: localNews[1].year, body: localNews[1].body }
+    : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
-  const otd1Text = `<b>${otd1Source.label}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
-  const otd2Text = `<b>${otd2Source.label}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
-  const otd3Text = `<b>${otd3Source.label}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
+  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
+  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
+  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
 
   // ── SPORT TEXT ──
   // The AI prompt deliberately asks for sport as headline-only, no body
@@ -257,7 +335,13 @@ function renderNewspaper(data, content, fonts) {
   // combinations (empirically measured, see banner_search.js), and the
   // box still allows a 2-line wrap as a last resort so a very long name
   // is never cut off with an ellipsis.
-  const bannerFullText = `${bannerText.toUpperCase()} — ${cleanedRecipientName.toUpperCase()}`;
+  // Client decision (7 Aug 2026, "I Love You" spec item): the Valentine's
+  // Day banner shows first name only ("Happy Valentine's — Jhe Ann"), not
+  // the full name — every other occasion is unaffected.
+  const bannerDisplayName = occasion === "Valentine's Day"
+    ? cleanedRecipientName.split(' ')[0]
+    : cleanedRecipientName;
+  const bannerFullText = `${bannerText.toUpperCase()} — ${bannerDisplayName.toUpperCase()}`;
   const bannerLen = bannerFullText.length;
   const bannerFontSize = bannerLen <= 33 ? 21 : bannerLen <= 36 ? 18 : bannerLen <= 40 ? 16 : bannerLen <= 45 ? 14 : 12;
 
@@ -709,4 +793,4 @@ function renderNewspaper(data, content, fonts) {
 </html>`;
 }
 
-module.exports = { renderNewspaper, titleCase, cleanTruncate, enforceExactYearLead };
+module.exports = { renderNewspaper, titleCase, cleanTruncate, enforceExactYearLead, enforceLocalIndexLabel, formatDisplayYear };
