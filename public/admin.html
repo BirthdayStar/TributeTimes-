@@ -1168,11 +1168,25 @@
   </div><!-- /shell -->
 
   <script>
-    const STORAGE_KEY  = 'phase2AdminToken';
-    const PROFILE_KEY  = 'phase2AdminProfile';
+    // Security fix (Col McCabe, 7 Aug 2026 QA report — "admin session
+    // token exposed on public site"): the admin session used to live in
+    // localStorage under these two keys. localStorage is scoped to the
+    // whole origin, not to admin.html specifically — any other page
+    // served from the same domain (the public checkout page included)
+    // can read it with its own JS, and so could any XSS landing anywhere
+    // on the site. The session now lives in an httpOnly cookie set by the
+    // server (see /api/admin/auth/login and authAdmin in
+    // src/phase2/admin-fulfilment.js), which client-side JS — on any
+    // page — cannot read at all. This removes the leak at its source
+    // rather than just hiding the symptom.
+    //
+    // These two legacy keys are only referenced once more below, in
+    // boot(), purely to delete any old data an admin's browser may still
+    // be holding from before this fix.
+    const LEGACY_STORAGE_KEY = 'phase2AdminToken';
+    const LEGACY_PROFILE_KEY = 'phase2AdminProfile';
     const state = {
-      token:       localStorage.getItem(STORAGE_KEY) || '',
-      admin:       readStoredProfile(),
+      admin:       null,
       orders:      [],
       summary:     null,
       attribution: null,
@@ -1280,14 +1294,22 @@
     boot();
 
     /* ── BOOT ── */
-    function boot() {
-      if (state.token) {
+    async function boot() {
+      // Clean up any pre-fix session data still sitting in this browser's
+      // localStorage — see the comment on LEGACY_STORAGE_KEY above.
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_PROFILE_KEY);
+
+      // No client-readable token to check anymore — the only way to know
+      // whether this browser has a valid admin session is to ask the
+      // server, which reads the httpOnly cookie itself.
+      try {
+        await loadMe();
         showDashboard();
-        loadMe().catch(() => logout());
         loadQueue().catch(() => {});
         loadAttribution().catch(() => {});
         loadBirthdays().catch(() => {});
-      } else {
+      } catch {
         showLogin();
       }
     }
@@ -1319,16 +1341,17 @@
         };
         const response = await fetch('/api/admin/auth/login', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Login failed.');
 
-        state.token = data.token;
+        // The server sets the session as an httpOnly cookie now — there's
+        // no token in this response to store. state.admin is just display
+        // data (name/email), kept in memory only, not persisted.
         state.admin = data.admin;
-        localStorage.setItem(STORAGE_KEY, data.token);
-        localStorage.setItem(PROFILE_KEY, JSON.stringify(data.admin));
         setLoginMessage('', false);
         document.getElementById('admin-password').value = '';
         syncPasswordToggle();
@@ -1346,7 +1369,6 @@
       if (!r.ok) throw new Error('Session expired.');
       const data = await r.json();
       state.admin = data;
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
       renderAdminMeta();
     }
 
@@ -2401,17 +2423,22 @@
 
     /* ── AUTH / LOGOUT ── */
     async function apiFetch(url, options = {}) {
+      // The httpOnly session cookie is attached by the browser
+      // automatically for same-origin requests — nothing for this code to
+      // read or send by hand anymore.
       return fetch(url, {
         ...options,
-        headers: { ...(options.headers || {}), Authorization: `Bearer ${state.token}` },
+        credentials: 'same-origin',
+        headers: { ...(options.headers || {}) },
       });
     }
 
-    function logout() {
-      state.token = ''; state.admin = null; state.orders = [];
+    async function logout() {
+      // Clears the httpOnly cookie server-side — client JS has no way to
+      // remove it itself, so this round-trip is required, not optional.
+      try { await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
+      state.admin = null; state.orders = [];
       state.summary = null; state.attribution = null; state.birthdays = [];
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(PROFILE_KEY);
       setQueueBodyMsg('Sign in to load the queue.');
       summaryGrid.innerHTML = '';
       attributionSummaryGrid.innerHTML = '';
@@ -2469,27 +2496,21 @@
     }
     function escapeAttr(v) { return escapeHtml(v).replace(/`/g,'&#96;'); }
     function escapeJs(v)   { return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-    function readStoredProfile() {
-      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
-      catch { localStorage.removeItem(PROFILE_KEY); return null; }
-    }
-
     async function submitPasswordUpdate(event) {
       event.preventDefault();
       const oldPassword = document.getElementById('settings-old-password').value;
       const newPassword = document.getElementById('settings-new-password').value;
       const errorDiv = document.getElementById('settings-password-error');
       const successDiv = document.getElementById('settings-password-success');
-      
+
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
 
       try {
-        const response = await fetch('/api/admin/auth/update-password', {
+        const response = await apiFetch('/api/admin/auth/update-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${state.token}`
           },
           body: JSON.stringify({ oldPassword, newPassword })
         });

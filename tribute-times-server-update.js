@@ -7,11 +7,13 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const { buildPrompt, getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
-const { renderNewspaper } = require('./tribute-times-renderer');
+const { renderNewspaper, titleCase } = require('./tribute-times-renderer');
 const { buildMemorialPrompt } = require('./tribute-times-memorial-prompt');
 const { renderMemorialNewspaper } = require('./tribute-times-memorial-renderer');
 const { buildAnniversaryPrompt } = require('./tribute-times-anniversary-prompt');
 const { renderAnniversaryNewspaper } = require('./tribute-times-anniversary-renderer');
+const { resolveLocalMarketIndexLabel } = require('./src/phase2/market-index-data');
+const { yearsElapsedToNzToday } = require('./src/phase2/nz-time');
 
 // Couple-based occasions get their own genuinely separate template path
 // (second name field, wedding framing, "years married" counter) rather
@@ -70,7 +72,12 @@ const OCCASIONS = {
   'Golden Anniversary': { banner: 'Fifty Golden Years Together.', deck: 'News from the day they got married' },
   'Silver Anniversary': { banner: 'Silver Wedding Anniversary',  deck: 'Twenty-five years of us' },
   'Diamond Anniversary':{ banner: 'Diamond Anniversary',         deck: 'Sixty years of forever' },
-  "Valentine's Day":    { banner: 'I Love You',                  deck: 'News from the day the one I love was born' },
+  // Client decision (7 Aug 2026 QA session, "Spec Decisions Confirmed"):
+  // display headline changed from "I Love You" to "Happy Valentine's" —
+  // the occasion key stays "Valentine's Day" throughout the backend
+  // (form-template.html, OCCASIONS map key, etc. all unchanged), only
+  // this displayed banner text changes.
+  "Valentine's Day":    { banner: "Happy Valentine's",           deck: 'News from the day the one I love was born' },
   'New Baby':           { banner: 'Welcome to the World',        deck: 'News from the day the world got better' },
   'Adoption':           { banner: 'Welcome to the Family',       deck: 'News from the day you became ours' },
   "Mother's Day":       { banner: "Happy Mother's Day",          deck: 'News from the day the world got its mum' },
@@ -105,12 +112,16 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         dateOfPassing,       // "In Loving Memory" only — "2024-02-03"
         relationship,        // "In Loving Memory" only, optional — "Beloved Mother"
         partnerName,         // couple occasions only — second name
+        customEditionType,   // "Custom" occasion only — e.g. "Get Well Soon" (new_changes.md Spec Decision: dynamic headline instead of generic "A Special Edition")
       } = req.body;
       const normalizedEdition = String(edition || '').trim().toLowerCase();
       const isMemorial = occasion === 'In Loving Memory';
       const isCouple = COUPLE_OCCASIONS.has(occasion);
       if (isCouple && !String(partnerName || '').trim()) {
         return res.status(400).json({ error: 'Partner\'s name is required for this occasion.' });
+      }
+      if (occasion === 'Custom' && !String(customEditionType || '').trim()) {
+        return res.status(400).json({ error: 'Please describe the occasion for a Custom Edition.' });
       }
       let floristAccount = null;
       let freeDemoAttribution = null;
@@ -168,12 +179,23 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
 
       // ── OCCASION ──
       const occasionData = OCCASIONS[occasion] || OCCASIONS['Custom'];
-      const bannerText = occasionData.banner;
+      // Spec decision (new_changes.md, Custom Edition): the generic "A
+      // Special Edition" banner is replaced by whatever the customer
+      // typed (e.g. "Get Well Soon"), title-cased for the same look as
+      // every other occasion's banner text. Capped at 40 chars — the
+      // banner already shrinks its font for longer text (see
+      // bannerFontSize in tribute-times-renderer.js), but a genuinely
+      // excessive value would still crowd out the recipient's name.
+      const customEditionTypeTrimmed = String(customEditionType || '').trim().slice(0, 40);
+      const bannerText = (occasion === 'Custom' && customEditionTypeTrimmed)
+        ? titleCase(customEditionTypeTrimmed)
+        : occasionData.banner;
       const dateContext = getOccasionDateContext(occasion);
 
-      // ── AGE ──
-      const now = new Date();
-      const age = now.getFullYear() - year - (now < new Date(now.getFullYear(), month-1, day) ? 1 : 0);
+      // ── AGE ── (see src/phase2/nz-time.js — this must never be computed
+      // against the server process's own timezone, which is what caused
+      // the client-reported "years married" off-by-one bug)
+      const age = yearsElapsedToNzToday(year, month, day);
 
       // ── BUILD DATA OBJECT ──
       const data = {
@@ -181,6 +203,12 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         dateFormatted, dateLong, country,
         residenceCountry: String(residenceCountry || '').trim() || null,
         countryCode: getCountryCode(country),
+        // Computed once here (not re-derived independently inside each
+        // prompt file) so the renderer can enforce this exact label on the
+        // ticker's second slot regardless of whether the AI actually
+        // followed the prompt's instruction to use it — see
+        // enforceLocalIndexLabel in tribute-times-renderer.js.
+        localIndexLabel: resolveLocalMarketIndexLabel(country, new Date(year, month - 1, day)),
         occasion, bannerText,
         dateLabel: dateContext.label,
         dateMeaning: dateContext.meaning,
@@ -193,6 +221,10 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         age,
         personalMessage: personalMessage || '',
       };
+
+      if (occasion === 'Custom') {
+        data.customEditionType = titleCase(customEditionTypeTrimmed);
+      }
 
       if (isMemorial) {
         data.relationship = (relationship || '').trim();
@@ -254,33 +286,66 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
           : isCouple ? buildAnniversaryPrompt(data)
           : buildPrompt(data);
 
-        try {
-          const aiResponse = await client.messages.create({
-            model: ANTHROPIC_GENERATE_MODEL,
-            max_tokens: 4000,
-            messages: [{ role: 'user', content: prompt }],
-          });
+        // Client-reported bug (7 Aug 2026 QA session, bug #7): an
+        // intermittent malformed-JSON response from Claude (e.g. a stray
+        // `":="` where `":"` was meant) crashed the whole generation with
+        // no retry, forcing the customer to manually click "Try Again."
+        // A JSON syntax error is not a connection failure — it never
+        // matched isAnthropicFallbackError below, so it was always
+        // re-thrown straight to the customer as a hard failure. Now
+        // retried automatically (up to 2 total attempts) before giving up,
+        // with a cheap, targeted sanitization pass first for the exact
+        // class of typo actually observed.
+        //
+        // `contentIsFreshAiJson` tracks specifically "did this content come
+        // from a real, successfully-parsed AI response this request" —
+        // deliberately separate from `content` itself being truthy, since
+        // fallback content (from either a connection error or two
+        // consecutive JSON errors) is also truthy but must never be cached
+        // (same as the original behaviour before this retry loop existed).
+        let contentIsFreshAiJson = false;
+        for (let attempt = 0; attempt < 2 && !content; attempt += 1) {
+          try {
+            const aiResponse = await client.messages.create({
+              model: ANTHROPIC_GENERATE_MODEL,
+              max_tokens: 4000,
+              messages: [{ role: 'user', content: prompt }],
+            });
 
-          anthropicUsage = extractAnthropicUsage(aiResponse);
-          anthropicEstimatedCostUsd = estimateAnthropicCostUsd({
-            modelName: ANTHROPIC_GENERATE_MODEL,
-            inputTokens: anthropicUsage.inputTokens,
-            outputTokens: anthropicUsage.outputTokens,
-          });
-          const rawText = aiResponse.content[0].text.trim();
-          const jsonStr = rawText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-          content = JSON.parse(jsonStr);
-
-          if (supabase) {
-            await saveCachedContent(supabase, contentCacheKey, { day, month, year, country, occasion, edition: normalizedEdition }, content);
+            const usage = extractAnthropicUsage(aiResponse);
+            anthropicUsage = usage;
+            anthropicEstimatedCostUsd = estimateAnthropicCostUsd({
+              modelName: ANTHROPIC_GENERATE_MODEL,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+            });
+            const rawText = aiResponse.content[0].text.trim();
+            const jsonStr = sanitizeAiJson(rawText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim());
+            content = JSON.parse(jsonStr);
+            contentIsFreshAiJson = true;
+          } catch (aiError) {
+            if (!isAnthropicFallbackError(aiError) && !(aiError instanceof SyntaxError)) {
+              throw aiError;
+            }
+            if (aiError instanceof SyntaxError) {
+              console.warn(`Anthropic returned malformed JSON (attempt ${attempt + 1}/2):`, aiError.message);
+              continue;
+            }
+            console.warn('Anthropic unavailable, using local fallback content for keepsake generation.');
+            content = buildFallbackContent(data);
           }
-        } catch (aiError) {
-          if (!isAnthropicFallbackError(aiError)) {
-            throw aiError;
-          }
+        }
 
-          console.warn('Anthropic unavailable, using local fallback content for keepsake generation.');
+        if (!content) {
+          // Both attempts produced malformed JSON — genuinely rare, but
+          // fall back to local content rather than a hard failure, same
+          // as the connection-error path above.
+          console.warn('Anthropic returned malformed JSON twice in a row, using local fallback content.');
           content = buildFallbackContent(data);
+        }
+
+        if (supabase && contentIsFreshAiJson) {
+          await saveCachedContent(supabase, contentCacheKey, { day, month, year, country, occasion, edition: normalizedEdition }, content);
         }
       }
 
@@ -708,7 +773,36 @@ function getOccasionDateContext(occasion) {
   };
 }
 
+// Targeted, low-risk fixes for the exact class of malformed JSON actually
+// observed from Claude (new_changes.md bug #7: a stray `":="` where `":"`
+// was meant, e.g. `"byline":="Eden Park"`). Each pattern here is not valid
+// JSON syntax under any legitimate interpretation, so correcting it can't
+// accidentally corrupt otherwise-valid content — this is a narrow repair
+// pass, not a general "fix any broken JSON" attempt.
+function sanitizeAiJson(jsonStr) {
+  return jsonStr
+    .replace(/":=/g, '":')      // "key":="value"  ->  "key":"value"
+    .replace(/,\s*([}\]])/g, '$1'); // trailing comma before } or ]
+}
+
+// Found during "100% perfect" sweep (8 Aug 2026, not client-reported):
+// this only ever recognised raw network-level connection failures
+// (APIConnectionError, ECONNRESET, etc.) — any actual response FROM
+// Anthropic's API that represents a failure (rate limited, an expired/
+// invalid API key, the account's credit balance running out — exactly
+// what surfaced during this session's own testing) is a real HTTP error
+// response the SDK throws as an `Anthropic.APIError` subclass, not a
+// connection error, so it fell through the `if (!isAnthropicFallbackError
+// && !SyntaxError) throw` guard below and 500'd the whole /api/generate
+// endpoint for every occasion, not just the one being tested — a
+// customer mid-checkout would see a hard failure with no fallback
+// newspaper at all, on a failure mode the fallback system exists
+// specifically to absorb. `error instanceof Anthropic.APIError` catches
+// every SDK error class (connection, rate limit, auth, billing, and
+// Anthropic-side 5xxs) in one check; the original message/code checks are
+// kept as a safety net for anything thrown before the SDK wraps it.
 function isAnthropicFallbackError(error) {
+  if (error instanceof Anthropic.APIError) return true;
   const message = String(error?.message || '');
   const causeMessage = String(error?.cause?.message || '');
   const code = String(error?.cause?.code || error?.code || '');

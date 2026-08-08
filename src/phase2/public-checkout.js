@@ -317,6 +317,14 @@ function normalizePayload(body, requestIp) {
     throw new Error('Invalid product tier.');
   }
 
+  // Digital-only for the public portal for now (new_changes.md bug #12,
+  // client decision, 7 Aug 2026) — Standard/Premium are hidden in the
+  // checkout UI, but this is the actual enforcement: a direct API request
+  // bypassing the frontend can't select a tier that isn't for sale.
+  if (productTier !== 'digital') {
+    throw new Error('This product option is not currently available. Digital is the only option right now.');
+  }
+
   const needsFulfilment = PRODUCT_TIERS[productTier].needsFulfilment;
   const deliveryOption = needsFulfilment ? (deliveryOptionRaw || 'standard') : null;
 

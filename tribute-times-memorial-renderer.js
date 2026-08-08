@@ -12,7 +12,7 @@
 // birthday fields with values swapped in.
 // ============================================================
 
-const { titleCase, cleanTruncate, enforceExactYearLead } = require('./tribute-times-renderer');
+const { titleCase, cleanTruncate, enforceExactYearLead, enforceLocalIndexLabel, formatDisplayYear } = require('./tribute-times-renderer');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
 
 function getVintageMemorialReflection() {
@@ -23,14 +23,14 @@ function renderMemorialNewspaper(data, content, fonts) {
   const {
     recipientName, dateFormatted, dateLong, day, month, year,
     country, senderName, edition, currency,
-    relationship, datePassingFormatted, yearsLived, personalMessage,
+    relationship, datePassingFormatted, yearsLived, personalMessage, localIndexLabel,
   } = data;
 
   const cleanedRecipientName = titleCase(recipientName);
 
   const {
     worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
-    chart, prices, weather, ticker,
+    chart, prices, weather, ticker: rawTicker,
     birthdays, astro, message,
   } = content;
 
@@ -39,6 +39,7 @@ function renderMemorialNewspaper(data, content, fonts) {
   // year, not just any year on the same calendar day.
   const worldNews = enforceExactYearLead(rawWorldNews, year);
   const localNews = enforceExactYearLead(rawLocalNews, year);
+  const ticker = enforceLocalIndexLabel(rawTicker, localIndexLabel);
 
   // ── YEARS LIVED (birth -> passing, never to today) ──
   const yearsLivedStr = Number.isFinite(yearsLived)
@@ -68,19 +69,30 @@ function renderMemorialNewspaper(data, content, fonts) {
   const weatherText = cleanTruncate(`${weather.season || 'The season'} in ${country}: ${weather.condition || 'typical weather'}, around ${weather.temp || ''}°C.`, 80);
 
   // ── ALSO ON THIS DAY STORIES ──
-  const otd1Source = worldNews[1]
-    ? { label: 'World', body: worldNews[1].body }
-    : { label: 'Business', body: business[0]?.body || '' };
-  const otd2Source = worldNews[2]
-    ? { label: 'World', body: worldNews[2].body }
-    : { label: 'Business', body: business[1]?.body || '' };
-  const otd3Source = localNews[1]
-    ? { label: country, body: localNews[1].body }
-    : { label: 'Business', body: business[2]?.body || '' };
+  // Client-reported bug (7 Aug 2026 QA session, bug #5): trivia items
+  // never showed which year each story happened in, even though the year
+  // was always present in the underlying data — undermines the "verified
+  // historical facts" premise since a reader has no idea when it happened.
+  // Same fix as tribute-times-renderer.js (found during final delivery
+  // re-check, 8 Aug 2026, live in this exact template — a memorial
+  // keepsake's "Also On This Day" showed "World, 1969:" with nothing
+  // after it): checking existence alone let a story with no `body` field
+  // (AI schema non-compliance) through as a blank box. Now requires a
+  // genuine body, falling through to business[] and, as a last resort,
+  // either headline — never both bodies AND both headlines missing.
+  const otd1Source = worldNews[1]?.body
+    ? { label: 'World', year: worldNews[1].year, body: worldNews[1].body }
+    : { label: 'Business', year: business[0]?.year, body: business[0]?.body || worldNews[1]?.headline || business[0]?.headline || '' };
+  const otd2Source = worldNews[2]?.body
+    ? { label: 'World', year: worldNews[2].year, body: worldNews[2].body }
+    : { label: 'Business', year: business[1]?.year, body: business[1]?.body || worldNews[2]?.headline || business[1]?.headline || '' };
+  const otd3Source = localNews[1]?.body
+    ? { label: country, year: localNews[1].year, body: localNews[1].body }
+    : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
-  const otd1Text = `<b>${otd1Source.label}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
-  const otd2Text = `<b>${otd2Source.label}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
-  const otd3Text = `<b>${otd3Source.label}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
+  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
+  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
+  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
 
   // ── SPORT TEXT ──
   const sportEntry = sport[0];
@@ -292,6 +304,11 @@ function renderMemorialNewspaper(data, content, fonts) {
     flex: 1 1 auto; min-height: 0;
     display: grid;
     grid-template-columns: 1fr 1.15fr 1fr;
+    /* See tribute-times-renderer.js for the full explanation — without
+       this, the single implicit grid row sizes to its content instead of
+       this container's full flex-grown height, stranding leftover page
+       space below all three columns instead of letting them stretch into it. */
+    grid-template-rows: minmax(0, 1fr);
     gap: 0 4mm;
     border-top: .25mm solid #1a1712;
     padding-top: 2mm; margin-top: 2mm;
@@ -300,6 +317,13 @@ function renderMemorialNewspaper(data, content, fonts) {
   .col { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
   .col + .col { border-left: .2mm solid #b9b09a; padding-left: 4mm; }
 
+  /* See tribute-times-renderer.js for the full explanation of this fix
+     (client-reported "excessive blank space" bug, 7 Aug 2026 QA session,
+     confirmed across every occasion type — this file never received the
+     fix applied there last session, which is exactly why it kept showing
+     up here too). Sections now size to their actual content (bounded by
+     max-height below as a ceiling, never a fixed reservation) instead of
+     always reserving their maximum possible height whether used or not. */
   section { overflow: hidden; flex: 0 0 auto; }
   section h3 {
     font-family: 'Playfair Display', serif; font-weight: 700;
@@ -317,18 +341,17 @@ function renderMemorialNewspaper(data, content, fonts) {
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
 
-  /* fixed section heights — the budget that guarantees one page */
-  .s-news1     { height: 70mm; }
-  .s-news2     { height: 58mm; margin-top: 3mm; }
-  .s-prices    { height: 50mm; margin-top: 3mm; }
-  .s-onthisday { height: 54mm; }
-  .s-message   { height: 72mm; margin-top: 3mm; }
-  .s-birthdays { height: 52mm; margin-top: 3mm; }
-  .s-charts    { height: 44mm; }
-  .s-weather   { height: 16mm; margin-top: 3mm; }
-  .s-horoscope { height: 40mm; margin-top: 3mm; }
-  .s-sport     { height: 22mm; margin-top: 3mm; }
-  .s-starmap   { height: 50mm; margin-top: 3mm; text-align: center; }
+  .s-news1     { max-height: 70mm; flex: 1 1 auto; }
+  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 1 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
+  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-onthisday { max-height: 54mm; flex: 1 1 auto; }
+  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-charts    { max-height: 44mm; flex: 1 1 auto; }
+  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 1 auto; }
+  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 1 auto; }
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
