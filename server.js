@@ -220,11 +220,27 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // Station login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  // Client-reported bug (11 Aug 2026, urgent — florist account created via
+  // admin panel couldn't log in on the florist portal, 401 "Invalid email
+  // or password" every time, despite the account showing Active with the
+  // right credit balance in admin): this query was case- and whitespace-
+  // sensitive on email (`.eq('email', email)` against the raw request
+  // body), while the admin login route two files over already normalizes
+  // and matches case-insensitively (`.ilike('email', ...)` in
+  // admin-fulfilment.js) — an inconsistency between the two login systems
+  // in this same codebase. Reproduced directly: a florist created with a
+  // lowercase email logs in fine with that exact casing, but fails 401 the
+  // moment the email arrives with a different case (e.g. autocapitalized
+  // by a mobile keyboard/autofill — Col's own message specifically
+  // suspected "autofill") or a stray leading/trailing space (a common
+  // copy-paste artifact from pasting an email out of the admin directory).
+  // The account was never missing; the lookup just couldn't find it.
+  const email = String(req.body?.email || '').trim().toLowerCase();
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   try {
-    const { data: station } = await supabase.from('stations').select('*').eq('email', email).single();
+    const { data: station } = await supabase.from('stations').select('*').ilike('email', email).single();
     if (!station) return res.status(401).json({ error: 'Invalid email or password' });
 
     // Restrict florist accounts logging in here unless florist portal directly requests
@@ -322,9 +338,13 @@ app.post('/api/public/stations/inquiry', async (req, res) => {
 
 // DJ login
 app.post('/api/auth/dj-login', async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  // Same case/whitespace-sensitivity fix as the station/florist login
+  // above — identical anti-pattern, same file, checked while investigating
+  // the client-reported florist login bug.
+  const email = String(req.body?.email || '').trim().toLowerCase();
   try {
-    const { data: dj } = await supabase.from('djs').select('*, stations(*)').eq('email', email).single();
+    const { data: dj } = await supabase.from('djs').select('*, stations(*)').ilike('email', email).single();
     if (!dj) return res.status(401).json({ error: 'Invalid email or password' });
 
     const valid = await bcrypt.compare(password, dj.password_hash);

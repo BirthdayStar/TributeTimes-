@@ -79,7 +79,7 @@ ${country.toUpperCase()} NEWS — On This Day:
 - Return 3-4 items. The FIRST item's "year" field MUST be exactly ${year} (same hard rule as the world news lead story above). If nothing globally notable happened in ${country} on that exact date, use a smaller but REAL, verifiable local event from that exact date instead — never substitute a different year.
 - The remaining items (index 1 onward) are "on this day in history" trivia from different years — intentional for these only.
 - Must be genuinely relevant to ${country} — local events, not international
-- Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence)
+- Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence), AND a "country" field naming the country the event actually took place in — almost always "${country}", but if you include a regional/Commonwealth/international event, set "country" to where it genuinely happened, not "${country}".
 
 SPORT — On This Day (any year):
 - 3-5 sport headline lines from different years, all on ${day}th ${monthName(month)}
@@ -149,7 +149,7 @@ RETURN THIS EXACT JSON STRUCTURE
     {"year": 1945, "headline": "string — max 10 words", "byline": "string", "body": "string"}
   ],
   "localNews": [
-    {"year": 1931, "headline": "string", "body": "string"}
+    {"year": 1931, "headline": "string", "body": "string", "country": "string — where this event actually happened, usually ${country}"}
   ],
   "sport": [
     {"year": 1981, "headline": "string — include scoreline", "byline": "string", "body": ""}

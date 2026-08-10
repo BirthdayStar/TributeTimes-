@@ -1644,10 +1644,27 @@
       }
     }
 
+    // Client-reported bug (11 Aug 2026 — "Edit button intermittently
+    // unresponsive"): reproduced directly (15/15 real double-clicks) — not
+    // a wiring problem, the onclick fires every time. The real cause is a
+    // race with the "close modal when clicking the backdrop" handler near
+    // the bottom of this file: a genuine double-click's second click lands
+    // within milliseconds of the first, on the exact same screen
+    // coordinate the Edit button was at — which the modal's own backdrop
+    // now covers the instant the first click opens it. That backdrop click
+    // fires the close handler, so the modal opens and immediately closes
+    // again, looking to the user like the button "did nothing." This
+    // timestamp lets the backdrop handler tell "a genuine click on the
+    // backdrop, well after the modal opened" apart from "the trailing
+    // click of the same gesture that just opened it," without touching
+    // the open/close logic itself or any other button on the page.
+    let lastModalOpenAt = 0;
+
     function openModal(type, id = null) {
       const modal = document.getElementById(`${type}-modal`);
       if (!modal) return;
-      
+      lastModalOpenAt = Date.now();
+
       const form = document.getElementById(`${type}-form`);
       if (form) form.reset();
       
@@ -2804,10 +2821,14 @@
   <script>
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', e => {
-        if (e.target === overlay) {
-          const type = overlay.id.replace('-modal', '');
-          closeModal(type);
-        }
+        if (e.target !== overlay) return;
+        // See the lastModalOpenAt comment above openModal() — skips a
+        // backdrop "click" that's really just the trailing half of the
+        // double-click gesture that opened this exact modal, so it isn't
+        // closed the instant it opens.
+        if (Date.now() - lastModalOpenAt < 400) return;
+        const type = overlay.id.replace('-modal', '');
+        closeModal(type);
       });
     });
   </script>

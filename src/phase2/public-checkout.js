@@ -156,6 +156,29 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
     return res.json({ valid: Boolean(row) });
   });
 
+  // Client-reported bug (11 Aug 2026, urgent — "Promo/referral discount
+  // doesn't apply"): the checkout promo code field had no Apply button and
+  // no way to trigger validation — entering a code and tabbing out gave no
+  // confirmation and no error either way, same complaint the share-code
+  // validate route above already solved for referral links. Mirrors that
+  // exact pattern for the checkout promo field: lets the frontend show a
+  // real "valid"/"not valid, here's why" message as soon as the customer
+  // leaves the field, using the same resolveCampaignPromoCode() check the
+  // checkout-session route re-runs anyway — so this is purely an early,
+  // friendlier preview, never the sole gate (checkout-session below still
+  // authoritatively re-validates before any Stripe session is created).
+  app.get('/api/public/promo/validate', async (req, res) => {
+    const code = String(req.query.code || '').trim();
+    const country = String(req.query.country || '').trim();
+    if (!code) return res.json({ valid: false });
+    try {
+      const campaign = await resolveCampaignPromoCode(supabase, code, country);
+      return res.json({ valid: Boolean(campaign) });
+    } catch (error) {
+      return res.json({ valid: false, message: error.message || 'That promo code is not valid.' });
+    }
+  });
+
   // Viral share loop (Tasks 1.7/1.8). Pre-payment shares unlock 10% off
   // immediately for the sharer; post-purchase shares create a link that
   // gives the next visitor 10% off at their own checkout.

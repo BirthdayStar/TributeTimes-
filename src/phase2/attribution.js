@@ -46,15 +46,40 @@ async function resolveFreeDemoAttribution({ supabase, promoCode }) {
 async function resolvePaidOrderAttribution({ supabase, promoCode, existingKeepsake, postcode, country }) {
   const code = normalizePromoCode(promoCode);
   if (code) {
-    const promo = await loadPromoCode(supabase, code);
-    return {
-      attributionSource: ATTRIBUTION_SOURCE.promoCode,
-      promoCodeId: promo.id,
-      salesConsultantId: promo.consultant_id || null,
-      territoryId: null,
-      promoCode: promo.code,
-      consultantName: promo.sales_consultants?.name || '',
-    };
+    // Client-reported bug (11 Aug 2026, URGENT — "Pay by Card does nothing"):
+    // loadPromoCode() here only recognises sales-consultant attribution
+    // codes (the `promo_codes` table with no code_type filter). It has no
+    // knowledge of customer-facing discount codes like "WELCOME20" — those
+    // are a separate concept, resolved later by resolveCampaignPromoCode()
+    // in public-checkout.js (code_type = 'campaign_single_use'), which
+    // already fails gracefully (returns null) when a code isn't a campaign
+    // code. Before this fix, any code that wasn't ALSO a recognised
+    // consultant code threw here and aborted checkout-session creation
+    // entirely — so typing a real, working customer promo code into the
+    // checkout box, or simply mistyping one, silently blocked payment with
+    // no Stripe redirect at all. Reproduced directly: same request without
+    // a promo code created a real Stripe session and redirected correctly;
+    // adding an unrecognised code made the whole request 400 before Stripe
+    // was ever contacted. A bad/unknown attribution code should only mean
+    // "no consultant credit for this order" — never "this customer can't
+    // pay" — so it now falls through to the same no-attribution outcome as
+    // if no code had been entered, instead of throwing. The actual
+    // customer-facing discount (resolveCampaignPromoCode) is untouched by
+    // this change and still applies (or still correctly rejects) exactly
+    // as before.
+    try {
+      const promo = await loadPromoCode(supabase, code);
+      return {
+        attributionSource: ATTRIBUTION_SOURCE.promoCode,
+        promoCodeId: promo.id,
+        salesConsultantId: promo.consultant_id || null,
+        territoryId: null,
+        promoCode: promo.code,
+        consultantName: promo.sales_consultants?.name || '',
+      };
+    } catch (error) {
+      console.warn(`Promo/attribution code "${code}" did not resolve to a sales-consultant code (${error.message}) — proceeding without consultant attribution.`);
+    }
   }
 
   if (existingKeepsake?.promo_code_id || existingKeepsake?.sales_consultant_id) {
