@@ -31,6 +31,7 @@ function renderMemorialNewspaper(data, content, fonts) {
   const {
     worldNews: rawWorldNews, localNews: rawLocalNews, sport, business,
     chart, prices, weather, ticker: rawTicker,
+    worldInNumbers, books,
     birthdays, astro, message,
   } = content;
 
@@ -54,11 +55,24 @@ function renderMemorialNewspaper(data, content, fonts) {
   const pricesHTML = prices.items.map(p => `
     <tr><td>${p.label}</td><td>${p.value}</td></tr>`).join('');
 
+  // ── WORLD IN NUMBERS / WHAT THEY WERE READING (fills the blank-space
+  // gap, Aug 2026) — see tribute-times-renderer.js for the full root
+  // cause and reasoning; identical fix applied here since this template
+  // generates and discards the exact same AI data. ──
+  // Reduced to 2 items / 1 item (10 Aug 2026) — see tribute-times-renderer.js.
+  const worldNumbersHTML = (worldInNumbers || []).slice(0, 2).map(n => `
+    <tr><td>${n.label}</td><td>${cleanTruncate(n.value, 40)}</td></tr>`).join('');
+  const booksHTML = (books || []).slice(0, 1).map(b => `
+    <div class="bday"><b>${b.title}</b> by ${b.author} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
+
   // ── ALSO BORN THIS DAY (reframed heading — see new_changes.md Step 12:
   // "Born On This Day" reads as present-tense trivia about someone who has
   // passed; the facts themselves stay, per client instruction, only the
   // heading changes) ──
-  const birthdaysHTML = birthdays.slice(0, 4).map((b, i) => `
+  // Reduced 4 → 3 (10 Aug 2026) — see tribute-times-renderer.js: 4 full
+  // entries can exceed this section's own height ceiling, confirmed
+  // against a real browser render, independent of the filler sections.
+  const birthdaysHTML = birthdays.slice(0, 3).map((b, i) => `
     <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── MUSIC CHART ──
@@ -86,8 +100,14 @@ function renderMemorialNewspaper(data, content, fonts) {
   const otd2Source = worldNews[2]?.body
     ? { label: 'World', year: worldNews[2].year, body: worldNews[2].body }
     : { label: 'Business', year: business[1]?.year, body: business[1]?.body || worldNews[2]?.headline || business[1]?.headline || '' };
+  // Client-reported bug (10 Aug 2026, Mick Jagger/UK test): this item was
+  // always labelled with the keepsake's selected country regardless of
+  // what the underlying fact was actually about — see the identical fix
+  // and full explanation in tribute-times-renderer.js. Prefers the AI's
+  // own per-item "country" field, falling back to the keepsake's country
+  // when absent (e.g. older cached content saved before this fix).
   const otd3Source = localNews[1]?.body
-    ? { label: country, year: localNews[1].year, body: localNews[1].body }
+    ? { label: localNews[1].country || country, year: localNews[1].year, body: localNews[1].body }
     : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
   const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
@@ -183,7 +203,9 @@ function renderMemorialNewspaper(data, content, fonts) {
     box-shadow: 0 4px 24px rgba(0,0,0,.45);
     overflow: hidden;                  /* the hard guarantee */
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: 8.4pt;
+    /* Bumped 8.4pt -> 8.8pt (10 Aug 2026) — see tribute-times-renderer.js
+       for the full reasoning. */
+    font-size: 8.8pt;
     line-height: 1.28;
     display: flex;
     flex-direction: column;
@@ -341,17 +363,24 @@ function renderMemorialNewspaper(data, content, fonts) {
     display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
 
-  .s-news1     { max-height: 70mm; flex: 1 1 auto; }
-  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 1 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
-  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-onthisday { max-height: 54mm; flex: 1 1 auto; }
-  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-charts    { max-height: 44mm; flex: 1 1 auto; }
-  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 1 auto; }
+  /* See tribute-times-renderer.js for the full mechanism/reasoning behind
+     flex-shrink:0 on core sections vs flex-shrink:1 on the new filler
+     sections (10 Aug 2026 fix — a client screenshot showed Born On This
+     Day and What They Were Reading both clipped mid-line after the
+     filler sections were first added). */
+  .s-news1     { max-height: 70mm; flex: 1 0 auto; }
+  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 0 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
+  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; }
+  .s-worldnumbers { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  .s-onthisday { max-height: 54mm; flex: 1 0 auto; }
+  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-books     { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  .s-charts    { max-height: 44mm; flex: 1 0 auto; }
+  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 0 auto; }
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -449,6 +478,13 @@ function renderMemorialNewspaper(data, content, fonts) {
           ${pricesHTML}
         </table>
       </section>
+      ${worldNumbersHTML ? `
+      <section class="s-worldnumbers">
+        <h3>The World in Numbers</h3>
+        <table class="datatable" data-field="worldnumbers-table">
+          ${worldNumbersHTML}
+        </table>
+      </section>` : ''}
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
@@ -470,6 +506,11 @@ function renderMemorialNewspaper(data, content, fonts) {
         <h3>Also Born This Day</h3>
         ${birthdaysHTML}
       </section>
+      ${booksHTML ? `
+      <section class="s-books">
+        <h3>What They Were Reading</h3>
+        ${booksHTML}
+      </section>` : ''}
     </div>
 
     <!-- ============ COLUMN 3 ============ -->

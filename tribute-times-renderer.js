@@ -26,6 +26,12 @@ const SENTENCE_ABBREVIATIONS = new Set([
   'dr', 'mr', 'mrs', 'ms', 'prof', 'st', 'sr', 'jr', 'rev', 'capt', 'gen',
   'sgt', 'lt', 'col', 'sen', 'gov', 'rep', 'no', 'vol', 'vs', 'etc', 'ft',
   'ave', 'blvd', 'inc', 'ltd', 'co', 'approx',
+  // Dotted multi-letter abbreviations (period stripped before lookup —
+  // see the updated regex in cleanTruncate below). Common in AI-generated
+  // world/history content: "a runaway U.S. bestseller" was silently
+  // truncated to "...a runaway U.S." with no ellipsis, because "U.S."
+  // was misread as ending a sentence.
+  'us', 'usa', 'uk', 'un', 'eu', 'dc', 'ussr',
 ]);
 
 // Occasions where the date field genuinely represents, and should be
@@ -53,9 +59,21 @@ function cleanTruncate(text, maxLength) {
     // Skip false sentence-ends caused by an abbreviation immediately
     // before the period (e.g. "...and Dr. Strangelove" — the word right
     // before this "." is "Dr", not the end of a real sentence).
+    // Found 10 Aug 2026 (real report, reproduced exactly — not assumed):
+    // "...a runaway U.S. bestseller." got silently truncated to "...a
+    // runaway U.S." with no ellipsis at all, because the old regex
+    // (`/([A-Za-z]+)$/`) can only ever capture a single unbroken run of
+    // letters — for a dotted abbreviation like "U.S." (letters separated
+    // by their own periods), that means it only ever sees the lone "S"
+    // right before the match, never "U.S" as a whole, so it can never
+    // match anything in the abbreviation set and the period gets treated
+    // as a genuine, silent sentence end. The new regex also captures any
+    // preceding single-letter-plus-period groups (`U.` `S.` etc.), and
+    // periods are stripped before the set lookup, so "U.S" correctly
+    // normalises to "us" and matches.
     const precedingText = str.slice(0, match.index);
-    const wordMatch = precedingText.match(/([A-Za-z]+)$/);
-    const precedingWord = wordMatch ? wordMatch[1].toLowerCase() : '';
+    const wordMatch = precedingText.match(/(?:[A-Za-z]\.)*[A-Za-z]+$/);
+    const precedingWord = wordMatch ? wordMatch[0].replace(/\./g, '').toLowerCase() : '';
     if (SENTENCE_ABBREVIATIONS.has(precedingWord)) continue;
 
     lastSentenceIndex = endIndex;
@@ -72,8 +90,11 @@ function cleanTruncate(text, maxLength) {
   let lastSpace = sliced.lastIndexOf(' ');
   if (lastSpace > 0) {
     let candidate = sliced.slice(0, lastSpace).trim();
-    const lastWord = candidate.match(/([A-Za-z]+)\.?$/);
-    if (lastWord && SENTENCE_ABBREVIATIONS.has(lastWord[1].toLowerCase())) {
+    // Same dotted-abbreviation fix as above — a trailing "U.S" needs the
+    // fuller regex to be recognised as one abbreviation, not just its
+    // last letter.
+    const lastWord = candidate.match(/(?:[A-Za-z]\.)*[A-Za-z]+\.?$/);
+    if (lastWord && SENTENCE_ABBREVIATIONS.has(lastWord[0].replace(/\./g, '').toLowerCase())) {
       const priorSpace = candidate.lastIndexOf(' ');
       if (priorSpace > 0) candidate = candidate.slice(0, priorSpace).trim();
     }
@@ -229,11 +250,66 @@ function renderNewspaper(data, content, fonts) {
   const pricesHTML = prices.items.map(p => `
     <tr><td>${p.label}</td><td>${p.value}</td></tr>`).join('');
 
+  // ── WORLD IN NUMBERS (fills the blank-space gap, Aug 2026) ──
+  // Client-reported bug (raised repeatedly — new_changes.md #1, and again
+  // after the max-height/flex fix): sections still come in short enough,
+  // often enough, to leave a visible empty patch. Every previous attempt
+  // fixed this by adjusting how much room a section is ALLOWED to take
+  // (CSS ceilings, flex growth) or asking the AI to write more — neither
+  // actually puts more real content on the page when the AI's answer is
+  // genuinely short that run. Investigating properly this time surfaced
+  // something simpler: the AI has been generating a full "World in
+  // Numbers" panel (7 real stats) and 3 book recommendations on every
+  // single request, in every occasion type, this entire engagement — and
+  // none of it was ever rendered anywhere. That's real, already-paid-for
+  // content sitting unused while the page shows gaps.
+  // This section and "What They Were Reading" below are deliberately new
+  // additions, not edits to any existing section's markup or the AI
+  // prompt's length guidance — no risk to anything already fixed and
+  // verified. Column 1 (long-form news paragraphs) and Column 2 (three
+  // On This Day paragraphs + a personal message) are where AI text-length
+  // variance actually shows up as a visible gap; Column 3 is almost
+  // entirely fixed-format content (chart list, one-line weather, a static
+  // per-star-sign horoscope) and isn't where this bug occurs, so it's
+  // deliberately left untouched.
+  // Both new sections use `flex: 1 1 auto` like every other section in
+  // the column, so they only draw on space genuinely left over after the
+  // existing content — on a page that's already full, they simply have
+  // little to no room to grow into (and the column's `overflow: hidden`
+  // guarantee still caps the worst case), so this cannot push the layout
+  // past one page.
+  // Kept to 2 items (was 3) and the "What They Were Reading" item below
+  // to 1 (was 2) after the client's screenshot showed BOTH new filler
+  // sections outgrowing their own boxes — see the CSS comment above for
+  // the full mechanism. Fewer items means less natural content height,
+  // so there's real margin against the max-height ceiling instead of
+  // sitting right at it.
+  const worldNumbersHTML = (worldInNumbers || []).slice(0, 2).map(n => `
+    <tr><td>${n.label}</td><td>${cleanTruncate(n.value, 40)}</td></tr>`).join('');
+
   // ── BORN ON THIS DAY ──
   // The 120-char budget was written against a 120-char AI prompt spec, not
   // against what actually fits the 2-line clamp box (measured ~87 chars).
-  const birthdaysHTML = birthdays.slice(0, 4).map((b, i) => `
+  // Found 10 Aug 2026, from the client's own screenshot: 4 full-length
+  // entries (each up to 2 clamped lines) genuinely exceeds this section's
+  // 52mm ceiling once notes are realistically long — confirmed against
+  // an actual browser render, not just arithmetic (a rough mm/pt estimate
+  // said 4 should fit; the real renderer disagreed, so the real renderer
+  // is what was trusted). This was a pre-existing gap, unrelated to the
+  // filler sections added the same day — reproduced with zero filler
+  // content present. Reduced to 3, which rendered cleanly with real
+  // (not shortened) note text in the same test.
+  const birthdaysHTML = birthdays.slice(0, 3).map((b, i) => `
     <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
+
+  // ── WHAT THEY WERE READING (fills the blank-space gap, Aug 2026) ──
+  // See the World in Numbers comment above — same fix, same reasoning,
+  // reusing the AI's own already-generated (and previously discarded)
+  // book recommendations. Reuses the existing `.bday` line style so no
+  // new CSS rule is needed for the row markup itself, only for the
+  // section's own height/flex budget.
+  const booksHTML = (books || []).slice(0, 1).map(b => `
+    <div class="bday"><b>${b.title}</b> by ${b.author} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── MUSIC CHART ──
   // Single-line ellipsis truncation (white-space:nowrap + text-overflow)
@@ -294,8 +370,20 @@ function renderNewspaper(data, content, fonts) {
   const otd2Source = worldNews[2]?.body
     ? { label: 'World', year: worldNews[2].year, body: worldNews[2].body }
     : { label: 'Business', year: business[1]?.year, body: business[1]?.body || worldNews[2]?.headline || business[1]?.headline || '' };
+  // Client-reported bug (10 Aug 2026, Mick Jagger/UK test): this item was
+  // always labelled with the keepsake's selected country regardless of
+  // what the underlying fact was actually about — e.g. a genuinely
+  // American event (the US Dept of Justice founding its Bureau of
+  // Investigation) got shown as "United Kingdom, 1908". The fact itself
+  // was correct, only the country tag was wrong — a separate bug from the
+  // Famous Birthdays fix, which is about person-country matching, not
+  // trivia-item country tagging. Now prefers the AI's own per-item
+  // "country" field (added to the prompt/schema alongside this fix) and
+  // only falls back to the keepsake's country when that field is absent,
+  // so older cached content (saved before this fix) still renders exactly
+  // as before rather than showing "undefined".
   const otd3Source = localNews[1]?.body
-    ? { label: country, year: localNews[1].year, body: localNews[1].body }
+    ? { label: localNews[1].country || country, year: localNews[1].year, body: localNews[1].body }
     : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
   const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
@@ -443,7 +531,18 @@ function renderNewspaper(data, content, fonts) {
     box-shadow: 0 4px 24px rgba(0,0,0,.45);
     overflow: hidden;                  /* the hard guarantee */
     font-family: 'EB Garamond', Georgia, serif;
-    font-size: 8.4pt;
+    /* Bumped 8.4pt -> 8.8pt (10 Aug 2026, requested directly, "lighter"
+       increase) — this is the one base size everything without its own
+       explicit font-size inherits (story bodies, table cells, birthday/
+       book descriptions, horoscope, weather, etc.), so a single isolated
+       change here raises all of that body text uniformly without
+       touching any heading, banner, or ticker size that already has its
+       own deliberately-tuned explicit value. A modest, real side benefit:
+       the same amount of text now takes a little more vertical room,
+       which also narrows the empty-space gaps reported the same day —
+       not a substitute for the layout fix above, just a genuine, welcome
+       side effect of showing the text a bit larger. */
+    font-size: 8.8pt;
     line-height: 1.28;
     display: flex;
     flex-direction: column;
@@ -620,17 +719,44 @@ function renderNewspaper(data, content, fonts) {
      section instead of concentrating it as one large void at the very
      bottom of the column, which read as a rendering mistake rather than
      intentional whitespace. */
-  .s-news1     { max-height: 70mm; flex: 1 1 auto; }
-  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 1 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
-  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-onthisday { max-height: 54mm; flex: 1 1 auto; }
-  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-charts    { max-height: 44mm; flex: 1 1 auto; }
-  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 1 auto; }
-  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 1 auto; }
+  /* Found 10 Aug 2026, from the client's own screenshot after the "fill
+     the gap" fix above: every section here used flex: 1 1 auto — grow
+     AND shrink. Adding the two new filler sections gave each column one
+     more sibling competing for the same fixed height, and overflow:
+     hidden on a flex item switches its effective minimum size to 0 (a
+     real, if obscure, CSS rule) — so when a column's total natural
+     content height ran tight, the browser shrank an ORIGINAL section
+     (Born On This Day, in the reported case) below its own content's
+     real height, and overflow: hidden clipped it mid-line with no
+     ellipsis, no warning, nothing. That's a strictly worse failure mode
+     than the blank space it replaced.
+     Fix: every pre-existing "core" section below is now flex: 1 0 auto
+     — can still grow into extra space, but flex-shrink:0 means it can
+     never be squeezed below its own natural content height again,
+     regardless of what else shares the column. Only the two new filler
+     sections keep flex-shrink (1 1 auto) — if a column is genuinely
+     full, THEY give way first, never the client's actual content. */
+  .s-news1     { max-height: 70mm; flex: 1 0 auto; }
+  .s-news2     { max-height: 58mm; margin-top: 3mm; flex: 1 0 auto; border-top: .25mm solid #1a1712; padding-top: 2mm; }
+  .s-prices    { max-height: 50mm; margin-top: 3mm; flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; }
+  /* New, small "filler" sections (Aug 2026 blank-space fix) — kept
+     genuinely shrinkable (see comment above) and capped to a small,
+     conservative item count each, so they need very little room and are
+     the first (and only) thing to give way on a tight page. Vertically
+     centered so any leftover height around them reads as deliberate
+     spacing, not an orphaned gap below the content. Omitted from the
+     HTML entirely (see worldNumbersHTML/booksHTML above) when there's no
+     data, so an empty section box is never rendered. */
+  .s-worldnumbers { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  .s-onthisday { max-height: 54mm; flex: 1 0 auto; }
+  .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-books     { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  .s-charts    { max-height: 44mm; flex: 1 0 auto; }
+  .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 0 auto; }
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -727,6 +853,13 @@ function renderNewspaper(data, content, fonts) {
           ${pricesHTML}
         </table>
       </section>
+      ${worldNumbersHTML ? `
+      <section class="s-worldnumbers">
+        <h3>The World in Numbers</h3>
+        <table class="datatable" data-field="worldnumbers-table">
+          ${worldNumbersHTML}
+        </table>
+      </section>` : ''}
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
@@ -748,6 +881,11 @@ function renderNewspaper(data, content, fonts) {
         <h3>${birthdaysHeading}</h3>
         ${birthdaysHTML}
       </section>
+      ${booksHTML ? `
+      <section class="s-books">
+        <h3>What They Were Reading</h3>
+        ${booksHTML}
+      </section>` : ''}
     </div>
 
     <!-- ============ COLUMN 3 ============ -->

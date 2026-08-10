@@ -29,6 +29,7 @@ const { createGenerateRateLimiter } = require('./src/phase2/rate-limit');
 const { extractAnthropicUsage, estimateAnthropicCostUsd, logAnthropicUsage } = require('./src/phase2/anthropic-usage');
 const { SOURCE_PORTALS, PAYMENT_STATUS, QUEUE_STATUS, ATTRIBUTION_SOURCE, WATERMARK_STATUS } = require('./src/phase2/constants');
 const { queryApprovedFamousBirthdays, normalizeCountry } = require('./src/phase2/famous-birthdays');
+const { fetchHistoricalWeather } = require('./src/phase2/historical-weather');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -347,6 +348,25 @@ module.exports = function(app, { supabase, sendEmail, buildFloristLowCreditEmail
         if (supabase && contentIsFreshAiJson) {
           await saveCachedContent(supabase, contentCacheKey, { day, month, year, country, occasion, edition: normalizedEdition }, content);
         }
+      }
+
+      // ── REAL HISTORICAL WEATHER (replaces AI-invented weather) ──
+      // Client-reported bug (10 Aug 2026 punch list): same category as the
+      // famous-birthdays fix — the weather panel must come from a verified
+      // data source, not AI-composed seasonal text. Applied after content
+      // is resolved (cache/AI/fallback all share the same {icon, temp,
+      // condition, season} shape used by every renderer) so it overrides
+      // stale AI weather even on a cache hit, without needing to
+      // invalidate or re-save the cached entry. If the lookup fails or the
+      // date has no archive coverage, content.weather is left untouched —
+      // isolated and non-breaking.
+      try {
+        const realWeather = await fetchHistoricalWeather({ day, month, year, country });
+        if (realWeather) {
+          content.weather = realWeather;
+        }
+      } catch (weatherError) {
+        console.warn('Historical weather lookup failed, keeping existing weather content:', weatherError.message);
       }
 
       // ── RENDER HTML ── (In Loving Memory and couple occasions each use

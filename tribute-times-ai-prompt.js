@@ -88,7 +88,7 @@ ${country.toUpperCase()} NEWS — On This Day:
 - Return 3-4 items. The FIRST item's "year" field MUST be exactly ${year} (same hard rule as the world news lead story above — this is displayed directly under the main headline as more of "this exact date" reporting, not trivia). If nothing globally notable happened in ${country} on that exact date, use a smaller but REAL, verifiable local event from that exact date instead — never substitute a different year. Same tone rule as above: do not default to "the day you were born" phrasing unless this occasion is actually about a birth.
 - The remaining items (index 1 onward) are "on this day in history" trivia from different years, all on ${day}th ${monthName(month)} — this varied-year trivia format is intentional for these only.
 - Must be genuinely relevant to ${country} — local events, not international
-- Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence)
+- Each item: year, short headline, body (no more than 220 characters, ending on a complete sentence), AND a "country" field naming the country the event actually took place in. This will almost always be "${country}" — but if you include a regional/Commonwealth/international event because nothing purely domestic fits (see the rule below), set "country" to where that event genuinely happened, not "${country}". This keepsake is displayed with a per-event country label, so a Bureau-of-Investigation-in-Washington-style event must never be labelled with a country it didn't happen in.
 - If ${country} is a smaller nation, include regional/Commonwealth events that affected it
 
 SPORT — On This Day (any year):
@@ -193,7 +193,8 @@ RETURN THIS EXACT JSON STRUCTURE
       "year": 1931,
       "headline": "string",
       "body": "string — 25-40 words",
-      "size": "lg|md|sm|xs"
+      "size": "lg|md|sm|xs",
+      "country": "string — the country this specific event actually happened in, usually ${country}"
     }
   ],
   "sport": [

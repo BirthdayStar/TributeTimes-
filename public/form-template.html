@@ -1303,7 +1303,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
       </div>
       <div class="field">
         <label>Promo Code (optional)</label>
-        <input type="text" id="checkoutPromoCode" placeholder="Enter promo code if you have one" autocomplete="off" oninput="updatePurchaseNote()" />
+        <input type="text" id="checkoutPromoCode" placeholder="Enter promo code if you have one" autocomplete="off" oninput="updatePurchaseNote()" onblur="validateCheckoutPromoCode()" />
       </div>
       <div class="field public-only" id="payment-method-field">
         <label>Payment Method</label>
@@ -1683,7 +1683,7 @@ function updatePurchaseNote(extraMessage) {
     return;
   }
 
-  const total = getSelectedTotal().toFixed(2);
+  const total = getSelectedTotal();
   const tierLabel = PUBLIC_PRODUCT_LABELS[selectedProductTier] || 'Digital';
   const delivery = needsShippingForTier(selectedProductTier)
     ? ` Delivery: ${formatDeliveryLabel(getDeliveryOption())}.`
@@ -1691,7 +1691,54 @@ function updatePurchaseNote(extraMessage) {
   const method = getPaymentMethod() === 'gcash'
     ? ' Payment: GCash manual verification.'
     : ' Payment: card using secure Stripe checkout.';
-  note.textContent = `Selected option: ${tierLabel}. Total today: NZ$${total}.${delivery}${method}`;
+  // Client-reported bug (11 Aug 2026): activating the referral discount
+  // ("Share & Save 10%") never changed the total shown here — the banner
+  // said "10% off applied" but this note still showed the full price with
+  // no visible change. activeReferralCode is only ever set after a real,
+  // server-confirmed discount (see initViralShareBanner / unlockShareDiscount
+  // below), so it's safe to reflect the known 10% here. A manually-typed
+  // promo code is deliberately NOT folded into this total — its discount
+  // amount lives only in Stripe's coupon config, not here, so rather than
+  // invent a number this can't verify, validateCheckoutPromoCode() below
+  // gives a real valid/not-valid confirmation instead.
+  const totalText = activeReferralCode
+    ? `NZ$${(total * 0.9).toFixed(2)} (10% off applied, was NZ$${total.toFixed(2)})`
+    : `NZ$${total.toFixed(2)}`;
+  note.textContent = `Selected option: ${tierLabel}. Total today: ${totalText}.${delivery}${method}`;
+}
+
+// Client-reported bug (11 Aug 2026, urgent): the promo code field had no
+// Apply button and no way to trigger validation — typing a code and
+// tabbing out gave no confirmation and no error either way, so a customer
+// had no idea whether their code would do anything until (or unless) they
+// completed a full checkout attempt. Fires on blur, using the same
+// lightweight check the share-link banner already uses for referral codes
+// (see initViralShareBanner) — mirrors that exact pattern for consistency.
+// This is a preview only: checkout-session still authoritatively
+// re-validates the code server-side before any Stripe session is created,
+// so this can never let an invalid code slip through to payment, and a
+// network hiccup here never blocks the customer from still clicking Pay.
+async function validateCheckoutPromoCode() {
+  const code = getCheckoutPromoCodeValue();
+  if (!code) {
+    updatePurchaseNote();
+    return;
+  }
+
+  try {
+    const country = document.getElementById('country')?.value || '';
+    const response = await fetch(`/api/public/promo/validate?code=${encodeURIComponent(code)}&country=${encodeURIComponent(country)}`);
+    const result = await response.json();
+    if (result.valid) {
+      updatePurchaseNote('Promo code looks good — the discount will be applied at Stripe checkout.');
+    } else {
+      updatePurchaseNote(result.message || 'That promo code is not valid. You can still pay full price, or fix the code.');
+    }
+  } catch (error) {
+    // Don't block or alarm the customer over a network hiccup checking the
+    // code — checkout-session re-validates it for real regardless.
+    updatePurchaseNote();
+  }
 }
 
 function updatePurchaseModeUi() {
