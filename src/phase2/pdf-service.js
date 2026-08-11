@@ -72,7 +72,13 @@ async function resolveBrowserLaunchOptions() {
     };
   }
 
-  const chromium = require('@sparticuz/chromium');
+  // @sparticuz/chromium ships as an ESM module — required via CommonJS
+  // require() like this, its real API lands under `.default`, not on the
+  // top-level object itself (confirmed directly: the bare require() only
+  // exposes `__esModule`/`default`/`inflate`/`setupLambdaEnvironment`,
+  // which is exactly why `chromium.executablePath` came back as "not a
+  // function" the first time — it genuinely wasn't there yet).
+  const chromium = require('@sparticuz/chromium').default;
   return {
     executablePath: await chromium.executablePath(),
     args: chromium.args,
