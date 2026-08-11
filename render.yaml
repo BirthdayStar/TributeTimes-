@@ -3,20 +3,20 @@ services:
     name: tribute-times
     env: node
     plan: free
-    # `npm install` alone never downloads Playwright's actual browser
-    # binary — that's a separate step. Without it, PDF generation
-    # (src/phase2/pdf-service.js) has no browser to launch on this Linux
-    # server (its own path list only ever checks Windows locations, which
-    # is why "Download PDF" worked in local dev but not here). This is
-    # the one missing step, not a code bug — found 11 Aug 2026.
-    # Strengthened same day: the live error was specifically
-    # "chromium_headless_shell... Executable doesn't exist" — Playwright
-    # 1.54 downloads a separate lightweight "headless shell" binary
-    # alongside the full browser, and also needs a handful of Linux
-    # system libraries (libnss3, libatk, etc.) to actually launch, which
-    # `--with-deps` installs. Without `--with-deps`, the browser binary
-    # can download successfully but still fail to launch at runtime.
-    buildCommand: npm install && npx playwright install --with-deps chromium
+    # History (11 Aug 2026): PDF generation used Playwright, which needs a
+    # separate browser download during the build (`npx playwright install
+    # ...`). That download reliably hung for 20+ minutes on Render's
+    # free-tier build resources — tried the full browser, `--with-deps`
+    # (blocked outright, needs root Render doesn't grant), and the smaller
+    # headless-shell-only target — all hung or failed the same way. Not a
+    # one-off fluke; a real limitation of this build environment.
+    # Switched PDF generation to puppeteer-core + @sparticuz/chromium
+    # instead (see src/phase2/pdf-service.js) — that package ships its
+    # Chromium build already inside the npm package itself (pre-compressed,
+    # no separate download step), so it comes down as part of this same
+    # plain `npm install`, which has succeeded quickly in every build log
+    # so far. No special build command needed any more.
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: ANTHROPIC_API_KEY

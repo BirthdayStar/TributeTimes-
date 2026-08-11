@@ -4,8 +4,18 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { chromium } = require('playwright');
+const puppeteer = require('puppeteer-core');
 
+// Switched from Playwright to puppeteer-core + @sparticuz/chromium, 11 Aug
+// 2026. Root cause of the switch: Playwright needs a separate browser
+// download during the build (`npx playwright install ...`), and on
+// Render's free-tier build resources that download reliably hung for
+// 20+ minutes, twice, even after narrowing it down to just the smaller
+// "headless shell" target — a real, repeatable platform limitation, not
+// a one-off fluke. @sparticuz/chromium ships its Chromium build already
+// inside the npm package itself (pre-compressed, ~65MB), so it comes down
+// as part of the normal `npm install` that has worked reliably in every
+// build log we've seen — no separate download step, nothing to hang on.
 const DEFAULT_BROWSER_CANDIDATES = [
   process.env.PDF_BROWSER_PATH,
   process.env.CHROME_PATH,
@@ -13,13 +23,6 @@ const DEFAULT_BROWSER_CANDIDATES = [
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  // Found 11 Aug 2026: this list was Windows-only, so on the actual
-  // Linux production server it never finds anything, leaving Playwright
-  // to fall back to its own bundled Chromium (see render.yaml for the
-  // real fix — ensuring that bundled browser is actually downloaded).
-  // These are purely an additional, defensive fallback in case a system
-  // browser is ever available on the server through some other means;
-  // they don't change anything about the existing Windows-path behaviour.
   '/usr/bin/google-chrome-stable',
   '/usr/bin/google-chrome',
   '/usr/bin/chromium-browser',
@@ -39,7 +42,7 @@ function sanitizeFilenamePart(value) {
     .slice(0, 60) || 'keepsake';
 }
 
-async function findBrowserExecutable() {
+async function findSystemBrowserExecutable() {
   for (const candidate of DEFAULT_BROWSER_CANDIDATES) {
     try {
       await fs.access(candidate);
@@ -50,6 +53,31 @@ async function findBrowserExecutable() {
   }
 
   return null;
+}
+
+// Prefers a real system browser when one is actually present (local dev
+// on Windows, or any host that happens to have Chrome/Chromium already
+// installed) — unchanged behaviour from before. Falls back to
+// @sparticuz/chromium's bundled build otherwise, which is the expected,
+// reliable path on Render. @sparticuz/chromium's binary is Linux-only, so
+// this fallback is only ever reached on a Linux host with no system
+// browser — exactly the production case it's meant for.
+async function resolveBrowserLaunchOptions() {
+  const systemPath = await findSystemBrowserExecutable();
+  if (systemPath) {
+    return {
+      executablePath: systemPath,
+      args: [],
+      source: 'system',
+    };
+  }
+
+  const chromium = require('@sparticuz/chromium');
+  return {
+    executablePath: await chromium.executablePath(),
+    args: chromium.args,
+    source: '@sparticuz/chromium',
+  };
 }
 
 function ensurePdfHtml(html) {
@@ -69,8 +97,12 @@ function ensurePdfHtml(html) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/>${printableCss}</head><body>${html}</body></html>`;
 }
 
+// Same fitting logic as before, verbatim — only the two Playwright-only
+// API calls around it (setViewportSize) changed to their puppeteer-core
+// equivalents (setViewport) at the call site below. This function itself
+// is engine-agnostic (just DOM/page.evaluate work).
 async function fitNewspaperToSingleA4Page(page) {
-  await page.setViewportSize(A4_PORTRAIT_PX);
+  await page.setViewport(A4_PORTRAIT_PX);
 
   return page.evaluate(({ width, height }) => {
     const target = document.getElementById('star') || document.body;
@@ -153,7 +185,7 @@ async function generatePdfFromHtml({ html, fileStem = 'tribute-times-keepsake', 
     throw new Error('Printable keepsake HTML is required to generate a PDF.');
   }
 
-  const browserPath = await findBrowserExecutable();
+  const { executablePath: browserPath, args: engineArgs } = await resolveBrowserLaunchOptions();
   const artifactId = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const safeStem = sanitizeFilenamePart(fileStem);
   const tempDir = path.join(os.tmpdir(), 'tribute-times-phase2-pdf');
@@ -167,11 +199,11 @@ async function generatePdfFromHtml({ html, fileStem = 'tribute-times-keepsake', 
     await fs.writeFile(htmlFilePath, finalHtml, 'utf8');
   }
 
-  const browser = await chromium.launch({
-    ...(browserPath ? { executablePath: browserPath } : {}),
+  const browser = await puppeteer.launch({
+    executablePath: browserPath,
     headless: true,
-    timeout: 0,
     args: [
+      ...engineArgs,
       '--no-first-run',
       '--disable-gpu',
       '--disable-dev-shm-usage',
@@ -181,19 +213,32 @@ async function generatePdfFromHtml({ html, fileStem = 'tribute-times-keepsake', 
 
   try {
     const page = await browser.newPage();
-    await page.emulateMedia({ media: 'print' });
-    await page.route('**/*', route => {
-      const resourceUrl = route.request().url();
+    await page.emulateMediaType('print');
+    // Same network-blocking intent as the old Playwright `page.route`
+    // guard (this HTML is fully self-contained — fonts/images are
+    // inlined as data URIs — so any http(s) request here would only ever
+    // be an unexpected external call, not a real asset the page needs).
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const resourceUrl = req.url();
       if (resourceUrl.startsWith('http://') || resourceUrl.startsWith('https://')) {
-        route.abort().catch(() => {});
+        req.abort().catch(() => {});
         return;
       }
-      route.continue().catch(() => {});
+      req.continue().catch(() => {});
     });
     await page.setContent(finalHtml, { waitUntil: 'load', timeout: 0 });
     const fit = await fitNewspaperToSingleA4Page(page);
 
-    const pdfBuffer = await page.pdf({
+    // This puppeteer-core version returns a plain Uint8Array here, not a
+    // Node Buffer (Playwright's page.pdf() returned a real Buffer, which
+    // is why this wasn't needed before the switch). Express's res.send()
+    // only sends raw binary for an actual Buffer instance — anything else
+    // falls through to its JSON-body path, which is exactly what
+    // happened here first: the "PDF" download came back as a byte-index
+    // JSON object instead of a real file. Wrapping it fixes that at the
+    // source, once, rather than in every caller.
+    const rawPdfOutput = await page.pdf({
       format: 'A4',
       printBackground: true,
       preferCSSPageSize: true,
@@ -205,6 +250,7 @@ async function generatePdfFromHtml({ html, fileStem = 'tribute-times-keepsake', 
         left: '0',
       },
     });
+    const pdfBuffer = Buffer.from(rawPdfOutput);
 
     await fs.writeFile(pdfFilePath, pdfBuffer);
 
