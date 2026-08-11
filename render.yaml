@@ -9,7 +9,14 @@ services:
     # server (its own path list only ever checks Windows locations, which
     # is why "Download PDF" worked in local dev but not here). This is
     # the one missing step, not a code bug — found 11 Aug 2026.
-    buildCommand: npm install && npx playwright install chromium
+    # Strengthened same day: the live error was specifically
+    # "chromium_headless_shell... Executable doesn't exist" — Playwright
+    # 1.54 downloads a separate lightweight "headless shell" binary
+    # alongside the full browser, and also needs a handful of Linux
+    # system libraries (libnss3, libatk, etc.) to actually launch, which
+    # `--with-deps` installs. Without `--with-deps`, the browser binary
+    # can download successfully but still fail to launch at runtime.
+    buildCommand: npm install && npx playwright install --with-deps chromium
     startCommand: npm start
     envVars:
       - key: ANTHROPIC_API_KEY
