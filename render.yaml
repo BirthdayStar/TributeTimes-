@@ -3,7 +3,13 @@ services:
     name: tribute-times
     env: node
     plan: free
-    buildCommand: npm install
+    # `npm install` alone never downloads Playwright's actual browser
+    # binary — that's a separate step. Without it, PDF generation
+    # (src/phase2/pdf-service.js) has no browser to launch on this Linux
+    # server (its own path list only ever checks Windows locations, which
+    # is why "Download PDF" worked in local dev but not here). This is
+    # the one missing step, not a code bug — found 11 Aug 2026.
+    buildCommand: npm install && npx playwright install chromium
     startCommand: npm start
     envVars:
       - key: ANTHROPIC_API_KEY

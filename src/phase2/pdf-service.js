@@ -13,6 +13,17 @@ const DEFAULT_BROWSER_CANDIDATES = [
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  // Found 11 Aug 2026: this list was Windows-only, so on the actual
+  // Linux production server it never finds anything, leaving Playwright
+  // to fall back to its own bundled Chromium (see render.yaml for the
+  // real fix — ensuring that bundled browser is actually downloaded).
+  // These are purely an additional, defensive fallback in case a system
+  // browser is ever available on the server through some other means;
+  // they don't change anything about the existing Windows-path behaviour.
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/chromium',
 ].filter(Boolean);
 
 const A4_PORTRAIT_PX = {

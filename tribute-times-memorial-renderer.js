@@ -62,8 +62,9 @@ function renderMemorialNewspaper(data, content, fonts) {
   // Reduced to 2 items / 1 item (10 Aug 2026) — see tribute-times-renderer.js.
   const worldNumbersHTML = (worldInNumbers || []).slice(0, 2).map(n => `
     <tr><td>${n.label}</td><td>${cleanTruncate(n.value, 40)}</td></tr>`).join('');
+  // Title/author bounded, 11 Aug 2026 — see tribute-times-renderer.js.
   const booksHTML = (books || []).slice(0, 1).map(b => `
-    <div class="bday"><b>${b.title}</b> by ${b.author} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
+    <div class="bday"><b>${cleanTruncate(b.title, 45)}</b> by ${cleanTruncate(b.author, 25)} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── ALSO BORN THIS DAY (reframed heading — see new_changes.md Step 12:
   // "Born On This Day" reads as present-tense trivia about someone who has
@@ -128,8 +129,9 @@ function renderMemorialNewspaper(data, content, fonts) {
   const finalMessage = cleanTruncate(personalMessage ? personalMessage.trim() : (message || ''), 260);
 
   // ── NEWS STORIES TRUNCATION ──
-  const news1Body = cleanTruncate(worldNews[0]?.body || '', 235);
-  const news2Body = cleanTruncate(localNews[0]?.body || '', 235);
+  // Raised 235 -> 295 (11 Aug 2026) — see tribute-times-renderer.js.
+  const news1Body = cleanTruncate(worldNews[0]?.body || '', 295);
+  const news2Body = cleanTruncate(localNews[0]?.body || '', 295);
 
   // ── REFLECTION PANEL (replaces the horoscope box — a memorial keepsake
   // has no reason to carry a birthday-style horoscope reading) ──
@@ -357,6 +359,14 @@ function renderMemorialNewspaper(data, content, fonts) {
   .clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp6 { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+  /* Used only by news1-body/news2-body — see tribute-times-renderer.js
+     (11 Aug 2026) for the full reasoning. */
+  /* Line-height raised 1.28 -> 1.45 (11 Aug 2026) — see
+     tribute-times-renderer.js. Only affects news1-body/news2-body. */
+  /* Split into two, 11 Aug 2026 — see tribute-times-renderer.js. Each
+     class used by exactly one field. */
+  .clamp8a { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; line-height: 1.55; }
+  .clamp8b { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; line-height: 1.8; }
   .story-head {
     font-family:'Playfair Display', serif; font-weight:700; font-size:10.5pt; line-height:1.1;
     margin-bottom:1mm;
@@ -375,7 +385,8 @@ function renderMemorialNewspaper(data, content, fonts) {
   .s-onthisday { max-height: 54mm; flex: 1 0 auto; }
   .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-books     { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  /* Raised 20mm -> 26mm (11 Aug 2026) — see tribute-times-renderer.js. */
+  .s-books     { max-height: 26mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
   .s-charts    { max-height: 44mm; flex: 1 0 auto; }
   .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
@@ -404,7 +415,7 @@ function renderMemorialNewspaper(data, content, fonts) {
   }
   .s-message .to { font-family:'Playfair Display', serif; font-size: 11pt; font-weight: 700; }
   .s-message .msg { font-style: italic; font-size: 9pt;
-    display:-webkit-box; -webkit-line-clamp:7; -webkit-box-orient:vertical; overflow:hidden; }
+    display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
   .s-message .from { font-size: 8.5pt; }
 
   .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
@@ -466,11 +477,11 @@ function renderMemorialNewspaper(data, content, fonts) {
       <section class="s-news1">
         <h3>News of the Day</h3>
         <div class="story-head" data-field="news1-head">${worldNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news1-body">${news1Body}</p>
+        <p class="clamp8a" data-field="news1-body">${news1Body}</p>
       </section>
       <section class="s-news2">
         <div class="story-head" data-field="news2-head">${localNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news2-body">${news2Body}</p>
+        <p class="clamp8b" data-field="news2-body">${news2Body}</p>
       </section>
       <section class="s-prices">
         <h3>Cost of Living, <span data-field="prices-year">${year}</span></h3>

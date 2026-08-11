@@ -2610,8 +2610,16 @@ async function ensureGcashSettings() {
   return settings;
 }
 
-function formatGcashAmount(totalNzd, settings) {
+// `fixedPhp`, when given, overrides the live-rate PHP conversion entirely
+// — used only for the Digital product via GCash (client decision, 11 Aug
+// 2026: flat PHP 199, not tied to the exchange rate). Optional and
+// defaults to unused, so every other GCash amount (florist credits,
+// station frames, any future non-digital tier) is completely unaffected.
+function formatGcashAmount(totalNzd, settings, fixedPhp) {
   const amount = Number(totalNzd || 0);
+  if (Number.isFinite(fixedPhp) && fixedPhp > 0) {
+    return `NZ$${amount.toFixed(2)} / PHP ${fixedPhp.toFixed(2)}`;
+  }
   if (settings?.phpPerNzd) {
     const php = amount * Number(settings.phpPerNzd || 0);
     return `NZ$${amount.toFixed(2)} / PHP ${php.toFixed(2)}`;
@@ -2656,12 +2664,23 @@ async function openGcashModal(payload, options = {}) {
     const deliveryText = !options.itemLabel && needsShippingForTier(payload.productTier)
       ? `, ${formatDeliveryLabel(payload.deliveryOption || 'standard')} delivery`
       : '';
-    const rateText = settings.phpPerNzd
-      ? `<div><strong>Rate:</strong> 1 NZD = PHP ${Number(settings.phpPerNzd).toFixed(4)} (${escapeHtml(settings.rateIsLive ? 'live' : 'fallback')}${settings.rateDate ? `, ${escapeHtml(String(settings.rateDate))}` : ''})</div>`
-      : '<div><strong>Rate:</strong> PHP conversion unavailable. Pay the NZD amount equivalent agreed with admin.</div>';
+    // Client decision, 11 Aug 2026: GCash + Digital product only pays a
+    // flat PHP 199, not the live exchange-rate conversion — every other
+    // GCash context (florist credits, station frames, any non-digital
+    // tier) is untouched, since this only ever applies when
+    // `payload.productTier === 'digital'` AND no other total was already
+    // supplied (options.totalNzd is only set by non-digital callers, like
+    // florist credit packs, so this can never accidentally fire there).
+    const isFixedDigitalGcashPrice = options.totalNzd === undefined && payload.productTier === 'digital';
+    const fixedPhp = isFixedDigitalGcashPrice ? 199 : undefined;
+    const rateText = fixedPhp
+      ? `<div><strong>Rate:</strong> Fixed price for GCash payments — PHP ${fixedPhp.toFixed(2)}.</div>`
+      : settings.phpPerNzd
+        ? `<div><strong>Rate:</strong> 1 NZD = PHP ${Number(settings.phpPerNzd).toFixed(4)} (${escapeHtml(settings.rateIsLive ? 'live' : 'fallback')}${settings.rateDate ? `, ${escapeHtml(String(settings.rateDate))}` : ''})</div>`
+        : '<div><strong>Rate:</strong> PHP conversion unavailable. Pay the NZD amount equivalent agreed with admin.</div>';
     document.getElementById('gcash-summary').innerHTML = `
       <div><strong>Selected:</strong> ${escapeHtml(tierLabel)}${escapeHtml(deliveryText)}</div>
-      <div><strong>Pay exact amount:</strong> <span class="gcash-amount">${escapeHtml(formatGcashAmount(total, settings))}</span></div>
+      <div><strong>Pay exact amount:</strong> <span class="gcash-amount">${escapeHtml(formatGcashAmount(total, settings, fixedPhp))}</span></div>
       ${rateText}
       <div style="margin-top:6px;">After sending payment in GCash, enter the sender name and transaction/reference ID below.</div>
     `;
