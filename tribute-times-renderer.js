@@ -308,8 +308,17 @@ function renderNewspaper(data, content, fonts) {
   // book recommendations. Reuses the existing `.bday` line style so no
   // new CSS rule is needed for the row markup itself, only for the
   // section's own height/flex budget.
+  // Found 11 Aug 2026 (client screenshot — "What They Were Reading"
+  // heading visually crushed/overlapping, book description cut off with
+  // no ellipsis): unlike every other field on the page, the book's title
+  // and author had no length bound at all. A longer-than-average title
+  // pushed this section's real content height past its available room —
+  // confirmed directly (a real render measured 84px of needed height
+  // against only 76px available). Bounding title/author here, plus the
+  // matching max-height increase below, closes that gap without touching
+  // any other section's content or budget.
   const booksHTML = (books || []).slice(0, 1).map(b => `
-    <div class="bday"><b>${b.title}</b> by ${b.author} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
+    <div class="bday"><b>${cleanTruncate(b.title, 45)}</b> by ${cleanTruncate(b.author, 25)} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── MUSIC CHART ──
   // Single-line ellipsis truncation (white-space:nowrap + text-overflow)
@@ -412,8 +421,13 @@ function renderNewspaper(data, content, fonts) {
   const finalMessage = cleanTruncate(personalMessage ? personalMessage.trim() : (message || ''), 260);
 
   // ── NEWS STORIES TRUNCATION ──
-  const news1Body = cleanTruncate(worldNews[0]?.body || '', 235);
-  const news2Body = cleanTruncate(localNews[0]?.body || '', 235);
+  // Raised 235 -> 295 (11 Aug 2026), matching the prompt's 220 -> 280
+  // bump for these exact two fields (client request: fill blank space in
+  // "News of the Day" with ~10 more words). Kept the same +15 safety
+  // margin over the prompt's new target as before. No other field's cap
+  // touched.
+  const news1Body = cleanTruncate(worldNews[0]?.body || '', 295);
+  const news2Body = cleanTruncate(localNews[0]?.body || '', 295);
 
   // ── HOROSCOPE (previously unbounded — the static copy runs ~350-450
   // characters, always overflowing its 6-line clamp box) ──
@@ -704,6 +718,22 @@ function renderNewspaper(data, content, fonts) {
   .clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp6 { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+  /* Added 11 Aug 2026, used only by news1-body/news2-body below — the
+     longer text now requested for those two fields (295-char cap, up
+     from 235) needs up to 8 lines at this column width to avoid the
+     paragraph's own clamp cutting it off mid-word (measured directly
+     against a real render, not estimated). Deliberately a new class, not
+     a change to .clamp6 above, since .clamp6 is shared with horoscope and
+     sport text — this keeps the change isolated to exactly the two
+     requested boxes. */
+  /* Split into two (11 Aug 2026): news1 and news2 needed different
+     amounts of extra spacing — news2 was still showing visible blank
+     space at the shared 1.45, news1 only needed a touch more. Each class
+     is used by exactly one field (news1-body / news2-body below), so
+     changing either can never affect the other or anything else on the
+     page. */
+  .clamp8a { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; line-height: 1.55; }
+  .clamp8b { display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; line-height: 1.8; }
   .story-head {
     font-family:'Playfair Display', serif; font-weight:700; font-size:10.5pt; line-height:1.1;
     margin-bottom:1mm;
@@ -751,7 +781,12 @@ function renderNewspaper(data, content, fonts) {
   .s-onthisday { max-height: 54mm; flex: 1 0 auto; }
   .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-books     { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+  /* Raised 20mm -> 26mm (11 Aug 2026) — measured directly against a real
+     worst-case render: this section needed 84px but only had 76px (20mm)
+     available, causing the heading and text to visually crush together.
+     26mm gives real margin above the measured 84px need. Only this one
+     section's ceiling changed — no other section's budget touched. */
+  .s-books     { max-height: 26mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
   .s-charts    { max-height: 44mm; flex: 1 0 auto; }
   .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
@@ -780,7 +815,7 @@ function renderNewspaper(data, content, fonts) {
   }
   .s-message .to { font-family:'Playfair Display', serif; font-size: 11pt; font-weight: 700; }
   .s-message .msg { font-style: italic; font-size: 9pt;
-    display:-webkit-box; -webkit-line-clamp:7; -webkit-box-orient:vertical; overflow:hidden; }
+    display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
   .s-message .from { font-size: 8.5pt; }
 
   .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
@@ -841,11 +876,11 @@ function renderNewspaper(data, content, fonts) {
       <section class="s-news1">
         <h3>News of the Day</h3>
         <div class="story-head" data-field="news1-head">${worldNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news1-body">${news1Body}</p>
+        <p class="clamp8a" data-field="news1-body">${news1Body}</p>
       </section>
       <section class="s-news2">
         <div class="story-head" data-field="news2-head">${localNews[0]?.headline || ''}</div>
-        <p class="clamp6" data-field="news2-body">${news2Body}</p>
+        <p class="clamp8b" data-field="news2-body">${news2Body}</p>
       </section>
       <section class="s-prices">
         <h3>Cost of Living, <span data-field="prices-year">${year}</span></h3>

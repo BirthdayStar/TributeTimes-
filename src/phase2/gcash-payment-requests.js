@@ -382,6 +382,15 @@ function normalizePublicGcashPayload(body, requestIp) {
     throwStatus(400, 'Invalid product tier.');
   }
 
+  // Same Digital-only enforcement as the card-payment checkout
+  // (src/phase2/public-checkout.js, bug #12) — found missing here while
+  // verifying the GCash flat-price fix (11 Aug 2026): Standard/Premium
+  // are hidden in the UI but weren't actually blocked at this endpoint,
+  // so a direct API request could still request one via GCash.
+  if (productTier !== 'digital') {
+    throwStatus(400, 'This product option is not currently available. Digital is the only option right now.');
+  }
+
   const needsFulfilment = PRODUCT_TIERS[productTier].needsFulfilment;
   const deliveryOption = needsFulfilment ? (deliveryOptionRaw || 'standard') : null;
   if (deliveryOption && !DELIVERY_OPTIONS[deliveryOption]) {
@@ -491,7 +500,16 @@ async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, g
 
   const keepsakeId = payload.keepsakeId || await createSampleKeepsakeForGcashRequest(supabase, payload);
   const pricing = calculateProductPricing(payload.productTier, payload.deliveryOption);
-  const expectedAmountPhp = settings.phpPerNzd
+  // Client decision, 11 Aug 2026: GCash + Digital product only pays a
+  // flat PHP 199, not the live exchange-rate conversion — matches the
+  // fixed amount shown to the customer in the checkout modal
+  // (public/form-template.html, openGcashModal). Scoped strictly to
+  // `productTier === 'digital'` in this one function (the public product
+  // order path) — florist credits and station frames use the separate
+  // `createAccountGcashPaymentRequest` function below and are untouched.
+  const expectedAmountPhp = payload.productTier === 'digital'
+    ? 199
+    : settings.phpPerNzd
     ? Number((pricing.totalAmountNzd * settings.phpPerNzd).toFixed(2))
     : null;
 
