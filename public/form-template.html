@@ -2617,8 +2617,14 @@ async function ensureGcashSettings() {
 // station frames, any future non-digital tier) is completely unaffected.
 function formatGcashAmount(totalNzd, settings, fixedPhp) {
   const amount = Number(totalNzd || 0);
+  // Client request, 12 Aug 2026: the fixed-price case (Digital via GCash,
+  // PHP 199) should show ONLY the PHP amount — the NZ$ figure alongside
+  // it was confusing since GCash is a Philippines-only payment method.
+  // Scoped to exactly this branch — every other GCash context (florist
+  // credits, station frames, any non-digital tier) still shows both
+  // currencies via the branch below, completely unaffected.
   if (Number.isFinite(fixedPhp) && fixedPhp > 0) {
-    return `NZ$${amount.toFixed(2)} / PHP ${fixedPhp.toFixed(2)}`;
+    return `PHP ${fixedPhp.toFixed(2)}`;
   }
   if (settings?.phpPerNzd) {
     const php = amount * Number(settings.phpPerNzd || 0);
