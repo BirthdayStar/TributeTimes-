@@ -114,6 +114,38 @@ body {
   transform: translateY(-1px);
 }
 
+/* COUNTRY SELECTOR — client-requested, 13 Aug 2026. Same markup/behaviour
+   reused in the header and footer (see .country-select-wrap below); both
+   instances stay in sync with each other via JS. Display-only, same as
+   the local-pricing-section cards this drives — no checkout, GCash, or
+   Stripe logic touched. */
+.country-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.country-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 9px 30px 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D4122'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 0.2s;
+}
+.country-select:hover, .country-select:focus {
+  border-color: #8A9160;
+  outline: none;
+}
+
 /* ════════════════════════════════════════
    HERO SECTION
    ════════════════════════════════════════ */
@@ -876,6 +908,72 @@ body {
   background: var(--accent-red-hover);
 }
 
+/* LOCAL PRICING STRIP — client-requested, 13 Aug 2026. Deliberately
+   distinct class names (local-price-* / not pricing-card etc.) so
+   nothing here collides with the existing tier-comparison pricing
+   section above. Purely a visual/marketing display: prices shown are
+   illustrative local pricing, not wired to checkout (checkout keeps its
+   existing flat-NZD + fixed-GCash-PHP pricing, untouched). */
+.local-pricing-section {
+  margin-bottom: 90px;
+}
+.local-price-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.local-price-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 28px 12px 24px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.local-price-card:hover {
+  background: #F4F0DE;
+  border-color: #8A9160;
+  transform: translateY(-4px);
+}
+.local-price-flag {
+  font-size: 1.8rem;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.local-price-code {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-main);
+}
+.local-price-amount {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-red);
+  margin: 6px 0 4px;
+}
+.local-price-country {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+/* Highlighted to match the visitor's own detected region — a soft
+   emphasis (lift + gold ring), not a hard hide/show of the other cards,
+   since detection here is a reasonable proxy (device timezone), not
+   guaranteed-accurate geolocation — a traveller or VPN user could see the
+   "wrong" one highlighted, so the other four staying visible keeps this
+   harmless either way. */
+.local-price-card.is-local {
+  border-color: var(--accent-red);
+  background: rgba(176, 138, 46, 0.08);
+  box-shadow: 0 8px 20px rgba(138, 106, 31, 0.22);
+  transform: translateY(-4px);
+}
+@media (max-width: 720px) {
+  .local-price-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
 /* ════════════════════════════════════════
    RESPONSIVE DESIGN (PWA MOBILE)
    ════════════════════════════════════════ */
@@ -922,6 +1020,15 @@ body {
       <li><a href="/station" class="nav-link">FOR STATIONS</a></li>
       <li><a href="#contact" class="nav-link">CONTACT</a></li>
     </ul>
+    <div class="country-select-wrap">
+      <select class="country-select" id="header-country-select" aria-label="Select your country to see local pricing">
+        <option value="New Zealand">🇳🇿 NZ</option>
+        <option value="United Kingdom">🇬🇧 GB</option>
+        <option value="United States">🇺🇸 US</option>
+        <option value="Australia">🇦🇺 AU</option>
+        <option value="Philippines">🇵🇭 PH</option>
+      </select>
+    </div>
     <a href="/public" class="btn-header">CREATE YOURS</a>
   </nav>
 </header>
@@ -953,7 +1060,7 @@ body {
   </section>
 
   <!-- STATS BAR -->
-  <section class="stats-bar" style="grid-template-columns: repeat(4, 1fr);">
+  <section class="stats-bar">
     <div class="stat-item">
       <div class="stat-icon">✨</div>
       <div class="stat-info">
@@ -980,6 +1087,46 @@ body {
       <div class="stat-info">
         <div class="stat-value">Digital & Print</div>
         <div class="stat-label">Instant PDF or Postal Delivery</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOCAL PRICING STRIP -->
+  <section class="local-pricing-section">
+    <div class="section-header">
+      <div class="section-eyebrow">PRICING</div>
+      <h2 class="section-h2">One Keepsake, Priced For Where You Are</h2>
+    </div>
+    <div class="local-price-grid" id="local-price-grid">
+      <div class="local-price-card" data-country="New Zealand">
+        <div class="local-price-flag">🇳🇿</div>
+        <div class="local-price-code">NZ</div>
+        <div class="local-price-amount">$9.95</div>
+        <div class="local-price-country">New Zealand</div>
+      </div>
+      <div class="local-price-card" data-country="United Kingdom">
+        <div class="local-price-flag">🇬🇧</div>
+        <div class="local-price-code">GB</div>
+        <div class="local-price-amount">£4.95</div>
+        <div class="local-price-country">United Kingdom</div>
+      </div>
+      <div class="local-price-card" data-country="United States">
+        <div class="local-price-flag">🇺🇸</div>
+        <div class="local-price-code">US</div>
+        <div class="local-price-amount">$6.95</div>
+        <div class="local-price-country">United States</div>
+      </div>
+      <div class="local-price-card" data-country="Australia">
+        <div class="local-price-flag">🇦🇺</div>
+        <div class="local-price-code">AU</div>
+        <div class="local-price-amount">$8.95</div>
+        <div class="local-price-country">Australia</div>
+      </div>
+      <div class="local-price-card" data-country="Philippines">
+        <div class="local-price-flag">🇵🇭</div>
+        <div class="local-price-code">PH</div>
+        <div class="local-price-amount">₱199</div>
+        <div class="local-price-country">Philippines</div>
       </div>
     </div>
   </section>
@@ -1240,6 +1387,15 @@ body {
 
     <div class="footer-bottom">
       <div>© 2026 The Tribute Times. All rights reserved.</div>
+      <div class="country-select-wrap">
+        <select class="country-select" id="footer-country-select" aria-label="Select your country to see local pricing">
+          <option value="New Zealand">🇳🇿 NZ — $9.95</option>
+          <option value="United Kingdom">🇬🇧 GB — £4.95</option>
+          <option value="United States">🇺🇸 US — $6.95</option>
+          <option value="Australia">🇦🇺 AU — $8.95</option>
+          <option value="Philippines">🇵🇭 PH — ₱199</option>
+        </select>
+      </div>
       <div class="footer-bottom-links">
         <a href="/legal/terms">Terms &amp; Conditions</a>
         <a href="/legal/privacy">Privacy Policy</a>
@@ -1249,6 +1405,89 @@ body {
 </footer>
 
 <script>
+// COUNTRY PRICING / SELECTOR — client-requested, 13 Aug 2026. Drives:
+// the header select, the footer select, the "From $X.XX" price teasers
+// (3 of them on this page), and the local-pricing-card highlight already
+// on the page. Entirely display-layer — nothing here talks to the
+// server, GCash, or Stripe/checkout. Auto-detects on load via the
+// browser's own timezone (see note below on why, not a real IP-geo
+// lookup), defaults to New Zealand if detection doesn't match one of the
+// 5 supported countries, and manual selection in either dropdown works
+// identically to auto-detection and stays in sync with the other one.
+const COUNTRY_PRICING = {
+  'New Zealand':    { display: 'NZ$9.95' },
+  'United Kingdom': { display: '£4.95' },
+  'United States':  { display: '$6.95' },
+  'Australia':      { display: '$8.95' },
+  'Philippines':    { display: '₱199' },
+};
+const DEFAULT_PRICING_COUNTRY = 'New Zealand';
+
+// Uses the browser's own timezone, not a real IP-geolocation lookup —
+// the page's Content-Security-Policy only allows network calls back to
+// this site (connect-src 'self'), and loosening that for this display
+// feature wasn't worth widening a site-wide security setting for. It's a
+// reasonable proxy, not pinpoint-accurate (a traveller or VPN user may
+// get the "wrong" one detected) — which is exactly why the manual
+// selector exists right alongside it as an equally-supported way to set
+// the same thing.
+function detectPricingCountry() {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const TIMEZONE_TO_COUNTRY = {
+      'Pacific/Auckland': 'New Zealand',
+      'Pacific/Chatham': 'New Zealand',
+      'Europe/London': 'United Kingdom',
+      'Australia/Sydney': 'Australia',
+      'Australia/Melbourne': 'Australia',
+      'Australia/Brisbane': 'Australia',
+      'Australia/Perth': 'Australia',
+      'Australia/Adelaide': 'Australia',
+      'Australia/Hobart': 'Australia',
+      'Australia/Darwin': 'Australia',
+      'Asia/Manila': 'Philippines',
+    };
+    let matched = TIMEZONE_TO_COUNTRY[timeZone];
+    if (!matched && timeZone.startsWith('America/')) {
+      matched = 'United States';
+    }
+    return matched && COUNTRY_PRICING[matched] ? matched : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Applies one country's pricing everywhere on the page it's shown, and
+// keeps both dropdowns in sync with each other regardless of which one
+// (or auto-detection) triggered the change.
+function applyPricingCountry(country) {
+  const pricing = COUNTRY_PRICING[country];
+  if (!pricing) return;
+
+  document.querySelectorAll('.hero-price').forEach(el => {
+    el.textContent = `From ${pricing.display}`;
+  });
+
+  document.querySelectorAll('.local-price-card').forEach(card => {
+    card.classList.toggle('is-local', card.getAttribute('data-country') === country);
+  });
+
+  ['header-country-select', 'footer-country-select'].forEach(id => {
+    const select = document.getElementById(id);
+    if (select && select.value !== country) select.value = country;
+  });
+}
+
+(function initCountryPricing() {
+  const initialCountry = detectPricingCountry() || DEFAULT_PRICING_COUNTRY;
+  applyPricingCountry(initialCountry);
+
+  ['header-country-select', 'footer-country-select'].forEach(id => {
+    const select = document.getElementById(id);
+    if (select) select.addEventListener('change', () => applyPricingCountry(select.value));
+  });
+})();
+
 // Fetch active radio stations to populate the dropdown
 async function loadStationsDropdown() {
   const select = document.getElementById('station-select');
