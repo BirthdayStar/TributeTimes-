@@ -2061,12 +2061,15 @@ async function loginFlorist() {
   const email = document.getElementById('florist-email').value.trim();
   const password = document.getElementById('florist-password').value;
   const note = document.getElementById('florist-auth-note');
+  const button = document.getElementById('florist-login-btn');
 
   if (!email || !password) {
     note.textContent = 'Enter the florist email and password first.';
     return;
   }
 
+  // Same fix as loginRadio() above — see that comment for why.
+  button.disabled = true;
   note.textContent = 'Signing in...';
 
   try {
@@ -2088,6 +2091,8 @@ async function loginFlorist() {
     updateFloristPortalUi();
   } catch (error) {
     note.textContent = error.message || 'Unable to sign in.';
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -2138,6 +2143,16 @@ async function buyFloristPack(packType, packSize) {
     return;
   }
 
+  // Six separate buttons (one per pack) call this same function — found
+  // during a site-wide UI audit (17 Aug 2026) that none of them disabled
+  // during the request, so a fast double-click (or clicking a second pack
+  // before the first request finished) could fire two concurrent
+  // checkout-session requests. Disabling every pack button in this panel
+  // for the duration, not just the one clicked, since any of them
+  // starting a second request while one is already in flight is the same
+  // problem.
+  const panelButtons = Array.from(document.querySelectorAll('#florist-credit-panel .secondary-btn'));
+  panelButtons.forEach(btn => { btn.disabled = true; });
   note.textContent = `Starting ${packLabel} ${packSize}-credit card checkout...`;
 
   try {
@@ -2156,6 +2171,7 @@ async function buyFloristPack(packType, packSize) {
     window.location.href = data.url;
   } catch (error) {
     note.textContent = error.message || 'Unable to start florist credit checkout.';
+    panelButtons.forEach(btn => { btn.disabled = false; });
   }
 }
 
@@ -2201,12 +2217,20 @@ async function loginRadio() {
   const email = document.getElementById('radio-email').value.trim();
   const password = document.getElementById('radio-password').value;
   const note = document.getElementById('radio-auth-note');
+  const button = document.getElementById('radio-login-btn');
 
   if (!email || !password) {
     note.textContent = 'Enter the DJ email and password first.';
     return;
   }
 
+  // Found during a site-wide UI audit (17 Aug 2026): unlike the checkout
+  // pay button (setCheckoutBusy) and the GCash proof submit button, this
+  // one never actually disabled itself during the request — a fast
+  // double-click could fire two concurrent login attempts. Same
+  // disable/re-enable pattern already used elsewhere on this page, just
+  // applied here too.
+  button.disabled = true;
   note.textContent = 'Signing in...';
 
   try {
@@ -2229,6 +2253,8 @@ async function loginRadio() {
     await loadRadioDashboard();
   } catch (error) {
     note.textContent = error.message || 'Unable to sign in.';
+  } finally {
+    button.disabled = false;
   }
 }
 

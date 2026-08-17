@@ -114,36 +114,56 @@ body {
   transform: translateY(-1px);
 }
 
-/* COUNTRY SELECTOR — client-requested, 13 Aug 2026. Same markup/behaviour
-   reused in the header and footer (see .country-select-wrap below); both
-   instances stay in sync with each other via JS. Display-only, same as
-   the local-pricing-section cards this drives — no checkout, GCash, or
-   Stripe logic touched. */
+/* COUNTRY SELECTOR — client-requested, 13 Aug 2026, refined 18 Aug 2026.
+   Same markup/behaviour reused in the header and footer; both instances
+   stay in sync with each other via JS. Display-only, same as the
+   local-pricing-section cards this drives — no checkout, GCash, or
+   Stripe logic touched.
+   Refinement, 18 Aug 2026: the header instance sat in its own slot in
+   the navbar's `justify-content: space-between` row, floating in a gap
+   of its own between the nav links and the CTA button rather than
+   reading as related to it — see `.nav-actions` below, which now groups
+   them into one visual cluster. Restyled from a plain 6px-radius box to
+   a pill matching the CTA button's own rounded/gold-accent language, and
+   the letter code (NZ/GB/US/AU/PH) dropped from the option text — the
+   flag alone is clearer at a glance and was the actual redundant part
+   once sized large enough to read. */
 .country-select-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 .country-select {
   appearance: none;
   -webkit-appearance: none;
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  border: 1.5px solid var(--card-border);
   color: var(--text-main);
   font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 9px 30px 9px 12px;
-  border-radius: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 10px 32px 10px 16px;
+  border-radius: 999px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(61, 65, 34, 0.08);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D4122'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  transition: border-color 0.2s;
+  background-position: right 14px center;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
-.country-select:hover, .country-select:focus {
-  border-color: #8A9160;
+.country-select:hover {
+  border-color: var(--accent-red);
+  box-shadow: 0 4px 14px rgba(138, 106, 31, 0.18);
+  transform: translateY(-1px);
+}
+.country-select:focus {
+  border-color: var(--accent-red);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(138, 106, 31, 0.16);
+}
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 /* ════════════════════════════════════════
@@ -997,6 +1017,7 @@ body {
 @media (max-width: 680px) {
   .navbar { flex-direction: column; gap: 16px; text-align: center; }
   .nav-links { display: none; }
+  .nav-actions { justify-content: center; }
   .hero-h1 { font-size: 2.1rem; }
   .stats-bar { grid-template-columns: 1fr; }
   .occasions-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1020,16 +1041,18 @@ body {
       <li><a href="/station" class="nav-link">FOR STATIONS</a></li>
       <li><a href="#contact" class="nav-link">CONTACT</a></li>
     </ul>
-    <div class="country-select-wrap">
-      <select class="country-select" id="header-country-select" aria-label="Select your country to see local pricing">
-        <option value="New Zealand">🇳🇿 NZ</option>
-        <option value="United Kingdom">🇬🇧 GB</option>
-        <option value="United States">🇺🇸 US</option>
-        <option value="Australia">🇦🇺 AU</option>
-        <option value="Philippines">🇵🇭 PH</option>
-      </select>
+    <div class="nav-actions">
+      <div class="country-select-wrap">
+        <select class="country-select" id="header-country-select" aria-label="Select your country to see local pricing">
+          <option value="New Zealand">🇳🇿</option>
+          <option value="United Kingdom">🇬🇧</option>
+          <option value="United States">🇺🇸</option>
+          <option value="Australia">🇦🇺</option>
+          <option value="Philippines">🇵🇭</option>
+        </select>
+      </div>
+      <a href="/public" class="btn-header">CREATE YOURS</a>
     </div>
-    <a href="/public" class="btn-header">CREATE YOURS</a>
   </nav>
 </header>
 
@@ -1389,11 +1412,11 @@ body {
       <div>© 2026 The Tribute Times. All rights reserved.</div>
       <div class="country-select-wrap">
         <select class="country-select" id="footer-country-select" aria-label="Select your country to see local pricing">
-          <option value="New Zealand">🇳🇿 NZ — $9.95</option>
-          <option value="United Kingdom">🇬🇧 GB — £4.95</option>
-          <option value="United States">🇺🇸 US — $6.95</option>
-          <option value="Australia">🇦🇺 AU — $8.95</option>
-          <option value="Philippines">🇵🇭 PH — ₱199</option>
+          <option value="New Zealand">🇳🇿 $9.95</option>
+          <option value="United Kingdom">🇬🇧 £4.95</option>
+          <option value="United States">🇺🇸 $6.95</option>
+          <option value="Australia">🇦🇺 $8.95</option>
+          <option value="Philippines">🇵🇭 ₱199</option>
         </select>
       </div>
       <div class="footer-bottom-links">

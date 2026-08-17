@@ -514,7 +514,7 @@
             <input type="text" id="dj-password" placeholder="Temp password" />
           </div>
         </div>
-        <button class="btn" onclick="createDJ()">+ Add DJ</button>
+        <button class="btn" onclick="createDJ(this)">+ Add DJ</button>
         <div class="msg hidden" id="dj-msg"></div>
       </div>
 
@@ -535,7 +535,7 @@
             <input type="text" id="settings-sponsor" />
           </div>
         </div>
-        <button class="btn" onclick="saveSettings()">Save Settings</button>
+        <button class="btn" onclick="saveSettings(this)">Save Settings</button>
         <div class="msg hidden" id="settings-msg"></div>
       </div>
 
@@ -573,7 +573,7 @@
         </div>
         <div class="purchase-note" id="subscription-price-note">Selected plan total: NZ$49.00.</div>
         <button class="btn" id="subscription-pay-btn" onclick="startSubscriptionPayment()">Start Payment</button>
-        <button class="btn btn-secondary" style="margin-left:8px;" onclick="openBillingPortal()">Manage Stripe Billing</button>
+        <button class="btn btn-secondary" style="margin-left:8px;" onclick="openBillingPortal(this)">Manage Stripe Billing</button>
         <div class="msg hidden" id="subscription-msg"></div>
       </div>
 
@@ -710,7 +710,15 @@
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
       const msg = document.getElementById('auth-msg');
-      msg.classList.add('hidden');
+      // Found during a site-wide UI audit (17 Aug 2026): this form gave no
+      // feedback at all while the request was in flight — not even a text
+      // message, let alone a disabled button — unlike every other login
+      // form on the site. Same disable + "Signing in…" pattern as those.
+      const button = document.querySelector('button[onclick="login()"]');
+      if (button) button.disabled = true;
+      msg.textContent = 'Signing in…';
+      msg.className = 'msg';
+      msg.classList.remove('hidden');
 
       try {
         const r = await fetch('/api/auth/login', {
@@ -723,10 +731,13 @@
 
         token = data.token;
         localStorage.setItem(STORAGE_KEY, token);
+        msg.classList.add('hidden');
         showDashboard();
       } catch (err) {
         msg.textContent = err.message;
         msg.className = 'msg error';
+      } finally {
+        if (button) button.disabled = false;
       }
     }
 
@@ -773,7 +784,7 @@
                 <td>${dj.last_login ? new Date(dj.last_login).toLocaleDateString() : 'Never'}</td>
                 <td><span style="color: ${dj.active ? '#4C7A3D' : '#A1442A'}">${dj.active ? 'Active' : 'Inactive'}</span></td>
                 <td>
-                  ${dj.active ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" onclick="deactivateDJ('${dj.id}')">Deactivate</button>` : '—'}
+                  ${dj.active ? `<button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" onclick="deactivateDJ('${dj.id}', this)">Deactivate</button>` : '—'}
                 </td>
               </tr>
             `).join('')
@@ -783,12 +794,16 @@
       }
     }
 
-    async function createDJ() {
+    async function createDJ(btnEl) {
       const name = document.getElementById('dj-name').value;
       const email = document.getElementById('dj-email').value;
       const password = document.getElementById('dj-password').value;
       const msg = document.getElementById('dj-msg');
       msg.classList.add('hidden');
+      // Found during a site-wide UI audit (17 Aug 2026): none of this
+      // page's other actions disabled their button during the request —
+      // a fast double-click could create two DJ accounts.
+      if (btnEl) btnEl.disabled = true;
 
       try {
         const r = await fetch('/api/station/djs', {
@@ -812,11 +827,15 @@
       } catch (err) {
         msg.textContent = err.message;
         msg.className = 'msg error';
+      } finally {
+        if (btnEl) btnEl.disabled = false;
       }
     }
 
-    async function deactivateDJ(id) {
+    async function deactivateDJ(id, btnEl) {
       if (!confirm('Are you sure you want to deactivate this DJ?')) return;
+      // Same fix as createDJ() above — see that comment.
+      if (btnEl) btnEl.disabled = true;
       try {
         const r = await fetch(`/api/station/djs/${id}`, {
           method: 'DELETE',
@@ -825,18 +844,23 @@
         if (r.ok) {
           loadDJs();
           loadStats();
+        } else if (btnEl) {
+          btnEl.disabled = false;
         }
       } catch (err) {
         alert('Failed to deactivate DJ');
+        if (btnEl) btnEl.disabled = false;
       }
     }
 
-    async function saveSettings() {
+    async function saveSettings(btnEl) {
       const name = document.getElementById('settings-name').value;
       const country = document.getElementById('settings-country').value;
       const sponsor_name = document.getElementById('settings-sponsor').value;
       const msg = document.getElementById('settings-msg');
       msg.classList.add('hidden');
+      // Same fix as createDJ() above — see that comment.
+      if (btnEl) btnEl.disabled = true;
 
       try {
         const r = await fetch('/api/station/settings', {
@@ -854,6 +878,8 @@
       } catch (err) {
         msg.textContent = err.message;
         msg.className = 'msg error';
+      } finally {
+        if (btnEl) btnEl.disabled = false;
       }
     }
 
@@ -921,6 +947,12 @@
         return;
       }
 
+      // Found during a site-wide UI audit (17 Aug 2026): navigates to
+      // Stripe on success, but a slow network could let a second click
+      // fire another checkout-session request before that redirect
+      // happens — only the failure path needs to re-enable.
+      const btn = document.getElementById('subscription-pay-btn');
+      if (btn) btn.disabled = true;
       try {
         const r = await fetch('/api/billing/subscribe', {
           method: 'POST',
@@ -935,11 +967,14 @@
         window.location.href = data.url;
       } catch (err) {
         setMsg('subscription-msg', err.message, true);
+        if (btn) btn.disabled = false;
       }
     }
 
-    async function openBillingPortal() {
+    async function openBillingPortal(btnEl) {
       setMsg('subscription-msg', '');
+      // Same fix as startSubscriptionPayment() above — see that comment.
+      if (btnEl) btnEl.disabled = true;
       try {
         const r = await fetch('/api/billing/portal', {
           method: 'POST',
@@ -950,6 +985,7 @@
         window.location.href = data.url;
       } catch (err) {
         setMsg('subscription-msg', err.message, true);
+        if (btnEl) btnEl.disabled = false;
       }
     }
 
@@ -973,8 +1009,14 @@
     async function startFramePayment() {
       setMsg('frame-msg', '');
       const payload = getFramePayload();
+      // Found during a site-wide UI audit (17 Aug 2026) — same fix as
+      // startSubscriptionPayment() above. Disabled only after validation
+      // passes, so a pure validation error (which resolves instantly)
+      // doesn't flash the button disabled for no reason.
+      const btn = document.getElementById('frame-pay-btn');
       try {
         validateFramePayload(payload);
+        if (btn) btn.disabled = true;
         if (getRadioValue('stationFramePaymentMethod') === 'gcash') {
           await openStationGcashModal({
             endpoint: '/api/gcash/station/frames/payment-request',
@@ -991,6 +1033,7 @@
             totalNzd: getSelectedFrameTotal(),
             successMessage: 'GCash proof received. After admin verification, the frame order will be recorded.',
           });
+          if (btn) btn.disabled = false;
           return;
         }
 
@@ -1007,6 +1050,7 @@
         window.location.href = data.url;
       } catch (err) {
         setMsg('frame-msg', err.message, true);
+        if (btn) btn.disabled = false;
       }
     }
 
@@ -1148,11 +1192,14 @@
 
     async function submitPasswordUpdate(event) {
       event.preventDefault();
+      // Same fix as createDJ() above — see that comment.
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
       const oldPassword = document.getElementById('modal-old-password').value;
       const newPassword = document.getElementById('modal-new-password').value;
       const errorDiv = document.getElementById('modal-password-error');
       const successDiv = document.getElementById('modal-password-success');
-      
+
       errorDiv.style.display = 'none';
       successDiv.style.display = 'none';
 
@@ -1176,6 +1223,8 @@
       } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.style.display = 'block';
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
     }
   </script>
