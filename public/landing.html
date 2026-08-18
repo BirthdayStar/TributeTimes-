@@ -128,38 +128,104 @@ body {
    the letter code (NZ/GB/US/AU/PH) dropped from the option text — the
    flag alone is clearer at a glance and was the actual redundant part
    once sized large enough to read. */
+/* Custom flag dropdown — NOT a native <select> with emoji text. Flag
+   emoji render fine on Mac/iOS/Android but fall back to plain letter
+   codes on Windows (no flag glyphs in the system emoji font there), so
+   the flags here are drawn as small inline SVGs instead — identical on
+   every platform regardless of installed fonts. The real <select> is
+   kept in the DOM (visually hidden) purely so existing value/change-event
+   logic (detection, sync, applyPricingCountry) keeps working untouched. */
 .country-select-wrap {
   display: flex;
   align-items: center;
+  position: relative;
 }
-.country-select {
-  appearance: none;
-  -webkit-appearance: none;
+.country-select-native {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+.country-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  padding: 6px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.country-select-btn:hover,
+.country-select-wrap.is-open .country-select-btn {
+  color: var(--text-main);
+  background: rgba(61, 65, 34, 0.05);
+}
+.country-select-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(138, 106, 31, 0.35);
+}
+.country-select-btn .flag-ico {
+  flex-shrink: 0;
+  width: 18px;
+  height: 13px;
+}
+.country-select-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.country-select-wrap.is-open .country-select-chevron {
+  transform: rotate(180deg);
+}
+.country-select-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 100%;
   background: var(--card-bg);
   border: 1.5px solid var(--card-border);
-  color: var(--text-main);
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1;
-  padding: 10px 32px 10px 16px;
-  border-radius: 999px;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(61, 65, 34, 0.18);
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  z-index: 40;
+}
+.country-select-list[hidden] { display: none; }
+.country-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 9px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(61, 65, 34, 0.08);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233D4122'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  color: var(--text-main);
+  white-space: nowrap;
+  transition: background 0.15s;
 }
-.country-select:hover {
-  border-color: var(--accent-red);
-  box-shadow: 0 4px 14px rgba(138, 106, 31, 0.18);
-  transform: translateY(-1px);
+.country-select-option:hover,
+.country-select-option.is-active {
+  background: rgba(138, 106, 31, 0.1);
 }
-.country-select:focus {
-  border-color: var(--accent-red);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(138, 106, 31, 0.16);
+.flag-ico {
+  display: inline-block;
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(61, 65, 34, 0.15);
 }
+.flag-ico svg { display: block; width: 100%; height: 100%; }
 .nav-actions {
   display: flex;
   align-items: center;
@@ -956,9 +1022,13 @@ body {
   transform: translateY(-4px);
 }
 .local-price-flag {
-  font-size: 2.4rem;
-  line-height: 1;
+  display: flex;
+  justify-content: center;
   margin-bottom: 10px;
+}
+.local-price-flag .flag-ico {
+  width: 40px;
+  height: 29px;
 }
 .local-price-amount {
   font-family: var(--font-serif);
@@ -1035,14 +1105,19 @@ body {
       <li><a href="#contact" class="nav-link">CONTACT</a></li>
     </ul>
     <div class="nav-actions">
-      <div class="country-select-wrap">
-        <select class="country-select" id="header-country-select" aria-label="Select your country to see local pricing">
-          <option value="New Zealand">🇳🇿</option>
-          <option value="United Kingdom">🇬🇧</option>
-          <option value="United States">🇺🇸</option>
-          <option value="Australia">🇦🇺</option>
-          <option value="Philippines">🇵🇭</option>
+      <div class="country-select-wrap" id="header-country-wrap" data-price-labels="false">
+        <select class="country-select-native" id="header-country-select" aria-hidden="true" tabindex="-1">
+          <option value="New Zealand">New Zealand</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="United States">United States</option>
+          <option value="Australia">Australia</option>
+          <option value="Philippines">Philippines</option>
         </select>
+        <button type="button" class="country-select-btn" id="header-country-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select your country to see local pricing">
+          <span class="flag-ico" data-flag-slot></span>
+          <svg class="country-select-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z" fill="currentColor"/></svg>
+        </button>
+        <ul class="country-select-list" id="header-country-list" role="listbox" hidden></ul>
       </div>
       <a href="/public" class="btn-header">CREATE YOURS</a>
     </div>
@@ -1115,27 +1190,27 @@ body {
     </div>
     <div class="local-price-grid" id="local-price-grid">
       <div class="local-price-card" data-country="New Zealand">
-        <div class="local-price-flag">🇳🇿</div>
+        <div class="local-price-flag" data-flag-slot></div>
         <div class="local-price-amount">$9.95</div>
         <div class="local-price-country">New Zealand</div>
       </div>
       <div class="local-price-card" data-country="United Kingdom">
-        <div class="local-price-flag">🇬🇧</div>
+        <div class="local-price-flag" data-flag-slot></div>
         <div class="local-price-amount">£4.95</div>
         <div class="local-price-country">United Kingdom</div>
       </div>
       <div class="local-price-card" data-country="United States">
-        <div class="local-price-flag">🇺🇸</div>
+        <div class="local-price-flag" data-flag-slot></div>
         <div class="local-price-amount">$6.95</div>
         <div class="local-price-country">United States</div>
       </div>
       <div class="local-price-card" data-country="Australia">
-        <div class="local-price-flag">🇦🇺</div>
+        <div class="local-price-flag" data-flag-slot></div>
         <div class="local-price-amount">$8.95</div>
         <div class="local-price-country">Australia</div>
       </div>
       <div class="local-price-card" data-country="Philippines">
-        <div class="local-price-flag">🇵🇭</div>
+        <div class="local-price-flag" data-flag-slot></div>
         <div class="local-price-amount">₱199</div>
         <div class="local-price-country">Philippines</div>
       </div>
@@ -1398,14 +1473,20 @@ body {
 
     <div class="footer-bottom">
       <div>© 2026 The Tribute Times. All rights reserved.</div>
-      <div class="country-select-wrap">
-        <select class="country-select" id="footer-country-select" aria-label="Select your country to see local pricing">
-          <option value="New Zealand">🇳🇿 $9.95</option>
-          <option value="United Kingdom">🇬🇧 £4.95</option>
-          <option value="United States">🇺🇸 $6.95</option>
-          <option value="Australia">🇦🇺 $8.95</option>
-          <option value="Philippines">🇵🇭 ₱199</option>
+      <div class="country-select-wrap" id="footer-country-wrap" data-price-labels="true">
+        <select class="country-select-native" id="footer-country-select" aria-hidden="true" tabindex="-1">
+          <option value="New Zealand">New Zealand</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="United States">United States</option>
+          <option value="Australia">Australia</option>
+          <option value="Philippines">Philippines</option>
         </select>
+        <button type="button" class="country-select-btn" id="footer-country-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select your country to see local pricing">
+          <span class="flag-ico" data-flag-slot></span>
+          <span data-price-slot></span>
+          <svg class="country-select-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z" fill="currentColor"/></svg>
+        </button>
+        <ul class="country-select-list" id="footer-country-list" role="listbox" hidden></ul>
       </div>
       <div class="footer-bottom-links">
         <a href="/legal/terms">Terms &amp; Conditions</a>
@@ -1433,6 +1514,22 @@ const COUNTRY_PRICING = {
   'Philippines':    { display: '₱199' },
 };
 const DEFAULT_PRICING_COUNTRY = 'New Zealand';
+
+// Flag icons as inline SVG, not emoji. Flag emoji (🇳🇿 etc.) render fine
+// on Mac/iOS/Android but Windows' system emoji font has no flag glyphs
+// and silently falls back to plain letter codes (NZ/GB/US/AU/PH) — so on
+// Windows the "flag" selector was just showing text. Drawing the flags
+// as small SVGs sidesteps that entirely: identical pixels on every OS.
+const FLAG_SVGS = {
+  'New Zealand': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><g transform="translate(0,0)"><path d="M0,0 L30,18 M30,0 L0,18" stroke="#fff" stroke-width="3"/><path d="M15,0 V18 M0,9 H30" stroke="#fff" stroke-width="5"/><path d="M15,0 V18 M0,9 H30" stroke="#cf142b" stroke-width="3"/></g><g fill="#cf142b" stroke="#fff" stroke-width="0.6"><circle cx="46" cy="9" r="2"/><circle cx="52" cy="15" r="2.6"/><circle cx="45" cy="23" r="2"/><circle cx="38" cy="18" r="1.6"/></g></svg>',
+  'United Kingdom': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><path d="M0,0 L60,36 M60,0 L0,36" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,36 M60,0 L0,36" stroke="#cf142b" stroke-width="2"/><path d="M30,0 V36 M0,18 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V36 M0,18 H60" stroke="#cf142b" stroke-width="6"/></svg>',
+  'United States': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#fff"/><g fill="#b22234"><rect y="0" width="60" height="2.77"/><rect y="5.54" width="60" height="2.77"/><rect y="11.08" width="60" height="2.77"/><rect y="16.62" width="60" height="2.77"/><rect y="22.16" width="60" height="2.77"/><rect y="27.7" width="60" height="2.77"/><rect y="33.24" width="60" height="2.77"/></g><rect width="24" height="19.4" fill="#3c3b6e"/></svg>',
+  'Australia': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><rect x="0" y="0" width="30" height="18" fill="#00247d"/><path d="M0,0 L30,18 M30,0 L0,18" stroke="#fff" stroke-width="3"/><path d="M15,0 V18 M0,9 H30" stroke="#fff" stroke-width="5"/><path d="M15,0 V18 M0,9 H30" stroke="#cf142b" stroke-width="3"/><g fill="#fff"><circle cx="46" cy="9" r="1.8"/><circle cx="52" cy="16" r="1.8"/><circle cx="46" cy="26" r="1.8"/><circle cx="39" cy="20" r="1.6"/><circle cx="51" cy="6" r="2.2"/></g></svg>',
+  'Philippines': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="18" fill="#0038a8"/><rect y="18" width="60" height="18" fill="#ce1126"/><polygon points="0,0 0,36 24,18" fill="#fff"/><circle cx="10" cy="18" r="4" fill="#fcd116"/></svg>',
+};
+function flagIconMarkup(country) {
+  return FLAG_SVGS[country] || '';
+}
 
 // Uses the browser's own timezone, not a real IP-geolocation lookup —
 // the page's Content-Security-Policy only allows network calls back to
@@ -1487,9 +1584,105 @@ function applyPricingCountry(country) {
     const select = document.getElementById(id);
     if (select && select.value !== country) select.value = country;
   });
+
+  updateCountrySelectVisuals(country);
 }
 
+// Custom flag dropdown wiring. The real <select> elements stay in the DOM
+// (visually hidden) and remain the source of truth for .value/'change' —
+// this only builds the flag-based trigger + menu on top of them and keeps
+// it in sync, so detection/manual-sync logic above is untouched.
+const COUNTRY_LIST = ['New Zealand', 'United Kingdom', 'United States', 'Australia', 'Philippines'];
+
+function updateCountrySelectVisuals(country) {
+  ['header', 'footer'].forEach(prefix => {
+    const btn = document.getElementById(`${prefix}-country-btn`);
+    if (!btn) return;
+    const flagSlot = btn.querySelector('[data-flag-slot]');
+    if (flagSlot) flagSlot.innerHTML = flagIconMarkup(country);
+    const priceSlot = btn.querySelector('[data-price-slot]');
+    if (priceSlot) {
+      const pricing = COUNTRY_PRICING[country];
+      priceSlot.textContent = pricing ? pricing.display : '';
+    }
+    const list = document.getElementById(`${prefix}-country-list`);
+    if (list) {
+      list.querySelectorAll('.country-select-option').forEach(opt => {
+        opt.classList.toggle('is-active', opt.getAttribute('data-value') === country);
+        opt.setAttribute('aria-selected', opt.getAttribute('data-value') === country ? 'true' : 'false');
+      });
+    }
+  });
+}
+
+function setupCountryDropdown(prefix) {
+  const wrap = document.getElementById(`${prefix}-country-wrap`);
+  const btn = document.getElementById(`${prefix}-country-btn`);
+  const list = document.getElementById(`${prefix}-country-list`);
+  const select = document.getElementById(`${prefix}-country-select`);
+  if (!wrap || !btn || !list || !select) return;
+
+  const showPrice = wrap.getAttribute('data-price-labels') === 'true';
+
+  list.innerHTML = COUNTRY_LIST.map(country => {
+    const priceHtml = showPrice
+      ? `<span>${COUNTRY_PRICING[country] ? COUNTRY_PRICING[country].display : ''}</span>`
+      : '';
+    return `<li class="country-select-option" role="option" data-value="${country}" aria-selected="false">
+      <span class="flag-ico">${flagIconMarkup(country)}</span>${priceHtml}
+    </li>`;
+  }).join('');
+
+  function closeList() {
+    list.hidden = true;
+    wrap.classList.remove('is-open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  function openList() {
+    list.hidden = false;
+    wrap.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+
+  btn.addEventListener('click', () => {
+    if (list.hidden) openList(); else closeList();
+  });
+  btn.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeList();
+  });
+  list.addEventListener('click', (e) => {
+    const opt = e.target.closest('.country-select-option');
+    if (!opt) return;
+    const country = opt.getAttribute('data-value');
+    closeList();
+    if (select.value !== country) {
+      select.value = country;
+      select.dispatchEvent(new Event('change'));
+    } else {
+      // Same value reselected — still refresh visuals for consistency.
+      applyPricingCountry(country);
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) closeList();
+  });
+}
+
+['local-price-grid'].forEach(id => {
+  const grid = document.getElementById(id);
+  if (grid) {
+    grid.querySelectorAll('.local-price-card').forEach(card => {
+      const slot = card.querySelector('[data-flag-slot]');
+      const country = card.getAttribute('data-country');
+      if (slot && country) slot.innerHTML = flagIconMarkup(country);
+    });
+  }
+});
+
 (function initCountryPricing() {
+  setupCountryDropdown('header');
+  setupCountryDropdown('footer');
+
   const initialCountry = detectPricingCountry() || DEFAULT_PRICING_COUNTRY;
   applyPricingCountry(initialCountry);
 
