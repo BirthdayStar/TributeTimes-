@@ -391,6 +391,98 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   color:#54592F;
   line-height:1.45;
 }
+/* LOCAL CURRENCY ESTIMATE — added 18 Aug 2026, client request. Purely a
+   display-layer estimate next to the real NZD price/total charged here —
+   the actual amount sent to Stripe/GCash is untouched (getSelectedTotal(),
+   formatGcashAmount() etc. are not modified by any of this). Auto-detects
+   the visitor's country the same way landing.html already does (device
+   timezone, since CSP blocks a real IP-geo call), with an identical manual
+   flag selector as a fallback/override. The conversion multipliers below
+   are not an independently-invented rate — they're derived from the exact
+   country prices already approved for the landing page's own local-pricing
+   section (NZ $9.95 / GB £4.95 / US $6.95 / AU $8.95 / PH ₱199), applied
+   here as ratios so this checkout estimate stays consistent with what the
+   customer already saw on the landing page. Stripe's own hosted checkout
+   still shows its own live-converted amount at actual payment time — this
+   is only a heads-up estimate beforehand. */
+.tier-price-local {
+  display:block;
+  font-size:0.78rem;
+  font-weight:600;
+  color:#8A9160;
+  margin:-4px 0 8px;
+}
+.checkout-local-price-row {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.82rem;
+  color:#54592F;
+  margin:-10px 0 20px;
+}
+.checkout-local-price-row .country-select-wrap { position:relative; }
+.checkout-local-price-row .country-select-btn {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:transparent;
+  border:none;
+  color:#54592F;
+  font-family:inherit;
+  font-size:0.82rem;
+  font-weight:700;
+  padding:4px 6px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:color 0.2s, background 0.2s;
+}
+.checkout-local-price-row .country-select-btn:hover,
+.checkout-local-price-row .country-select-wrap.is-open .country-select-btn {
+  color:#3D4122;
+  background:rgba(61,65,34,0.06);
+}
+.checkout-local-price-row .country-select-chevron { transition:transform 0.2s; }
+.checkout-local-price-row .country-select-wrap.is-open .country-select-chevron { transform:rotate(180deg); }
+.checkout-local-price-row .flag-ico {
+  display:inline-block;
+  width:18px;
+  height:13px;
+  border-radius:3px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(61,65,34,0.15);
+}
+.checkout-local-price-row .flag-ico svg { display:block; width:100%; height:100%; }
+.checkout-local-price-row .country-select-list {
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  background:#fff;
+  border:1.5px solid #DED9BE;
+  border-radius:14px;
+  box-shadow:0 10px 28px rgba(61,65,34,0.18);
+  padding:6px;
+  margin:0;
+  list-style:none;
+  z-index:40;
+  min-width:180px;
+}
+.checkout-local-price-row .country-select-list[hidden] { display:none; }
+.checkout-local-price-row .country-select-option {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:9px;
+  cursor:pointer;
+  font-size:0.85rem;
+  color:#3D4122;
+  white-space:nowrap;
+  transition:background 0.15s;
+}
+.checkout-local-price-row .country-select-option:hover,
+.checkout-local-price-row .country-select-option.is-active {
+  background:rgba(138,106,31,0.1);
+}
 .delivery-grid {
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -1242,6 +1334,23 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
     <div class="purchase-eyebrow">Public Preview</div>
     <div class="purchase-title">Choose your keepsake option</div>
     <div class="purchase-copy" id="purchase-copy">Your public preview shows a SAMPLE watermark until payment. Choose card or GCash below.</div>
+    <div class="checkout-local-price-row" id="checkout-local-price-row">
+      <span>Prices shown in NZD. Your estimate:</span>
+      <div class="country-select-wrap" id="checkout-country-wrap">
+        <select class="country-select-native" id="checkout-country-select" aria-hidden="true" tabindex="-1" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
+          <option value="New Zealand">New Zealand</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="United States">United States</option>
+          <option value="Australia">Australia</option>
+          <option value="Philippines">Philippines</option>
+        </select>
+        <button type="button" class="country-select-btn" id="checkout-country-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select your country to see an estimated local price">
+          <span class="flag-ico" data-flag-slot></span>
+          <svg class="country-select-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z" fill="currentColor"/></svg>
+        </button>
+        <ul class="country-select-list" id="checkout-country-list" role="listbox" hidden></ul>
+      </div>
+    </div>
     <!-- Standard ($24.95) and Premium ($34.95) printed tiers dropped per
          client decision (new_changes.md bug #12, 7 Aug 2026) — public
          portal is Digital-only at $14.95 for now. Hidden rather than
@@ -1253,16 +1362,19 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
       <div class="tier-card primary selected" data-tier="digital" onclick="selectProductTier('digital')">
         <span class="tier-name">Digital</span>
         <span class="tier-price">NZ$14.95</span>
+        <span class="tier-price-local" data-tier-local="digital"></span>
         <span class="tier-copy">Instant clean PDF access after payment.</span>
       </div>
       <div class="tier-card is-hidden" data-tier="standard" onclick="selectProductTier('standard')">
         <span class="tier-name">Standard</span>
         <span class="tier-price">NZ$24.95</span>
+        <span class="tier-price-local" data-tier-local="standard"></span>
         <span class="tier-copy">Printed and posted in a plain cream envelope.</span>
       </div>
       <div class="tier-card is-hidden" data-tier="premium" onclick="selectProductTier('premium')">
         <span class="tier-name">Premium</span>
         <span class="tier-price">NZ$34.95</span>
+        <span class="tier-price-local" data-tier-local="premium"></span>
         <span class="tier-copy">Printed, posted, floral envelope, and frame included.</span>
       </div>
     </div>
@@ -1444,6 +1556,35 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
 </div>
 
 <script>
+// LOCAL CURRENCY ESTIMATE (checkout) constants — declared first, before
+// anything else in this script, so they're already initialized by the
+// time any top-level init code calls updatePurchaseNote() (which reads
+// CHECKOUT_FX via formatLocalCheckoutEstimate()). The functions that use
+// these are declared further down near updatePurchaseNote() itself; only
+// the const/let values needed moving up here (function declarations are
+// hoisted automatically, these aren't). See the full explanatory comment
+// further down where the rest of this feature lives.
+const CHECKOUT_FLAG_SVGS = {
+  'New Zealand': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><g><path d="M0,0 L30,18 M30,0 L0,18" stroke="#fff" stroke-width="3"/><path d="M15,0 V18 M0,9 H30" stroke="#fff" stroke-width="5"/><path d="M15,0 V18 M0,9 H30" stroke="#cf142b" stroke-width="3"/></g><g fill="#cf142b" stroke="#fff" stroke-width="0.6"><circle cx="46" cy="9" r="2"/><circle cx="52" cy="15" r="2.6"/><circle cx="45" cy="23" r="2"/><circle cx="38" cy="18" r="1.6"/></g></svg>',
+  'United Kingdom': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><path d="M0,0 L60,36 M60,0 L0,36" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,36 M60,0 L0,36" stroke="#cf142b" stroke-width="2"/><path d="M30,0 V36 M0,18 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V36 M0,18 H60" stroke="#cf142b" stroke-width="6"/></svg>',
+  'United States': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#fff"/><g fill="#b22234"><rect y="0" width="60" height="2.77"/><rect y="5.54" width="60" height="2.77"/><rect y="11.08" width="60" height="2.77"/><rect y="16.62" width="60" height="2.77"/><rect y="22.16" width="60" height="2.77"/><rect y="27.7" width="60" height="2.77"/><rect y="33.24" width="60" height="2.77"/></g><rect width="24" height="19.4" fill="#3c3b6e"/></svg>',
+  'Australia': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="36" fill="#00247d"/><path d="M0,0 L30,18 M30,0 L0,18" stroke="#fff" stroke-width="3"/><path d="M15,0 V18 M0,9 H30" stroke="#fff" stroke-width="5"/><path d="M15,0 V18 M0,9 H30" stroke="#cf142b" stroke-width="3"/><g fill="#fff"><circle cx="46" cy="9" r="1.8"/><circle cx="52" cy="16" r="1.8"/><circle cx="46" cy="26" r="1.8"/><circle cx="39" cy="20" r="1.6"/><circle cx="51" cy="6" r="2.2"/></g></svg>',
+  'Philippines': '<svg viewBox="0 0 60 36" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="18" fill="#0038a8"/><rect y="18" width="60" height="18" fill="#ce1126"/><polygon points="0,0 0,36 24,18" fill="#fff"/><circle cx="10" cy="18" r="4" fill="#fcd116"/></svg>',
+};
+// Multipliers derived from the already-approved landing-page local prices
+// (NZ $9.95 -> GB £4.95 / US $6.95 / AU $8.95 / PH ₱199), not a separately
+// invented exchange rate — keeps this estimate consistent with what the
+// customer already saw before reaching checkout.
+const CHECKOUT_FX = {
+  'New Zealand':    { symbol: 'NZ$', rate: 1 },
+  'United Kingdom': { symbol: '£',   rate: 4.95 / 9.95 },
+  'United States':  { symbol: '$',   rate: 6.95 / 9.95 },
+  'Australia':      { symbol: '$',   rate: 8.95 / 9.95 },
+  'Philippines':    { symbol: '₱',   rate: 199 / 9.95 },
+};
+const CHECKOUT_TIER_NZD = { digital: 14.95, standard: 24.95, premium: 34.95 };
+let checkoutPricingCountry = 'New Zealand';
+
 let selectedOccasion = null;
 let selectedBanner = null;
 let selectedBg = null;
@@ -1704,7 +1845,10 @@ function updatePurchaseNote(extraMessage) {
   const totalText = activeReferralCode
     ? `NZ$${(total * 0.9).toFixed(2)} (10% off applied, was NZ$${total.toFixed(2)})`
     : `NZ$${total.toFixed(2)}`;
-  note.textContent = `Selected option: ${tierLabel}. Total today: ${totalText}.${delivery}${method}`;
+  // Local-currency estimate appended for display only — the NZD amount
+  // above (and everything Stripe/GCash actually charges) is unchanged.
+  const localEstimate = formatLocalCheckoutEstimate(activeReferralCode ? total * 0.9 : total);
+  note.textContent = `Selected option: ${tierLabel}. Total today: ${totalText}${localEstimate}.${delivery}${method}`;
 }
 
 // Client-reported bug (11 Aug 2026, urgent): the promo code field had no
@@ -3413,6 +3557,128 @@ async function submitPasswordUpdate(event) {
     errorDiv.style.display = 'block';
   }
 }
+
+// LOCAL CURRENCY ESTIMATE (checkout) — client request, 18 Aug 2026. Display
+// only: auto-detects the visitor's country the same way landing.html does
+// (device timezone — CSP blocks a real IP-geo call), plus a manual flag
+// selector as override, and shows a "≈" estimate next to the real NZD
+// tier prices and the purchase-note total. Nothing here touches
+// getSelectedTotal(), formatGcashAmount(), or the Stripe checkout amount —
+// those remain exactly as before, in NZD, untouched. Only runs on the
+// public portal where this purchase panel exists at all. (CHECKOUT_FX /
+// CHECKOUT_FLAG_SVGS / CHECKOUT_TIER_NZD / checkoutPricingCountry are
+// declared at the very top of this script, not here — they need to exist
+// before updatePurchaseNote() can be called, which happens earlier during
+// page init than this point in the file.)
+function detectCheckoutPricingCountry() {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const TIMEZONE_TO_COUNTRY = {
+      'Pacific/Auckland': 'New Zealand', 'Pacific/Chatham': 'New Zealand',
+      'Europe/London': 'United Kingdom',
+      'Australia/Sydney': 'Australia', 'Australia/Melbourne': 'Australia',
+      'Australia/Brisbane': 'Australia', 'Australia/Perth': 'Australia',
+      'Australia/Adelaide': 'Australia', 'Australia/Hobart': 'Australia',
+      'Australia/Darwin': 'Australia',
+      'Asia/Manila': 'Philippines',
+    };
+    let matched = TIMEZONE_TO_COUNTRY[timeZone];
+    if (!matched && timeZone.startsWith('America/')) matched = 'United States';
+    return matched && CHECKOUT_FX[matched] ? matched : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function formatLocalCheckoutEstimate(nzdAmount) {
+  const fx = CHECKOUT_FX[checkoutPricingCountry];
+  if (!fx || checkoutPricingCountry === 'New Zealand') return '';
+  return ` (≈ ${fx.symbol}${(Number(nzdAmount || 0) * fx.rate).toFixed(2)})`;
+}
+
+function refreshCheckoutTierLocals() {
+  const fx = CHECKOUT_FX[checkoutPricingCountry];
+  document.querySelectorAll('[data-tier-local]').forEach(el => {
+    const tier = el.getAttribute('data-tier-local');
+    const nzd = CHECKOUT_TIER_NZD[tier];
+    if (!fx || checkoutPricingCountry === 'New Zealand' || nzd === undefined) {
+      el.textContent = '';
+      return;
+    }
+    el.textContent = `≈ ${fx.symbol}${(nzd * fx.rate).toFixed(2)}`;
+  });
+}
+
+function applyCheckoutPricingCountry(country) {
+  if (!CHECKOUT_FX[country]) return;
+  checkoutPricingCountry = country;
+
+  const select = document.getElementById('checkout-country-select');
+  if (select && select.value !== country) select.value = country;
+
+  const btn = document.getElementById('checkout-country-btn');
+  if (btn) {
+    const flagSlot = btn.querySelector('[data-flag-slot]');
+    if (flagSlot) flagSlot.innerHTML = CHECKOUT_FLAG_SVGS[country] || '';
+  }
+  const list = document.getElementById('checkout-country-list');
+  if (list) {
+    list.querySelectorAll('.country-select-option').forEach(opt => {
+      const active = opt.getAttribute('data-value') === country;
+      opt.classList.toggle('is-active', active);
+      opt.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  refreshCheckoutTierLocals();
+  // Refreshes the "Total today" note (which calls formatLocalCheckoutEstimate
+  // using the checkoutPricingCountry set above) — safe to call any time,
+  // it only rebuilds display text from the existing selectedProductTier.
+  if (typeof updatePurchaseNote === 'function') updatePurchaseNote();
+}
+
+function setupCheckoutCountryDropdown() {
+  const wrap = document.getElementById('checkout-country-wrap');
+  const btn = document.getElementById('checkout-country-btn');
+  const list = document.getElementById('checkout-country-list');
+  const select = document.getElementById('checkout-country-select');
+  if (!wrap || !btn || !list || !select) return;
+
+  const COUNTRY_ORDER = ['New Zealand', 'United Kingdom', 'United States', 'Australia', 'Philippines'];
+  list.innerHTML = COUNTRY_ORDER.map(country =>
+    `<li class="country-select-option" role="option" data-value="${country}" aria-selected="false">
+      <span class="flag-ico">${CHECKOUT_FLAG_SVGS[country] || ''}</span><span>${country}</span>
+    </li>`
+  ).join('');
+
+  function closeList() {
+    list.hidden = true;
+    wrap.classList.remove('is-open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  function openList() {
+    list.hidden = false;
+    wrap.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+  btn.addEventListener('click', () => { list.hidden ? openList() : closeList(); });
+  btn.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeList(); });
+  list.addEventListener('click', (e) => {
+    const opt = e.target.closest('.country-select-option');
+    if (!opt) return;
+    closeList();
+    applyCheckoutPricingCountry(opt.getAttribute('data-value'));
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) closeList();
+  });
+}
+
+(function initCheckoutLocalPricing() {
+  if (!document.getElementById('checkout-country-wrap')) return;
+  setupCheckoutCountryDropdown();
+  applyCheckoutPricingCountry(detectCheckoutPricingCountry() || 'New Zealand');
+})();
 </script>
 
 <!-- UPDATE PASSWORD MODAL -->
