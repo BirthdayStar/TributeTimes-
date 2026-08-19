@@ -13,7 +13,7 @@
 // read as a birth-specific panel.
 // ============================================================
 
-const { titleCase, cleanTruncate, enforceExactYearLead, enforceLocalIndexLabel, formatDisplayYear } = require('./tribute-times-renderer');
+const { titleCase, cleanTruncate, enforceExactYearLead, enforceSportHasScore, enforceLocalIndexLabel, formatDisplayYear } = require('./tribute-times-renderer');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
 
 function vintageAnniversaryHoroscope(signName) {
@@ -132,11 +132,22 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     ? { label: localNews[1].country || country, year: localNews[1].year, body: localNews[1].body }
     : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
-  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
-  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
-  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
+  // Client-reported bug (18 Aug 2026) — see the matching fix/comment on
+  // otd1Text etc. in tribute-times-renderer.js: the "<b>Label, Year:</b> "
+  // prefix shares the same clamped line as the body but wasn't counted
+  // against the body's own budget, so a longer label pushed the body past
+  // the box's real capacity and the browser's CSS clamp hard-cut it
+  // mid-word.
+  const otd1Prefix = `${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}: `;
+  const otd2Prefix = `${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}: `;
+  const otd3Prefix = `${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}: `;
+  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, Math.max(80, 165 - Math.round(otd1Prefix.length * 1.15)))}`;
+  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, Math.max(80, 165 - Math.round(otd2Prefix.length * 1.15)))}`;
+  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, Math.max(55, 115 - Math.round(otd3Prefix.length * 1.15)))}`;
 
-  const sportEntry = sport[0];
+  // Client-reported bug (18 Aug 2026) — see enforceSportHasScore() in
+  // tribute-times-renderer.js for why this replaces sport[0] directly.
+  const sportEntry = enforceSportHasScore(sport);
   const sportText = cleanTruncate(
     sportEntry
       ? `${sportEntry.year ? sportEntry.year + ' — ' : ''}${sportEntry.headline || ''}${sportEntry.byline ? ` (${sportEntry.byline})` : ''}.`
