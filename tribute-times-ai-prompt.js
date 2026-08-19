@@ -94,8 +94,8 @@ ${country.toUpperCase()} NEWS — On This Day:
 SPORT — On This Day (any year):
 - 3-5 sport headline lines from different years, all on ${day}th ${monthName(month)}
 - Headlines only — no story text beneath them
-- Each headline should be one concise vintage newspaper-style line, ideally with scoreline or result detail
-- No vague descriptions — real results only
+- CRITICAL, not optional (client-reported bug, 18 Aug 2026: a keepsake showed "All Blacks Complete Dominant Tour of British Isles (Review, Wellington)" — a vague, unsourced-sounding summary with no actual result) — every headline MUST include a real, specific scoreline or result (e.g. "All Blacks 23 · Springboks 22", "Wimbledon: Brough def. Fry 6-3, 6-3", "3-1"). A summary sentence describing a result in prose, with no actual score/number in it, is NOT acceptable and will be rejected at render time — see enforceSportHasScore() in tribute-times-renderer.js.
+- If you are not confident of the real scoreline for an event, choose a different REAL event from that date where you ARE confident of the actual score — do not invent a plausible-sounding score, and do not fall back to a vague prose summary instead of a score.
 - Prefer ${country} sport but include international if no local results found
 
 BUSINESS — On This Day (any year):
@@ -200,7 +200,7 @@ RETURN THIS EXACT JSON STRUCTURE
   "sport": [
     {
       "year": 1981,
-      "headline": "string — include scoreline e.g. All Blacks 23 · Springboks 22",
+      "headline": "string — MUST include a real scoreline/result, e.g. All Blacks 23 · Springboks 22 — not a vague prose summary with no score",
       "byline": "string — venue and location",
       "body": "",
       "boxed": true|false

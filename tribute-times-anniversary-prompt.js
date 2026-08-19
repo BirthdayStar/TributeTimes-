@@ -79,6 +79,8 @@ ${country.toUpperCase()} NEWS — On This Day:
 SPORT — On This Day (any year):
 - 3-5 sport headline lines from different years, all on ${day}th ${monthName(month)}
 - Headlines only — no story text beneath them
+- CRITICAL, not optional (client-reported bug, 18 Aug 2026 — see tribute-times-ai-prompt.js for full context): every headline MUST include a real, specific scoreline or result (e.g. "All Blacks 23 · Springboks 22"). A summary sentence describing a result in prose, with no actual score/number in it, is NOT acceptable and will be rejected at render time.
+- If you are not confident of the real scoreline for an event, choose a different REAL event from that date where you ARE confident of the actual score — do not invent a plausible-sounding score.
 - Prefer ${country} sport but include international if no local results found
 
 BUSINESS — On This Day (any year):

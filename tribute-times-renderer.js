@@ -134,6 +134,27 @@ function enforceExactYearLead(newsArray, year) {
   return reordered;
 }
 
+// Client-reported bug (18 Aug 2026): the Sporting News box showed vague,
+// unsourced-reading text with no actual result — "All Blacks Complete
+// Dominant Tour of British Isles (Review, Wellington)" — which reads as
+// AI-generated commentary rather than a real, verifiable fact, the same
+// category of complaint already fixed once for the weather panel. The
+// prompt now requires a real scoreline in every sport headline (see
+// tribute-times-ai-prompt.js), but that alone means trusting the AI to
+// comply every time — not a guarantee, same reasoning as
+// enforceExactYearLead() above. This is the actual enforcement: a
+// headline only counts as having a real result if it contains at least
+// one digit (every genuine scoreline does — "23", "6-3", "3-1" — a pure
+// prose summary with no numbers in it does not). Searches the sport array
+// for the first entry that qualifies and returns it; if nothing in the
+// whole array has a scoreline, returns null so the caller can show the
+// honest "no sporting results available" message instead of ever
+// displaying a vague, unsourced-looking blurb.
+function enforceSportHasScore(sportArray) {
+  if (!Array.isArray(sportArray)) return null;
+  return sportArray.find(item => /\d/.test(item?.headline || '')) || null;
+}
+
 // Found during testing (7 Aug 2026, not client-reported but a genuine
 // display gap): a real BC/BCE event (e.g. Julius Caesar's assassination,
 // 44 BC) rendered as "World, 44:" — a correct year value with no
@@ -299,8 +320,22 @@ function renderNewspaper(data, content, fonts) {
   // filler sections added the same day — reproduced with zero filler
   // content present. Reduced to 3, which rendered cleanly with real
   // (not shortened) note text in the same test.
-  const birthdaysHTML = birthdays.slice(0, 3).map((b, i) => `
-    <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
+  // Client-reported bug (18 Aug 2026): mid-word cuts on longer names —
+  // "Won Wimbledon four times in a glitterin...", "Celebrated for
+  // genre-defying soul...". Same root cause as the "Also On This Day"
+  // fix above: the name renders bold, inline, on the SAME first line as
+  // the note (not in a separately-clamped box), so a longer name (e.g.
+  // "Meshell Ndegeocello") eats into the note's real 2-line capacity —
+  // the fixed 85-char budget didn't account for that, so the browser's
+  // own CSS clamp hard-cut the note mid-word after cleanTruncate had
+  // already produced a clean, word-safe cut that just didn't fit at that
+  // width. See the matching fix/comment on otd1Text etc. above.
+  const birthdaysHTML = birthdays.slice(0, 3).map((b, i) => {
+    const namePrefix = `${b.name} — `;
+    const noteBudget = Math.max(40, 85 - Math.round(namePrefix.length * 1.15));
+    return `
+    <div class="bday"><b>${b.name}</b> &mdash; <span class="desc">${cleanTruncate(b.note, noteBudget)}</span></div>`;
+  }).join('');
 
   // ── WHAT THEY WERE READING (fills the blank-space gap, Aug 2026) ──
   // See the World in Numbers comment above — same fix, same reasoning,
@@ -395,9 +430,27 @@ function renderNewspaper(data, content, fonts) {
     ? { label: localNews[1].country || country, year: localNews[1].year, body: localNews[1].body }
     : { label: 'Business', year: business[2]?.year, body: business[2]?.body || localNews[1]?.headline || business[2]?.headline || '' };
 
-  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, 165)}`;
-  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, 165)}`;
-  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, 115)}`;
+  // Client-reported bug (18 Aug 2026): mid-word cuts came back — e.g.
+  // "...found thousands of survivors in desperate condition. It was among
+  // the first camps freed by Alli..." Root cause: the body's own budget
+  // (165/165/115) was correct in isolation, but the "<b>Label, Year:</b> "
+  // prefix shares the SAME clamped box on the SAME first line, and that
+  // prefix's length was never subtracted from the budget. A longer label
+  // (e.g. "New Zealand, 1931:" vs "World, 1945:") ate into the box's real
+  // capacity, pushing the body past what actually fits — the browser's own
+  // CSS line-clamp then hard-cut it mid-word, which is exactly what
+  // cleanTruncate exists to prevent but never got the chance to, since it
+  // was only ever told about the body's length, not the prefix sharing its
+  // line. Subtracting the prefix length (with a small multiplier since the
+  // prefix renders bold/wider than the body's regular weight) keeps the
+  // combined prefix+body within the same empirically-safe capacity these
+  // budgets were originally measured against.
+  const otd1Prefix = `${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}: `;
+  const otd2Prefix = `${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}: `;
+  const otd3Prefix = `${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}: `;
+  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, Math.max(80, 165 - Math.round(otd1Prefix.length * 1.15)))}`;
+  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, Math.max(80, 165 - Math.round(otd2Prefix.length * 1.15)))}`;
+  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, Math.max(55, 115 - Math.round(otd3Prefix.length * 1.15)))}`;
 
   // ── SPORT TEXT ──
   // The AI prompt deliberately asks for sport as headline-only, no body
@@ -409,7 +462,9 @@ function renderNewspaper(data, content, fonts) {
   // "undated, unsourced" sporting blurbs. Both fields already exist in the
   // same verified data used everywhere else on the page; this just surfaces
   // them instead of discarding them.
-  const sportEntry = sport[0];
+  // Client-reported bug (18 Aug 2026): only enforceSportHasScore() below
+  // guarantees a real scoreline is present — see its comment for why.
+  const sportEntry = enforceSportHasScore(sport);
   const sportText = cleanTruncate(
     sportEntry
       ? `${sportEntry.year ? sportEntry.year + ' — ' : ''}${sportEntry.headline || ''}${sportEntry.byline ? ` (${sportEntry.byline})` : ''}.`
@@ -466,9 +521,27 @@ function renderNewspaper(data, content, fonts) {
   // language is literally accurate rather than nonsensical — reinstated here
   // specifically for this occasion only (new_changes.md Step 14), everything
   // else keeps the occasion-neutral real-news headline above.
+  // Client question (18 Aug 2026): a keepsake for a NZ-born recipient led
+  // with a Pope John XXIII world story over a genuinely NZ-specific one
+  // (the nuclear-free Pacific debate) that was also available that exact
+  // date — asked whether the recipient's home-country story should be
+  // preferred for the lead when one's available. Answer implemented here:
+  // yes — the local story now wins the masthead headline when it's a real,
+  // exact-year match (enforceExactYearLead() above already guarantees
+  // localNews[0]/worldNews[0] are each independently exact-year-verified
+  // when a match exists anywhere in their own array), falling back to the
+  // world story only when no local story has that guarantee. This only
+  // changes which headline is shown at the very top — the separate World
+  // News / local News boxes further down the page (news1Body/news2Body)
+  // are untouched and still show both, unchanged.
+  const localLeadIsExactYear = Number(localNews[0]?.year) === Number(year);
+  const worldLeadIsExactYear = Number(worldNews[0]?.year) === Number(year);
+  const preferredLeadHeadline = localLeadIsExactYear
+    ? localNews[0]?.headline
+    : (worldLeadIsExactYear ? worldNews[0]?.headline : (worldNews[0]?.headline || localNews[0]?.headline));
   const leadHeadline = occasion === 'New Baby'
     ? cleanTruncate(`A Star Arrives: The World Welcomes ${cleanedRecipientName}`, 105)
-    : cleanTruncate(worldNews[0]?.headline || localNews[0]?.headline || bannerFullText, 105);
+    : cleanTruncate(preferredLeadHeadline || bannerFullText, 105);
   // Was "Born on {date} in {country} — full report from the day everything
   // changed" — same birth-announcement problem as the headline above, plus
   // it duplicated the wording already covered by the name-banner directly
@@ -966,4 +1039,4 @@ function renderNewspaper(data, content, fonts) {
 </html>`;
 }
 
-module.exports = { renderNewspaper, titleCase, cleanTruncate, enforceExactYearLead, enforceLocalIndexLabel, formatDisplayYear };
+module.exports = { renderNewspaper, titleCase, cleanTruncate, enforceExactYearLead, enforceSportHasScore, enforceLocalIndexLabel, formatDisplayYear };
