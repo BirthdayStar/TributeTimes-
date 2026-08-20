@@ -1,0 +1,2990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#8A6A1F" />
+  <title>The Tribute Times — Admin Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS & STYLE VARIABLES ── */
+    :root {
+      --bg: #FCF9E8;
+      --surface: #FFFFFF;
+      --panel: #ffffff;
+      --ink: #3D4122;
+      --ink-2: #54592F;
+      --muted: #54592F;
+      --accent: #8A6A1F;
+      --accent-h: #6F5418;
+      --accent-2: #8A6A1F;
+      --green: #4C7A3D;
+      --green-bg: #E8F0DE;
+      --blue: #1e4d8c;
+      --blue-bg: #eef3ff;
+      --amber: #92600a;
+      --amber-bg: #fffaeb;
+      --line: #DED9BE;
+      --line-2: #DED9BE;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow-sm: 0 1px 3px rgba(61,65,34,.07), 0 4px 12px rgba(61,65,34,.06);
+      --shadow: 0 4px 24px rgba(61,65,34,.10), 0 1px 4px rgba(61,65,34,.06);
+      --shadow-lg: 0 16px 48px rgba(61,65,34,.14);
+      --transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ── RESET & BASE ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ── LOGGED IN STYLES (DARK CRIMSON THEME) ── */
+    body.logged-in {
+      background: #FCF9E8;
+      background-attachment: fixed;
+      color: #3D4122;
+      --surface: #FFFFFF;
+      --panel: #FFFFFF;
+      --line: #DED9BE;
+      --line-2: #DED9BE;
+      --ink: #3D4122;
+      --ink-2: #54592F;
+      --muted: #8A9160;
+    }
+
+    /* ── FIXED LAYOUT & PORTAL STRUCTURE ── */
+    .portal-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Left Navigation Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 260px;
+      background: #3D4122;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(252,249,232,0.15);
+      display: none;
+      flex-direction: column;
+      z-index: 1000;
+      color: #FCF9E8;
+      transition: transform 0.3s ease;
+    }
+    body.logged-in .sidebar { display: flex; }
+
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(252,249,232,0.15);
+    }
+    .sidebar-logo {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #FCF9E8;
+    }
+    .sidebar-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #8A6A1F 0%, #B08A2E 100%);
+      color: #FCF9E8;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(252,249,232,0.78);
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+      transition: background var(--transition), color var(--transition);
+    }
+    .nav-item:hover {
+      background: rgba(252,249,232,0.12);
+      color: #FCF9E8;
+    }
+    .nav-item.active {
+      background: var(--accent);
+      color: #FCF9E8;
+      box-shadow: 0 4px 12px rgba(138,106,31,0.35);
+    }
+    .nav-item[onclick="navigateTo('consultants')"],
+    .nav-item[onclick="navigateTo('promo-codes')"] {
+      display: none;
+    }
+
+    .sidebar-footer {
+      padding: 18px 20px;
+      border-top: 1px solid rgba(252,249,232,0.15);
+      background: rgba(29,31,16,0.35);
+    }
+    .sidebar-user {
+      font-size: 0.8rem;
+      color: rgba(252,249,232,0.65);
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sidebar-user strong {
+      color: #FCF9E8;
+      font-weight: 600;
+    }
+    
+    /* Main Content Wrapper */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 30px 40px;
+      transition: margin-left 0.3s ease;
+      min-width: 0;
+    }
+    body:not(.logged-in) .main-content {
+      margin-left: 0;
+      padding: 0;
+    }
+
+    /* ── AUTH STAGE (LOGIN VIEW) ──
+       Matches the dark-crimson gradient + centered white-card pattern used
+       on every other portal's sign-in screen (public/florist/radio/station). */
+    body:not(.logged-in) {
+      background: radial-gradient(circle at top right, #F4F0DE, #FCF9E8 60%);
+      background-attachment: fixed;
+    }
+    .hero {
+      text-align: center;
+      padding: 56px 20px 12px;
+    }
+    body.logged-in .hero { display: none; }
+    .hero-inner { max-width: 480px; margin: 0 auto; }
+    .hero .header-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #3D4122;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    .hero .header-sub {
+      font-size: 0.72rem;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: rgba(61,65,34,0.55);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    .auth-stage {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 20px;
+    }
+    body.logged-in .auth-stage { display: none; }
+    .auth-card {
+      width: min(100%, 480px);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      color: #3D4122;
+    }
+    .auth-card-head {
+      padding: 28px 28px 18px;
+      border-bottom: 1px solid #DED9BE;
+    }
+    .auth-card-eyebrow {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .auth-card-head h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .auth-card-head p {
+      margin: 6px 0 0;
+      font-size: 0.85rem;
+      color: #54592F;
+    }
+    .auth-card-body {
+      padding: 24px 28px 28px;
+    }
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #54592F;
+    }
+    .form-field input {
+      width: 100%;
+      border: 1.5px solid #DED9BE;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font: inherit;
+      font-size: 0.95rem;
+      color: #3D4122;
+      background: #F4F0DE;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      outline: none;
+    }
+    .form-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(138,106,31,.15);
+    }
+    .field-wrap { position: relative; }
+    .field-wrap input { padding-right: 52px; }
+    .pass-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid #DED9BE;
+      background: #ffffff;
+      color: #54592F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background var(--transition);
+    }
+    .pass-toggle:hover { background: #F4F0DE; transform: translateY(-50%); }
+
+    /* ── PAGE VIEW WRAPPERS ── */
+    .page-view {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .page-view.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION PANELS (GLASSMORPHISM) ── */
+    .section {
+      background: var(--panel);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line-2);
+      background: #F4F0DE;
+    }
+    .section-head h3 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-head-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .section-body { padding: 20px 22px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      white-space: nowrap;
+      text-decoration: none;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--accent); color: #FCF9E8; box-shadow: 0 2px 8px rgba(138,106,31,.30); }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
+    .btn-ghost:hover { background: var(--line-2); }
+    .btn-soft { background: var(--line-2); color: var(--ink-2); }
+    .btn-soft:hover { background: var(--line); }
+    .btn-green { background: var(--green); color: #FCF9E8; }
+    .btn-green:hover { background: #3D5F30; }
+    .btn-danger { background: #A1442A; color: #FCF9E8; }
+    .btn-danger:hover { background: #8B3820; }
+    .btn-sm { padding: 7px 13px; font-size: 0.8rem; border-radius: 8px; }
+    .btn-full { width: 100%; justify-content: center; padding: 13px 18px; font-size: 0.95rem; }
+
+    /* ── DATA TABLES ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(61,65,34,0.03);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .data-table thead th {
+      background: #F4F0DE;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 14px 16px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--line);
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid var(--line-2);
+      transition: background var(--transition);
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: rgba(61,65,34,0.04); }
+    .data-table td {
+      padding: 14px 16px;
+      vertical-align: middle;
+    }
+
+    /* ── FORM ELEMENTS ── */
+    .fld label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .fld input,
+    .fld select,
+    .fld textarea,
+    .inline-select {
+      width: 100%;
+      font: inherit;
+      font-size: 0.88rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 11px;
+      color: var(--ink);
+      background: #F4F0DE;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .fld input:focus,
+    .fld select:focus,
+    .fld textarea:focus,
+    .inline-select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(138,106,31,.15);
+    }
+
+    /* ── MOBILE HEADER & HAMBURGER menu ── */
+    .mobile-header {
+      display: none;
+      height: 56px;
+      background: #3D4122;
+      border-bottom: 1px solid rgba(252,249,232,0.15);
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+    .hamburger-btn {
+      background: transparent;
+      border: none;
+      color: #FCF9E8;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    /* ── METRIC CARDS ── */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .metric-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .metric-card.c-total::before { background: #8A6A1F; }
+    .metric-card.c-pending::before { background: var(--amber); }
+    .metric-card.c-printed::before { background: var(--blue); }
+    .metric-card.c-posted::before { background: var(--green); }
+    .metric-card.c-delivered::before { background: #7c3aed; }
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+    }
+
+    /* ── ATTRIBUTION METRICS ── */
+    .attr-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .attr-card {
+      background: rgba(61,65,34,0.05);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .attr-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 4px; }
+    .attr-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; }
+
+    /* ── MESSAGES ── */
+    .msg {
+      font-size: 0.88rem;
+      min-height: 1.4em;
+      color: var(--muted);
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+    .msg.error { color: #A1442A; }
+    .msg.ok { color: #4C7A3D; }
+    .hidden { display: none !important; }
+
+    /* ── STATUS PILLS ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: capitalize;
+    }
+    .status-pill::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-pill.pending   { background: rgba(245, 158, 11, 0.15); color: #92600A; }
+    .status-pill.pending::before { background: #f59e0b; }
+    .status-pill.printed   { background: rgba(59, 130, 246, 0.15); color: #1E4D8C; }
+    .status-pill.printed::before { background: #3b82f6; }
+    .status-pill.posted    { background: rgba(34, 197, 94, 0.15); color: #3D5F30; }
+    .status-pill.posted::before  { background: #22c55e; }
+    .status-pill.delivered { background: rgba(139, 92, 246, 0.15); color: #6B46C1; }
+    .status-pill.delivered::before { background: #8b5cf6; }
+    .status-pill.approved  { background: rgba(34, 197, 94, 0.15); color: #3D5F30; }
+    .status-pill.approved::before { background: #22c55e; }
+    .status-pill.rejected  { background: rgba(239, 68, 68, 0.15); color: #A1442A; }
+    .status-pill.rejected::before { background: #ef4444; }
+
+    /* ── PAGINATION CONTROLS ── */
+    .pagination-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 10px 4px 4px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .pagination-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── POPUP MODALS ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(61,65,34,0.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #ffffff;
+      color: #3D4122;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(61,65,34,0.28);
+      border: 1px solid #DED9BE;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    body.logged-in .modal-card {
+      background: #ffffff;
+      color: #3D4122;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(61,65,34,0.05);
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: rgba(61,65,34,0.05);
+    }
+    .close-modal-btn {
+      background: transparent;
+      border: none;
+      color: var(--ink);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    @keyframes modalSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── RESPONSIVE MEDIA QUERIES ── */
+    @media (max-width: 992px) {
+      body.logged-in .mobile-header {
+        display: flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 10px 0 30px rgba(61,65,34,0.35);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0 !important;
+        padding: 20px 16px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .attr-metrics { grid-template-columns: 1fr 1fr; }
+      .metrics-row { gap: 10px; }
+    }
+    @media (max-width: 576px) {
+      .metrics-row { grid-template-columns: 1fr; }
+      .attr-metrics { grid-template-columns: 1fr; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile Header (Visible on viewport < 992px) -->
+  <header class="mobile-header" id="mobile-header">
+    <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Toggle Sidebar Navigation">☰</button>
+    <div style="font-family: 'Playfair Display', Georgia, serif; font-size: 1.15rem; font-weight: 700; color: #FCF9E8;">The Tribute Times</div>
+    <div style="width: 24px;"></div>
+  </header>
+
+  <div class="portal-container">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">The Tribute Times</div>
+        <span class="sidebar-badge">Admin Portal</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" type="button" onclick="navigateTo('dashboard')">📊 Dashboard</button>
+        <button class="nav-item" type="button" onclick="navigateTo('gcash-payments')">📲 GCash Payments</button>
+        <button class="nav-item" type="button" onclick="navigateTo('orders')">📬 Order Queue</button>
+        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Consultants</button>
+        <button class="nav-item" type="button" onclick="navigateTo('promo-codes')">🏷️ Promo Codes</button>
+        <button class="nav-item" type="button" onclick="navigateTo('campaign-codes')">🎟️ Campaign Codes</button>
+        <button class="nav-item" type="button" onclick="navigateTo('territories')">🗺️ Territories</button>
+        <button class="nav-item" type="button" onclick="navigateTo('stations')">📻 Station Managers</button>
+        <button class="nav-item" type="button" onclick="navigateTo('florists')">🌸 Florist Partners</button>
+        <button class="nav-item" type="button" onclick="navigateTo('birthdays')">🎂 Famous Birthdays</button>
+        <button class="nav-item" type="button" onclick="navigateTo('settings')">⚙️ Settings</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user" id="sidebar-user-meta">Signed out</div>
+        <button class="btn btn-danger btn-sm btn-full" id="sidebar-logout-btn" type="button">Log out</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Panel Area -->
+    <main class="main-content">
+      <div class="shell">
+    <!-- Hero — visible only on login screen -->
+    <div class="hero" id="hero-block">
+      <div class="hero-inner">
+        <div class="header-title">The Tribute Times</div>
+        <div class="header-sub">Admin Console</div>
+      </div>
+    </div>
+
+    <!-- Login form -->
+    <div class="auth-stage" id="auth-stage">
+      <div class="auth-card">
+        <div class="auth-card-head">
+          <div class="auth-card-eyebrow">Admin Portal</div>
+          <h2>Admin Sign In</h2>
+          <p>Sign in with Col's admin credentials to access the fulfilment console.</p>
+        </div>
+        <div class="auth-card-body">
+          <div class="form-field">
+            <label for="admin-email">Email address</label>
+            <input id="admin-email" type="email" autocomplete="username" placeholder="admin@tributetimes.co.nz" />
+          </div>
+          <div class="form-field">
+            <label for="admin-password">Password</label>
+            <div class="field-wrap">
+              <input id="admin-password" type="password" autocomplete="current-password" placeholder="Enter password" />
+              <button class="pass-toggle" id="password-toggle" type="button" aria-pressed="false" aria-label="Show password">👁</button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="login-btn" type="button">Sign in</button>
+          <div class="msg" id="login-message"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard — hidden until logged in -->
+    <div id="dashboard" class="hidden">
+
+      <!-- ── VIEW: DASHBOARD ── -->
+      <div id="view-dashboard" class="page-view active">
+        <!-- Metrics strip -->
+        <div class="metrics-row" id="summary-grid"></div>
+
+        <!-- System overview card -->
+        <div class="section">
+          <div class="section-head">
+            <h3>📊 Dashboard Overview</h3>
+          </div>
+          <div class="section-body">
+            <p style="margin: 0 0 20px; font-size: 0.95rem; line-height: 1.6;">
+              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, consultants, radio networks, florist stores, and famous birthdays.
+            </p>
+            <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Attribution Summary (This Month)</p>
+            <div class="attr-metrics" id="attribution-summary-grid"></div>
+
+            <hr class="section-divider" style="margin: 24px 0;" />
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Consultant Attribution Report</p>
+              <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh Report</button>
+            </div>
+            <div class="msg" id="attribution-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Consultant</th>
+                    <th>Free Demos This Month</th>
+                    <th>Paid Sales</th>
+                    <th>Paid Total</th>
+                  </tr>
+                </thead>
+                <tbody id="attribution-report-body">
+                  <tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: ORDERS ── -->
+      <div id="view-orders" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>📬 Fulfilment Queue</h3>
+            <div class="section-head-right">
+              <button class="btn btn-soft btn-sm" id="refresh-btn" type="button">↻ Refresh queue</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="queue-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Address</th>
+                    <th>Tier</th>
+                    <th>Delivery</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="queue-body">
+                  <tr class="empty-row"><td colspan="8">Sign in to load the queue.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: CONSULTANTS ── -->
+      <div id="view-gcash-payments" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>GCash Payment Requests</h3>
+            <div class="section-head-right">
+              <select id="gcash-status-filter" class="inline-select" style="width:auto;min-width:130px;">
+                <option value="">All statuses</option>
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <button class="btn btn-soft btn-sm" id="refresh-gcash-payments-btn" type="button">Refresh</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="gcash-payments-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:72vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Request</th>
+                    <th>Customer</th>
+                    <th>Item</th>
+                    <th>Expected</th>
+                    <th>GCash Proof</th>
+                    <th>Status</th>
+                    <th>Promo Code</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="gcash-payments-body">
+                  <tr class="empty-row"><td colspan="8">No GCash payment requests loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="gcash-payments-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-consultants" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>👤 Sales Consultants Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Consultant</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="consultants-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Commission Notes</th>
+                    <th>Admin Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="consultants-table-body">
+                  <tr class="empty-row"><td colspan="7">No consultants loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="consultants-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: PROMO CODES ── -->
+      <div id="view-promo-codes" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🏷️ Promo Codes Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('promo')">+ Add Promo Code</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="promos-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Consultant</th>
+                    <th>Monthly Limit</th>
+                    <th>Used This Month</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="promo-code-body">
+                  <tr class="empty-row"><td colspan="7">No promo codes loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="promos-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: CAMPAIGN CODES ── -->
+      <div id="view-campaign-codes" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🎟️ Campaign Codes — single-use discount codes</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openCampaignBatchModal()">+ Create Codes</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:14px;">
+              Single-use, batch-generated discount codes for campaigns (e.g. a Facebook promo like <code>WELCOME20</code>) — each code works exactly once. This is separate from the reusable, consultant-quota Promo Codes above.
+            </p>
+            <div class="msg" id="campaign-codes-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Batch / Campaign</th>
+                    <th>Discount</th>
+                    <th>Country</th>
+                    <th>Used</th>
+                    <th>Valid Until</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="campaign-code-body">
+                  <tr class="empty-row"><td colspan="8">No campaign codes yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="campaign-codes-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: TERRITORIES ── -->
+      <div id="view-territories" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🗺️ Postcode Territories Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('territory')">+ Add Territory</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="territories-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Territory</th>
+                    <th>Consultant</th>
+                    <th>Country</th>
+                    <th>Match Type</th>
+                    <th>Postcodes</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="territory-body">
+                  <tr class="empty-row"><td colspan="9">No territories loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="territories-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: STATIONS ── -->
+      <div id="view-stations" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>📻 Station Managers Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('station')">+ Add Station Manager</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="stations-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Station Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Tier</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="stations-table-body">
+                  <tr class="empty-row"><td colspan="6">No station managers loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="stations-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: FLORISTS ── -->
+      <div id="view-florists" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🌸 Florist Partners Directory</h3>
+            <div class="section-head-right">
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('florist')">+ Add Florist Partner</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="msg" id="florists-message"></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Store Name</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Credit Balance</th>
+                    <th>Low Threshold</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="florists-table-body">
+                  <tr class="empty-row"><td colspan="7">No florist partners loaded.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="florists-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: FAMOUS BIRTHDAYS ── -->
+      <div id="view-birthdays" class="page-view">
+        <div class="section">
+          <div class="section-head">
+            <h3>🎂 Famous Birthdays Curation</h3>
+            <div class="section-head-right">
+              <select id="birthday-status-filter" class="inline-select" style="width:130px;" aria-label="Birthday curation status">
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <button class="btn btn-soft btn-sm" id="refresh-birthdays-btn" type="button">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="section-body">
+            <p style="font-size:.83rem;color:var(--muted);margin:0 0 14px;">Review imported Wikipedia rows before they appear in the public birthdays API.</p>
+            <div class="msg" id="birthdays-message"></div>
+            <div class="table-wrap" style="margin-top:12px; max-height:70vh; overflow-y:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Person</th>
+                    <th>Date</th>
+                    <th>Country &amp; Priority</th>
+                    <th>Summary</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="birthdays-body">
+                  <tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="birthdays-pagination" class="pagination-footer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VIEW: SETTINGS ── -->
+      <div id="view-settings" class="page-view">
+        <div class="section" style="max-width: 600px;">
+          <div class="section-head">
+            <h3>⚙️ Account Settings</h3>
+          </div>
+          <div class="section-body">
+            <h4 style="margin: 0 0 16px; font-size: 1rem; font-weight: 700;">Change Admin Password</h4>
+            <form onsubmit="submitPasswordUpdate(event)">
+              <div class="form-field">
+                <label for="settings-old-password">Current Password</label>
+                <input type="password" id="settings-old-password" required placeholder="Enter current password" />
+              </div>
+              <div class="form-field">
+                <label for="settings-new-password">New Password</label>
+                <input type="password" id="settings-new-password" required placeholder="Enter new password" />
+              </div>
+              <div id="settings-password-error" class="msg error" style="display:none; margin-bottom: 12px; padding: 0 0 8px;"></div>
+              <div id="settings-password-success" class="msg ok" style="display:none; margin-bottom: 12px; padding: 0 0 8px;">Password changed successfully!</div>
+              <button class="btn btn-primary" type="submit">Update Password</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+  </div><!-- /shell -->
+
+  <script>
+    // Security fix (Col McCabe, 7 Aug 2026 QA report — "admin session
+    // token exposed on public site"): the admin session used to live in
+    // localStorage under these two keys. localStorage is scoped to the
+    // whole origin, not to admin.html specifically — any other page
+    // served from the same domain (the public checkout page included)
+    // can read it with its own JS, and so could any XSS landing anywhere
+    // on the site. The session now lives in an httpOnly cookie set by the
+    // server (see /api/admin/auth/login and authAdmin in
+    // src/phase2/admin-fulfilment.js), which client-side JS — on any
+    // page — cannot read at all. This removes the leak at its source
+    // rather than just hiding the symptom.
+    //
+    // These two legacy keys are only referenced once more below, in
+    // boot(), purely to delete any old data an admin's browser may still
+    // be holding from before this fix.
+    const LEGACY_STORAGE_KEY = 'phase2AdminToken';
+    const LEGACY_PROFILE_KEY = 'phase2AdminProfile';
+    const state = {
+      admin:       null,
+      orders:      [],
+      summary:     null,
+      attribution: null,
+      birthdays:   [],
+      gcashPayments: [],
+      consultantsList: [],
+    };
+
+    // DOM refs
+    const dashboard             = document.getElementById('dashboard');
+    const heroBlock             = document.getElementById('hero-block');
+    const loginMessage          = document.getElementById('login-message');
+    const queueMessage          = document.getElementById('queue-message');
+    const summaryGrid           = document.getElementById('summary-grid');
+    const queueBody             = document.getElementById('queue-body');
+    const sidebarUserMeta       = document.getElementById('sidebar-user-meta');
+    const attributionMessage    = document.getElementById('attribution-message');
+    const attributionSummaryGrid= document.getElementById('attribution-summary-grid');
+    const attributionReportBody = document.getElementById('attribution-report-body');
+    const gcashPaymentsMessage  = document.getElementById('gcash-payments-message');
+    const gcashPaymentsBody     = document.getElementById('gcash-payments-body');
+    const promoCodeBody         = document.getElementById('promo-code-body');
+    const territoryBody         = document.getElementById('territory-body');
+    const birthdaysMessage      = document.getElementById('birthdays-message');
+    const birthdaysBody         = document.getElementById('birthdays-body');
+
+    // Current pagination state
+    const paginationState = {
+      consultants: { page: 1, limit: 10, total: 0 },
+      gcashPayments: { page: 1, limit: 10, total: 0 },
+      promos: { page: 1, limit: 10, total: 0 },
+      campaignCodes: { page: 1, limit: 10, total: 0 },
+      territories: { page: 1, limit: 10, total: 0 },
+      stations: { page: 1, limit: 10, total: 0 },
+      florists: { page: 1, limit: 10, total: 0 },
+      birthdays: { page: 1, limit: 10, total: 0 }
+    };
+
+    const currentNavigation = {
+      page: 'dashboard',
+      currentPageNumber: 1,
+      searchQuery: ''
+    };
+
+    // State Router
+    function navigateTo(viewId) {
+      currentNavigation.page = viewId;
+      currentNavigation.currentPageNumber = 1;
+      
+      // Toggle sidebar nav item styles
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const onclickAttr = item.getAttribute('onclick') || '';
+        item.classList.toggle('active', onclickAttr.includes(`'${viewId}'`));
+      });
+      // Toggle views visibility
+      document.querySelectorAll('.page-view').forEach(view => {
+        view.classList.toggle('active', view.id === `view-${viewId}`);
+      });
+      // Close sidebar on mobile
+      const sb = document.getElementById('sidebar');
+      if (sb) sb.classList.remove('open');
+
+      // Fetch view-specific data
+      if (viewId === 'dashboard') {
+        loadQueue().catch(() => {});
+        loadAttribution().catch(() => {});
+      } else if (viewId === 'orders') {
+        loadQueue(1);
+      } else if (viewId === 'gcash-payments') {
+        loadGcashPayments(1);
+      } else if (viewId === 'consultants') {
+        loadConsultants(1);
+      } else if (viewId === 'promo-codes') {
+        loadPromos(1);
+      } else if (viewId === 'campaign-codes') {
+        loadCampaignCodes(1);
+      } else if (viewId === 'territories') {
+        loadTerritories(1);
+      } else if (viewId === 'stations') {
+        loadStations(1);
+      } else if (viewId === 'florists') {
+        loadFlorists(1);
+      } else if (viewId === 'birthdays') {
+        loadBirthdays(1);
+      }
+    }
+
+    // Wire events
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('refresh-btn').addEventListener('click', () => loadQueue(1));
+    document.getElementById('refresh-attribution-btn').addEventListener('click', loadAttribution);
+    document.getElementById('refresh-gcash-payments-btn').addEventListener('click', () => loadGcashPayments(1));
+    document.getElementById('gcash-status-filter').addEventListener('change', () => loadGcashPayments(1));
+    document.getElementById('refresh-birthdays-btn').addEventListener('click', () => loadBirthdays(1));
+    document.getElementById('birthday-status-filter').addEventListener('change', () => loadBirthdays(1));
+    document.getElementById('sidebar-logout-btn').addEventListener('click', logout);
+    document.getElementById('password-toggle').addEventListener('click', togglePasswordVisibility);
+    document.getElementById('admin-password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    
+    // Mobile hamburger menu wiring
+    document.getElementById('hamburger-btn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    boot();
+
+    /* ── BOOT ── */
+    async function boot() {
+      // Clean up any pre-fix session data still sitting in this browser's
+      // localStorage — see the comment on LEGACY_STORAGE_KEY above.
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_PROFILE_KEY);
+
+      // No client-readable token to check anymore — the only way to know
+      // whether this browser has a valid admin session is to ask the
+      // server, which reads the httpOnly cookie itself.
+      try {
+        await loadMe();
+        showDashboard();
+        loadQueue().catch(() => {});
+        loadAttribution().catch(() => {});
+        loadBirthdays().catch(() => {});
+      } catch {
+        showLogin();
+      }
+    }
+
+    /* ── SHOW/HIDE ── */
+    function showLogin() {
+      document.body.classList.remove('logged-in');
+      document.getElementById('auth-stage').classList.remove('hidden');
+      heroBlock.classList.remove('hidden');
+      dashboard.classList.add('hidden');
+    }
+
+    function showDashboard() {
+      document.body.classList.add('logged-in');
+      document.getElementById('auth-stage').classList.add('hidden');
+      heroBlock.classList.add('hidden');
+      dashboard.classList.remove('hidden');
+      renderAdminMeta();
+      navigateTo('dashboard');
+    }
+
+    /* ── LOGIN ── */
+    async function login() {
+      // Found during a site-wide UI audit (17 Aug 2026): this button never
+      // disabled itself during the request — same gap as the public site's
+      // radio/florist login buttons — so a fast double-click (or the Enter
+      // key plus a click) could fire two concurrent login attempts.
+      const loginBtn = document.getElementById('login-btn');
+      loginBtn.disabled = true;
+      setLoginMessage('Signing in…', false);
+      try {
+        const payload = {
+          email:    document.getElementById('admin-email').value.trim(),
+          password: document.getElementById('admin-password').value,
+        };
+        const response = await fetch('/api/admin/auth/login', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Login failed.');
+
+        // The server sets the session as an httpOnly cookie now — there's
+        // no token in this response to store. state.admin is just display
+        // data (name/email), kept in memory only, not persisted.
+        state.admin = data.admin;
+        setLoginMessage('', false);
+        document.getElementById('admin-password').value = '';
+        syncPasswordToggle();
+        showDashboard();
+        await loadQueue();
+        await loadAttribution();
+        await loadBirthdays();
+      } catch (err) {
+        setLoginMessage(err.message, true);
+      } finally {
+        loginBtn.disabled = false;
+      }
+    }
+
+    async function loadMe() {
+      const r = await apiFetch('/api/admin/me');
+      if (!r.ok) throw new Error('Session expired.');
+      const data = await r.json();
+      state.admin = data;
+      renderAdminMeta();
+    }
+
+    /* ── QUEUE ── */
+    async function loadQueue() {
+      setMsg(queueMessage, 'Loading queue…', false);
+      setQueueBodyMsg('Loading printed orders…');
+      try {
+        const r    = await apiFetch('/api/admin/orders');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load queue.');
+        state.orders  = data.orders  || [];
+        state.summary = data.summary || {};
+        renderSummary();
+        renderQueue();
+        setMsg(queueMessage, state.orders.length ? '' : 'No printed orders are waiting right now.', false);
+      } catch (err) {
+        setQueueBodyMsg('Unable to load orders.');
+        setMsg(queueMessage, err.message, true);
+      }
+    }
+
+    function renderAdminMeta() {
+      const name = state.admin?.displayName || state.admin?.email || '';
+      if (sidebarUserMeta) {
+        sidebarUserMeta.innerHTML = `Signed in as <strong>${escapeHtml(name)}</strong>`;
+      }
+    }
+
+    function renderSummary() {
+      const s = state.summary || {};
+      const cards = [
+        { label: 'Total',     value: s.total     || 0, cls: 'c-total' },
+        { label: 'Pending',   value: s.pending   || 0, cls: 'c-pending' },
+        { label: 'Printed',   value: s.printed   || 0, cls: 'c-printed' },
+        { label: 'Posted',    value: s.posted    || 0, cls: 'c-posted' },
+        { label: 'Delivered', value: s.delivered || 0, cls: 'c-delivered' },
+      ];
+      summaryGrid.innerHTML = cards.map(c => `
+        <div class="metric-card ${c.cls}">
+          <div class="metric-label">${c.label}</div>
+          <div class="metric-value">${c.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderQueue() {
+      if (!state.orders.length) {
+        setQueueBodyMsg('No printed orders are waiting right now.');
+        return;
+      }
+      queueBody.innerHTML = state.orders.map(order => {
+        const opts = ['pending','printed','posted','delivered'].map(s =>
+          `<option value="${s}" ${order.queueStatus === s ? 'selected' : ''}>${s}</option>`
+        ).join('');
+        const selId  = `sel-${order.id}`;
+        return `
+          <tr>
+            <td>
+              <strong style="font-size:.9rem;">${escapeHtml(order.orderNumber)}</strong><br/>
+              <span style="font-size:.75rem;color:var(--muted);text-transform:capitalize;">${escapeHtml(order.sourcePortal)}</span>
+            </td>
+            <td>
+              <span style="font-weight:600;">${escapeHtml(order.customerName || '')}</span><br/>
+              <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(order.customerEmail || '')}</span>
+            </td>
+            <td><div class="addr">${escapeHtml(order.shippingAddress || 'Digital order')}</div></td>
+            <td style="white-space:nowrap;font-weight:500;">${escapeHtml(order.productTierLabel || order.productTier || '')}</td>
+            <td style="white-space:nowrap;font-size:.83rem;color:var(--muted);">${escapeHtml(order.deliveryOptionLabel || 'Standard')}</td>
+            <td>
+              <div class="status-cell">
+                <span class="status-pill ${escapeHtml(order.queueStatus)}" id="pill-${order.id}">${escapeHtml(order.queueStatus)}</span>
+                <div class="status-changer">
+                  <select class="status-select" id="${selId}" aria-label="Change status for ${escapeHtml(order.orderNumber)}"
+                    onchange="previewStatusPill('${order.id}', this.value)">
+                    ${opts}
+                  </select>
+                  <button class="save-status-btn" type="button"
+                    onclick="updateOrderStatus('${order.id}', document.getElementById('${selId}').value)">
+                    Save
+                  </button>
+                </div>
+              </div>
+            </td>
+            <td style="white-space:nowrap;font-size:.8rem;color:var(--muted);">${formatDate(order.createdAt)}</td>
+            <td>
+              <div class="action-cell">
+                <button class="btn btn-soft btn-sm" type="button"
+                  onclick="downloadPdf('${order.id}', '${escapeJs(order.orderNumber)}')">⬇ PDF</button>
+                <button class="btn btn-green btn-sm" type="button"
+                  onclick="markPosted('${order.id}')">✓ Posted</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* Live-preview the pill colour as user changes the dropdown */
+    function previewStatusPill(orderId, newStatus) {
+      const pill = document.getElementById(`pill-${orderId}`);
+      if (!pill) return;
+      pill.className = `status-pill ${newStatus}`;
+      pill.textContent = newStatus;
+    }
+
+    function setQueueBodyMsg(msg) {
+      queueBody.innerHTML = `<tr class="empty-row"><td colspan="8">${escapeHtml(msg)}</td></tr>`;
+    }
+
+    /* ── ATTRIBUTION ── */
+    async function loadAttribution() {
+      if (attributionMessage) setMsg(attributionMessage, 'Loading attribution…', false);
+      try {
+        const r    = await apiFetch('/api/admin/attribution');
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load attribution.');
+        state.attribution = data;
+        state.consultantsList = data.consultants || [];
+        renderAttribution();
+        if (attributionMessage) setMsg(attributionMessage, '', false);
+      } catch (err) {
+        if (attributionMessage) setMsg(attributionMessage, err.message, true);
+      }
+    }
+
+    function renderAttribution() {
+      const data        = state.attribution || {};
+      const report      = data.report       || {};
+      const consultants = data.consultants  || [];
+      const promoCodes  = data.promoCodes   || [];
+      const territories = data.territories  || [];
+
+      attributionSummaryGrid.innerHTML = [
+        { label: 'Free Demos', value: report.freeDemosThisMonth || 0 },
+        { label: 'Paid Sales', value: report.paidSalesCount     || 0 },
+        { label: 'Paid Total', value: formatMoney(report.paidSalesTotalNzd || 0) },
+        { label: 'Unattributed', value: report.unattributedPaidSalesCount || 0 },
+      ].map(c => `
+        <div class="attr-card">
+          <div class="attr-label">${c.label}</div>
+          <div class="attr-value">${escapeHtml(String(c.value))}</div>
+        </div>
+      `).join('');
+
+      // Build consultant options for modals
+      const consultantOpts = consultants.length
+        ? consultants.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
+        : '<option value="">No consultants yet</option>';
+
+      const selectPromo = document.getElementById('modal-promo-consultant');
+      const selectTerr = document.getElementById('modal-territory-consultant');
+      if (selectPromo) selectPromo.innerHTML = `<option value="">— select consultant —</option>${consultantOpts}`;
+      if (selectTerr) selectTerr.innerHTML = `<option value="">— select —</option>${consultantOpts}`;
+
+      attributionReportBody.innerHTML = (report.byConsultant || []).length
+        ? report.byConsultant.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.consultantName)}</strong></td>
+              <td>${escapeHtml(String(row.freeDemosThisMonth))}</td>
+              <td>${escapeHtml(String(row.paidSalesCount))}</td>
+              <td>${escapeHtml(formatMoney(row.paidSalesTotalNzd))}</td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="4">No consultants yet.</td></tr>';
+
+      // Only update promoCodeBody if the promo-codes view is NOT currently active
+      // (avoid overwriting the CRUD view with attribution-summary rows)
+      const promoView = document.getElementById('view-promo-codes');
+      if (!promoView || !promoView.classList.contains('active')) {
+        promoCodeBody.innerHTML = promoCodes.length
+          ? promoCodes.map(code => `
+              <tr>
+                <td><strong>${escapeHtml(code.code)}</strong></td>
+                <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
+                <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
+                <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
+              </tr>
+            `).join('')
+          : '<tr class="empty-row"><td colspan="4">No promo codes yet.</td></tr>';
+      }
+
+      // Only update territoryBody if territory view is NOT currently active
+      const terrView = document.getElementById('view-territories');
+      if (!terrView || !terrView.classList.contains('active')) {
+        territoryBody.innerHTML = territories.length
+          ? territories.map(t => `
+              <tr>
+                <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
+                <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
+                <td>${escapeHtml(t.country)}</td>
+                <td>${escapeHtml(formatTerritoryMatch(t))}</td>
+              </tr>
+            `).join('')
+          : '<tr class="empty-row"><td colspan="4">No territories yet.</td></tr>';
+      }
+    }
+
+    // Modal helpers
+    async function loadEntityForEdit(type, id) {
+      try {
+        let endpoint = '';
+        if (type === 'consultant') endpoint = `/api/admin/consultants/${id}`;
+        else if (type === 'promo') endpoint = `/api/admin/promo-codes/${id}`;
+        else if (type === 'territory') endpoint = `/api/admin/postcode-territories/${id}`;
+        else if (type === 'station') endpoint = `/api/admin/stations/${id}`;
+        else if (type === 'florist') endpoint = `/api/admin/florists/${id}`;
+        
+        const r = await apiFetch(endpoint);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load details.');
+        
+        if (type === 'consultant') {
+          document.getElementById('modal-consultant-name').value = data.name || '';
+          document.getElementById('modal-consultant-email').value = data.email || '';
+        } else if (type === 'promo') {
+          document.getElementById('modal-promo-consultant').value = data.consultant_id || '';
+          document.getElementById('modal-promo-code').value = data.code || '';
+          document.getElementById('modal-promo-limit').value = data.monthly_free_demo_limit || 5;
+        } else if (type === 'territory') {
+          document.getElementById('modal-territory-consultant').value = data.consultant_id || '';
+          document.getElementById('modal-territory-name').value = data.territory_name || '';
+          document.getElementById('modal-territory-country').value = data.country || 'New Zealand';
+          document.getElementById('modal-territory-match-type').value = data.match_type || 'exact';
+          document.getElementById('modal-territory-postcode-start').value = data.postcode_start || '';
+          document.getElementById('modal-territory-postcode-end').value = data.postcode_end || '';
+          document.getElementById('modal-territory-priority').value = data.priority || 100;
+        } else if (type === 'station') {
+          document.getElementById('modal-station-name').value = data.name || '';
+          document.getElementById('modal-station-email').value = data.email || '';
+          document.getElementById('modal-station-country').value = data.country || 'New Zealand';
+          document.getElementById('modal-station-tier').value = data.tier || 'community';
+          
+          const pwWrap = document.getElementById('modal-station-password-wrap');
+          if (pwWrap) pwWrap.style.display = 'none';
+          const actWrap = document.getElementById('modal-station-active-wrap');
+          if (actWrap) {
+            actWrap.style.display = 'flex';
+            document.getElementById('modal-station-active').checked = !!data.active;
+          }
+        } else if (type === 'florist') {
+          document.getElementById('modal-florist-name').value = data.name || '';
+          document.getElementById('modal-florist-email').value = data.email || '';
+          document.getElementById('modal-florist-country').value = data.country || 'New Zealand';
+
+          // Business type is locked once created — changing it after the
+          // wholesale code and credit history already exist under the old
+          // type is a bigger decision than an inline edit should make
+          // silently. Shown read-only for reference instead.
+          const typeSelect = document.getElementById('modal-florist-account-type');
+          if (typeSelect) {
+            typeSelect.value = data.account_type || 'florist';
+            typeSelect.disabled = true;
+          }
+          const codeWrap = document.getElementById('modal-florist-wholesale-code-wrap');
+          if (codeWrap) {
+            codeWrap.style.display = data.wholesale_code ? 'block' : 'none';
+            document.getElementById('modal-florist-wholesale-code').value = data.wholesale_code || '';
+          }
+
+          // Editing an existing florist: show Current/New/Total instead of the
+          // single "Initial Credits" field (that field only makes sense when
+          // there's no existing balance yet, i.e. creating a brand new florist).
+          const initialWrap = document.getElementById('modal-florist-initial-credits-wrap');
+          if (initialWrap) initialWrap.style.display = 'none';
+          const creditEditWrap = document.getElementById('modal-florist-credit-edit-wrap');
+          if (creditEditWrap) creditEditWrap.style.display = 'block';
+          document.getElementById('modal-florist-current-credits').value = data.credit_balance || 0;
+          document.getElementById('modal-florist-new-credits').value = 0;
+          updateFloristCreditTotalPreview();
+
+          const pwWrap = document.getElementById('modal-florist-password-wrap');
+          if (pwWrap) pwWrap.style.display = 'none';
+          const actWrap = document.getElementById('modal-florist-active-wrap');
+          if (actWrap) {
+            actWrap.style.display = 'flex';
+            document.getElementById('modal-florist-active').checked = !!data.active;
+          }
+          const thWrap = document.getElementById('modal-florist-threshold-wrap');
+          if (thWrap) {
+            thWrap.style.display = 'block';
+            document.getElementById('modal-florist-threshold').value = data.low_credit_threshold || 5;
+          }
+        }
+      } catch (err) {
+        alert(`Error loading data: ${err.message}`);
+        closeModal(type);
+      }
+    }
+
+    // Client-reported bug (11 Aug 2026 — "Edit button intermittently
+    // unresponsive"): reproduced directly (15/15 real double-clicks) — not
+    // a wiring problem, the onclick fires every time. The real cause is a
+    // race with the "close modal when clicking the backdrop" handler near
+    // the bottom of this file: a genuine double-click's second click lands
+    // within milliseconds of the first, on the exact same screen
+    // coordinate the Edit button was at — which the modal's own backdrop
+    // now covers the instant the first click opens it. That backdrop click
+    // fires the close handler, so the modal opens and immediately closes
+    // again, looking to the user like the button "did nothing." This
+    // timestamp lets the backdrop handler tell "a genuine click on the
+    // backdrop, well after the modal opened" apart from "the trailing
+    // click of the same gesture that just opened it," without touching
+    // the open/close logic itself or any other button on the page.
+    let lastModalOpenAt = 0;
+
+    function openModal(type, id = null) {
+      const modal = document.getElementById(`${type}-modal`);
+      if (!modal) return;
+      lastModalOpenAt = Date.now();
+
+      const form = document.getElementById(`${type}-form`);
+      if (form) form.reset();
+      
+      const titleEl = document.getElementById(type === 'florist' ? 'modal-florist-title' : `${type}-modal-title`);
+      const idInput = document.getElementById(`${type}-id`);
+      if (idInput) idInput.value = id || '';
+      
+      if (id) {
+        if (titleEl) titleEl.textContent = `Edit ${capitalize(type)}`;
+        loadEntityForEdit(type, id);
+      } else {
+        if (titleEl) titleEl.textContent = `Add ${capitalize(type)}`;
+        const pwWrap = document.getElementById(`modal-${type}-password-wrap`);
+        if (pwWrap) pwWrap.style.display = 'block';
+        const actWrap = document.getElementById(`modal-${type}-active-wrap`);
+        if (actWrap) actWrap.style.display = 'none';
+        const thWrap = document.getElementById(`modal-${type}-threshold-wrap`);
+        if (thWrap) thWrap.style.display = 'none';
+        if (type === 'florist') {
+          // Adding a brand new florist: restore the single "Initial Credits"
+          // field and hide the Current/New/Total group (which only applies
+          // when editing a florist that already has a balance).
+          const initialWrap = document.getElementById('modal-florist-initial-credits-wrap');
+          if (initialWrap) initialWrap.style.display = 'block';
+          const creditEditWrap = document.getElementById('modal-florist-credit-edit-wrap');
+          if (creditEditWrap) creditEditWrap.style.display = 'none';
+          // Business type is only locked (read-only) once a partner
+          // already exists — form.reset() above resets the select's
+          // VALUE but not a JS-set `disabled` property, so this has to be
+          // re-enabled explicitly for a fresh "Add" open. Wholesale code
+          // doesn't exist yet for a not-yet-created partner.
+          const typeSelect = document.getElementById('modal-florist-account-type');
+          if (typeSelect) typeSelect.disabled = false;
+          const codeWrap = document.getElementById('modal-florist-wholesale-code-wrap');
+          if (codeWrap) codeWrap.style.display = 'none';
+        }
+      }
+      modal.style.display = 'flex';
+    }
+
+    function updateFloristCreditTotalPreview() {
+      const current = Number(document.getElementById('modal-florist-current-credits').value || 0);
+      const toAdd = Number(document.getElementById('modal-florist-new-credits').value || 0);
+      document.getElementById('modal-florist-total-credits').value = current + toAdd;
+    }
+
+    function closeModal(type) {
+      const modal = document.getElementById(`${type}-modal`);
+      if (modal) modal.style.display = 'none';
+    }
+
+    function capitalize(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ');
+    }
+
+    // Modal submit saves
+    async function saveConsultant(e) {
+      e.preventDefault();
+      // Found during a site-wide UI audit (17 Aug 2026): none of the admin
+      // panel's save forms disabled their submit button during the
+      // request — a fast double-click could create two duplicate records.
+      // Same disable/re-enable pattern already used for the login buttons.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const id = document.getElementById('consultant-id').value;
+      const payload = {
+        name: document.getElementById('modal-consultant-name').value.trim(),
+        email: document.getElementById('modal-consultant-email').value.trim()
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/consultants/${id}` : '/api/admin/consultants';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('consultant');
+        loadConsultants(paginationState.consultants.page);
+        loadAttribution().catch(() => {});
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    async function savePromoCode(e) {
+      e.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const id = document.getElementById('promo-id').value;
+      const payload = {
+        consultantId: document.getElementById('modal-promo-consultant').value,
+        code: document.getElementById('modal-promo-code').value.trim().toUpperCase(),
+        monthlyFreeDemoLimit: Number(document.getElementById('modal-promo-limit').value || 5)
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/promo-codes/${id}` : '/api/admin/promo-codes';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('promo');
+        loadPromos(paginationState.promos.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    async function saveTerritory(e) {
+      e.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const id = document.getElementById('territory-id').value;
+      const payload = {
+        consultantId: document.getElementById('modal-territory-consultant').value,
+        territoryName: document.getElementById('modal-territory-name').value.trim(),
+        country: document.getElementById('modal-territory-country').value.trim(),
+        matchType: document.getElementById('modal-territory-match-type').value,
+        postcodeStart: document.getElementById('modal-territory-postcode-start').value.trim(),
+        postcodeEnd: document.getElementById('modal-territory-postcode-end').value.trim(),
+        priority: Number(document.getElementById('modal-territory-priority').value || 100)
+      };
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/postcode-territories/${id}` : '/api/admin/postcode-territories';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('territory');
+        loadTerritories(paginationState.territories.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    async function saveStation(e) {
+      e.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const id = document.getElementById('station-id').value;
+      const payload = {
+        name: document.getElementById('modal-station-name').value.trim(),
+        email: document.getElementById('modal-station-email').value.trim(),
+        country: document.getElementById('modal-station-country').value.trim(),
+        tier: document.getElementById('modal-station-tier').value
+      };
+      if (!id) {
+        payload.password = document.getElementById('modal-station-password').value;
+      } else {
+        payload.active = document.getElementById('modal-station-active').checked;
+      }
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/stations/${id}` : '/api/admin/stations';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('station');
+        loadStations(paginationState.stations.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    async function saveFlorist(e) {
+      e.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const id = document.getElementById('florist-id').value;
+      const payload = {
+        name: document.getElementById('modal-florist-name').value.trim(),
+        email: document.getElementById('modal-florist-email').value.trim(),
+        country: document.getElementById('modal-florist-country').value.trim(),
+      };
+      let creditsBeingAdded = 0;
+      let floristNameForConfirmation = payload.name;
+      if (!id) {
+        payload.password = document.getElementById('modal-florist-password').value;
+        // New florist: no existing balance yet, so this is an absolute starting value.
+        payload.initial_credit_balance = Number(document.getElementById('modal-florist-credits').value || 30);
+        // Business type — client request, 19 Aug 2026: gift shops and cake
+        // shops reuse this exact same form/endpoint (see server's
+        // FLORIST_LIKE_ACCOUNT_TYPES). Only sent on create — the type is
+        // locked after that (see loadEntityForEdit above).
+        payload.account_type = document.getElementById('modal-florist-account-type').value;
+      } else {
+        payload.active = document.getElementById('modal-florist-active').checked;
+        payload.low_credit_threshold = Number(document.getElementById('modal-florist-threshold').value || 5);
+        // Existing florist: send the amount to ADD, not an absolute total — the
+        // server computes the new balance from its own current value.
+        creditsBeingAdded = Number(document.getElementById('modal-florist-new-credits').value || 0);
+        payload.creditsToAdd = creditsBeingAdded;
+      }
+      const method = id ? 'PUT' : 'POST';
+      const endpoint = id ? `/api/admin/florists/${id}` : '/api/admin/florists';
+      try {
+        const r = await apiFetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to save.');
+        closeModal('florist');
+        await loadFlorists(paginationState.florists.page);
+        const msgEl = document.getElementById('florists-message');
+        if (id && creditsBeingAdded) {
+          if (msgEl) {
+            msgEl.textContent = `Added ${creditsBeingAdded} credits — ${floristNameForConfirmation} now has ${data.newCreditBalance} credits.`;
+            msgEl.classList.remove('error');
+            msgEl.classList.add('ok');
+          }
+        } else if (!id) {
+          // UX audit fix, 20 Aug 2026: creating a new partner previously
+          // gave no success confirmation at all, and the wholesale code
+          // the server just generated (data.florist.wholesale_code) was
+          // only ever shown later if the admin happened to reopen this
+          // same record in Edit — with no immediate way to see the code
+          // they actually need to hand to the new partner. Additive only:
+          // surfaces the same data the server already returns, doesn't
+          // change what's created or how.
+          if (msgEl) {
+            const code = data.florist?.wholesale_code;
+            msgEl.textContent = code
+              ? `✓ ${floristNameForConfirmation} created — wholesale code: ${code}`
+              : `✓ ${floristNameForConfirmation} created.`;
+            msgEl.classList.remove('error');
+            msgEl.classList.add('ok');
+          }
+        }
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    // Generic Delete
+    async function deleteEntity(type, id) {
+      if (!confirm(`Are you sure you want to delete this record?`)) return;
+      try {
+        const r = await apiFetch(`/api/admin/${type}/${id}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to delete.');
+        alert('Deleted successfully.');
+        if (type === 'consultants') loadConsultants(paginationState.consultants.page);
+        else if (type === 'promo-codes') loadPromos(paginationState.promos.page);
+        else if (type === 'postcode-territories') loadTerritories(paginationState.territories.page);
+        else if (type === 'stations') loadStations(paginationState.stations.page);
+        else if (type === 'florists') loadFlorists(paginationState.florists.page);
+        else if (type === 'famous-birthdays') loadBirthdays(paginationState.birthdays.page);
+      } catch (err) { alert(`Error: ${err.message}`); }
+    }
+
+    // State Loaders
+    function loadingRow(cols) {
+      return `<tr class="empty-row"><td colspan="${cols}" style="text-align:center;padding:20px;">
+        <span style="display:inline-block;width:20px;height:20px;border:2.5px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>
+        Loading…</td></tr>`;
+    }
+
+    async function loadGcashPayments(page = 1) {
+      paginationState.gcashPayments.page = page;
+      if (gcashPaymentsBody) gcashPaymentsBody.innerHTML = loadingRow(8);
+      setMsg(gcashPaymentsMessage, '', false);
+      try {
+        const status = document.getElementById('gcash-status-filter').value;
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(paginationState.gcashPayments.limit),
+        });
+        if (status) params.set('status', status);
+        const r = await apiFetch(`/api/admin/gcash-payments?${params.toString()}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load GCash payments.');
+
+        paginationState.gcashPayments.total = data.total || 0;
+        state.gcashPayments = data.items || [];
+        renderGcashPayments();
+        renderPaginationControls('gcash-payments-pagination', paginationState.gcashPayments.total, page, paginationState.gcashPayments.limit, 'loadGcashPayments');
+        setMsg(gcashPaymentsMessage, state.gcashPayments.length ? '' : 'No GCash payment requests for this filter.', false);
+      } catch (err) {
+        if (gcashPaymentsBody) gcashPaymentsBody.innerHTML = '<tr class="empty-row"><td colspan="8">Unable to load GCash payments.</td></tr>';
+        setMsg(gcashPaymentsMessage, err.message, true);
+      }
+    }
+
+    function renderGcashPayments() {
+      if (!gcashPaymentsBody) return;
+      gcashPaymentsBody.innerHTML = state.gcashPayments.length
+        ? state.gcashPayments.map(item => {
+            const amount = [
+              formatMoney(item.expectedAmountNzd || 0),
+              item.expectedAmountPhp ? `PHP ${Number(item.expectedAmountPhp).toFixed(2)}` : '',
+            ].filter(Boolean).join(' / ');
+            const rateMeta = item.exchangeRatePhpPerNzd
+              ? `<br/><span style="font-size:.72rem;color:var(--muted);">${escapeHtml(item.exchangeRateIsLive ? 'Live' : 'Fallback')} rate: ${escapeHtml(Number(item.exchangeRatePhpPerNzd).toFixed(4))}</span>`
+              : '';
+            const proof = [
+              `Sender: ${escapeHtml(item.gcashSenderName || '')}`,
+              `Ref: ${escapeHtml(item.gcashReferenceId || '')}`,
+            ].filter(Boolean).join('<br/>');
+            const itemLine = item.itemLabel || [
+              item.productTierLabel || item.productTier || '',
+              item.deliveryOptionLabel || '',
+            ].filter(Boolean).join(' / ');
+            const approvalResult = item.promoCode?.code
+              ? `<strong>${escapeHtml(item.promoCode.code)}</strong><br/><span style="font-size:.74rem;color:var(--muted);">Used ${escapeHtml(String(item.promoCode.usedCount || 0))}/${escapeHtml(String(item.promoCode.maxUses || 1))}</span>`
+              : '—';
+            const approvalResultDisplay = item.promoCode?.code
+              ? approvalResult
+              : item.appliedAt
+                ? `<strong>Applied</strong><br/><span style="font-size:.74rem;color:var(--muted);">${escapeHtml(formatDate(item.appliedAt))}</span>`
+                : approvalResult;
+            const actions = item.status === 'pending'
+              ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="btn btn-green btn-sm" type="button" onclick="approveGcashPayment('${item.id}', this)">Approve</button>
+                  <button class="btn btn-danger btn-sm" type="button" onclick="rejectGcashPayment('${item.id}', this)">Reject</button>
+                </div>`
+              : `<span style="font-size:.78rem;color:var(--muted);">${escapeHtml(item.reviewedAt ? formatDate(item.reviewedAt) : 'Reviewed')}</span>`;
+
+            return `
+              <tr>
+                <td>
+                  <strong>${escapeHtml(item.requestNumber)}</strong><br/>
+                  <span style="font-size:.75rem;color:var(--muted);">${escapeHtml(formatDate(item.createdAt))}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(item.customerName || '')}</strong><br/>
+                  <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(item.customerEmail || '')}</span>
+                </td>
+                <td>
+                  <strong>${escapeHtml(item.paymentContextLabel || 'GCash Payment')}</strong><br/>
+                  <span style="font-size:.78rem;color:var(--muted);">${escapeHtml(itemLine || '')}</span>
+                </td>
+                <td style="white-space:nowrap;">${escapeHtml(amount)}${rateMeta}</td>
+                <td style="font-size:.8rem;line-height:1.45;">${proof || '—'}</td>
+                <td><span class="status-pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+                <td>${approvalResultDisplay}</td>
+                <td>${actions}</td>
+              </tr>
+            `;
+          }).join('')
+        : '<tr class="empty-row"><td colspan="8">No GCash payment requests for this filter.</td></tr>';
+    }
+
+    async function approveGcashPayment(id, btnEl) {
+      if (!confirm('Approve this GCash payment and apply the paid item?')) return;
+      // Found during a site-wide UI audit (17 Aug 2026): approving/rejecting
+      // a real payment has real consequences (a promo code or credits get
+      // issued) if fired twice — the confirm() dialog above helps, but a
+      // fast double-click before it appears (or right after dismissing it)
+      // wasn't actually blocked. Disabling both buttons on this row for the
+      // duration closes that gap; the row gets fully replaced by
+      // loadGcashPayments() on success anyway, so there's nothing stale to
+      // clean up there — only the failure path needs to re-enable.
+      const row = btnEl ? btnEl.closest('tr') : null;
+      const rowButtons = row ? Array.from(row.querySelectorAll('button')) : [];
+      rowButtons.forEach(b => { b.disabled = true; });
+      setMsg(gcashPaymentsMessage, 'Approving GCash payment...', false);
+      try {
+        const r = await apiFetch(`/api/admin/gcash-payments/${id}/approve`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to approve GCash payment.');
+        const code = data.promoCode?.code || data.request?.promoCode?.code || '';
+        if (code) {
+          setMsg(gcashPaymentsMessage, data.emailSent
+            ? `Approved. Promo code ${code} was emailed.`
+            : `Approved. Promo code ${code} was created, but email was not confirmed.`, false);
+        } else {
+          setMsg(gcashPaymentsMessage, data.emailSent
+            ? 'Approved and applied. Customer email sent.'
+            : 'Approved and applied.', false);
+        }
+        await loadGcashPayments(paginationState.gcashPayments.page);
+      } catch (err) {
+        setMsg(gcashPaymentsMessage, err.message, true);
+        rowButtons.forEach(b => { b.disabled = false; });
+      }
+    }
+
+    async function rejectGcashPayment(id, btnEl) {
+      const adminNote = prompt('Reason for rejection / note for customer:');
+      if (adminNote === null) return;
+      // Same fix as approveGcashPayment() above — see that comment.
+      const row = btnEl ? btnEl.closest('tr') : null;
+      const rowButtons = row ? Array.from(row.querySelectorAll('button')) : [];
+      rowButtons.forEach(b => { b.disabled = true; });
+      setMsg(gcashPaymentsMessage, 'Rejecting GCash payment...', false);
+      try {
+        const r = await apiFetch(`/api/admin/gcash-payments/${id}/reject`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminNote }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to reject GCash payment.');
+        setMsg(gcashPaymentsMessage, data.emailSent ? 'Rejected and customer email sent.' : 'Rejected.', false);
+        await loadGcashPayments(paginationState.gcashPayments.page);
+      } catch (err) {
+        setMsg(gcashPaymentsMessage, err.message, true);
+        rowButtons.forEach(b => { b.disabled = false; });
+      }
+    }
+
+    async function loadConsultants(page = 1) {
+      paginationState.consultants.page = page;
+      const msgEl = document.getElementById('consultants-message');
+      const body = document.getElementById('consultants-table-body');
+      if (body) body.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/consultants?page=${page}&limit=${paginationState.consultants.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.consultants.total = data.total;
+        
+        if (body) body.innerHTML = data.items.length ? data.items.map(c => `
+          <tr>
+            <td><strong>${escapeHtml(c.name)}</strong></td>
+            <td>${escapeHtml(c.email || '')}</td>
+            <td>${escapeHtml(c.phone || '—')}</td>
+            <td><span class="status-pill ${c.active ? 'approved' : 'rejected'}">${c.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(c.commission_notes || '—')}</td>
+            <td>${escapeHtml(c.admin_notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('consultant', '${c.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('consultants', '${c.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No consultants found.</td></tr>';
+        
+        renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+
+    async function loadPromos(page = 1) {
+      paginationState.promos.page = page;
+      const msgEl = document.getElementById('promos-message');
+      if (promoCodeBody) promoCodeBody.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/promo-codes?page=${page}&limit=${paginationState.promos.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.promos.total = data.total;
+        
+        promoCodeBody.innerHTML = data.items.length ? data.items.map(code => `
+          <tr>
+            <td><strong>${escapeHtml(code.code)}</strong></td>
+            <td>${escapeHtml(code.sales_consultants?.name || 'Unassigned')}</td>
+            <td>${escapeHtml(String(code.monthly_free_demo_limit))}</td>
+            <td>${escapeHtml(String(code.freeDemosUsedThisMonth || 0))}</td>
+            <td><span class="status-pill ${code.active ? 'approved' : 'rejected'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(code.notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('promo', '${code.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('promo-codes', '${code.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No promo codes found.</td></tr>';
+        
+        renderPaginationControls('promos-pagination', data.total, page, paginationState.promos.limit, 'loadPromos');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    // ── CAMPAIGN CODES (single-use batch discount codes) ──
+    function openCampaignBatchModal() {
+      const form = document.getElementById('campaign-batch-form');
+      if (form) form.reset();
+      document.getElementById('campaign-batch-modal').style.display = 'flex';
+    }
+
+    async function createCampaignBatch(e) {
+      e.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const payload = {
+        label: document.getElementById('modal-campaign-label').value.trim(),
+        code: document.getElementById('modal-campaign-single-code').value.trim(),
+        quantity: Number(document.getElementById('modal-campaign-quantity').value || 1),
+        codePrefix: document.getElementById('modal-campaign-prefix').value.trim(),
+        discountType: document.getElementById('modal-campaign-discount-type').value,
+        discountValue: Number(document.getElementById('modal-campaign-discount-value').value || 0),
+        country: document.getElementById('modal-campaign-country').value.trim(),
+        validUntil: document.getElementById('modal-campaign-valid-until').value || null,
+      };
+      try {
+        const r = await apiFetch('/api/admin/campaign-codes/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to create campaign codes.');
+        closeModal('campaign-batch');
+        await loadCampaignCodes(1);
+        const msgEl = document.getElementById('campaign-codes-message');
+        if (msgEl) {
+          const count = (data.codes || []).length;
+          msgEl.textContent = `Created ${count} code${count === 1 ? '' : 's'} for "${data.label}".`;
+          msgEl.classList.remove('error');
+          msgEl.classList.add('ok');
+        }
+      } catch (err) { alert(`Error: ${err.message}`); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    function formatCampaignDiscount(code) {
+      if (code.discount_type === 'fixed') return `NZ$${Number(code.discount_value).toFixed(2)} off`;
+      return `${Number(code.discount_value)}% off`;
+    }
+
+    // UX audit fix, 20 Aug 2026: these two had no loading/success feedback
+    // and no double-click guard, unlike their siblings on this same page
+    // (deleteEntity, saveBirthday, approveGcashPayment) which already use
+    // this exact disable+setMsg pattern. Additive only — the PATCH/DELETE
+    // calls and their payloads are unchanged.
+    async function toggleCampaignCodeActive(id, nextActive, btnEl) {
+      const msgEl = document.getElementById('campaign-codes-message');
+      if (btnEl) btnEl.disabled = true;
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: nextActive })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to update.');
+        await loadCampaignCodes(paginationState.campaignCodes.page);
+        setMsg(msgEl, nextActive ? '✓ Code activated.' : '✓ Code deactivated.', false);
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
+    }
+
+    async function deleteCampaignCode(id, btnEl) {
+      if (!confirm('Delete this campaign code? This only works for codes that have never been used.')) return;
+      const msgEl = document.getElementById('campaign-codes-message');
+      if (btnEl) btnEl.disabled = true;
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes/${id}`, { method: 'DELETE' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to delete.');
+        await loadCampaignCodes(paginationState.campaignCodes.page);
+        setMsg(msgEl, '✓ Code deleted.', false);
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
+    }
+
+    async function loadCampaignCodes(page = 1) {
+      paginationState.campaignCodes.page = page;
+      const msgEl = document.getElementById('campaign-codes-message');
+      const body = document.getElementById('campaign-code-body');
+      if (body) body.innerHTML = loadingRow(8);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/campaign-codes?page=${page}&limit=${paginationState.campaignCodes.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.campaignCodes.total = data.total;
+
+        body.innerHTML = data.items.length ? data.items.map(code => `
+          <tr>
+            <td><strong>${escapeHtml(code.code)}</strong></td>
+            <td>${escapeHtml(code.batch_label || '—')}</td>
+            <td>${escapeHtml(formatCampaignDiscount(code))}</td>
+            <td>${escapeHtml(code.country || 'All')}</td>
+            <td>${escapeHtml(String(code.used_count || 0))}/${escapeHtml(String(code.max_uses || 1))}</td>
+            <td>${code.valid_until ? escapeHtml(formatDate(code.valid_until)) : '—'}</td>
+            <td><span class="status-pill ${code.active ? 'approved' : 'rejected'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="toggleCampaignCodeActive('${code.id}', ${code.active ? 'false' : 'true'}, this)">${code.active ? '⏸ Deactivate' : '▶ Activate'}</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCampaignCode('${code.id}', this)">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="8">No campaign codes yet.</td></tr>';
+
+        renderPaginationControls('campaign-codes-pagination', data.total, page, paginationState.campaignCodes.limit, 'loadCampaignCodes');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadTerritories(page = 1) {
+      paginationState.territories.page = page;
+      const msgEl = document.getElementById('territories-message');
+      if (territoryBody) territoryBody.innerHTML = loadingRow(9);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/postcode-territories?page=${page}&limit=${paginationState.territories.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.territories.total = data.total;
+        
+        territoryBody.innerHTML = data.items.length ? data.items.map(t => `
+          <tr>
+            <td><strong>${escapeHtml(t.territory_name || '')}</strong></td>
+            <td>${escapeHtml(t.sales_consultants?.name || 'Unassigned')}</td>
+            <td>${escapeHtml(t.country)}</td>
+            <td style="text-transform:capitalize;">${escapeHtml(t.match_type)}</td>
+            <td>${escapeHtml(formatTerritoryMatch(t))}</td>
+            <td>${escapeHtml(String(t.priority || 100))}</td>
+            <td><span class="status-pill ${t.active !== false ? 'approved' : 'rejected'}">${t.active !== false ? 'Active' : 'Inactive'}</span></td>
+            <td>${escapeHtml(t.notes || '—')}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('territory', '${t.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('postcode-territories', '${t.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="9">No postcode territories found.</td></tr>';
+        
+        renderPaginationControls('territories-pagination', data.total, page, paginationState.territories.limit, 'loadTerritories');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadStations(page = 1) {
+      paginationState.stations.page = page;
+      const msgEl = document.getElementById('stations-message');
+      const body = document.getElementById('stations-table-body');
+      if (body) body.innerHTML = loadingRow(6);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/stations?page=${page}&limit=${paginationState.stations.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.stations.total = data.total;
+        
+        const body = document.getElementById('stations-table-body');
+        // Wholesale code shown as a subtitle under the name — client
+        // request, 19 Aug 2026: "should also follow through for... radio
+        // stations." Same reasoning as the florists table above for not
+        // adding a new column.
+        body.innerHTML = data.items.length ? data.items.map(s => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(s.name)}</strong>${s.wholesale_code ? `<br/><span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(s.wholesale_code)}</span>` : ''}
+            </td>
+            <td>${escapeHtml(s.email || '')}</td>
+            <td>${escapeHtml(s.country || '')}</td>
+            <td style="text-transform:capitalize;">${escapeHtml(s.tier || 'community')}</td>
+            <td><span class="status-pill ${s.active ? 'approved' : 'rejected'}">${s.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('station', '${s.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('stations', '${s.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="6">No station managers found.</td></tr>';
+        
+        renderPaginationControls('stations-pagination', data.total, page, paginationState.stations.limit, 'loadStations');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    async function loadFlorists(page = 1) {
+      paginationState.florists.page = page;
+      const msgEl = document.getElementById('florists-message');
+      const body = document.getElementById('florists-table-body');
+      if (body) body.innerHTML = loadingRow(7);
+      setMsg(msgEl, '', false);
+      try {
+        const r = await apiFetch(`/api/admin/florists?page=${page}&limit=${paginationState.florists.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load.');
+        paginationState.florists.total = data.total;
+        
+        const body = document.getElementById('florists-table-body');
+        // Business type + wholesale code shown as a subtitle under the
+        // name (client request, 19 Aug 2026) rather than as new table
+        // columns — avoids touching the table's <thead>/colspan, which
+        // would risk breaking the empty-state row and other layout code
+        // that assumes a fixed column count.
+        const ACCOUNT_TYPE_LABELS = { florist: 'Florist', gift_shop: 'Gift Shop', cake_shop: 'Cake Shop' };
+        body.innerHTML = data.items.length ? data.items.map(f => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(f.name)}</strong><br/>
+              <span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(ACCOUNT_TYPE_LABELS[f.account_type] || 'Florist')}${f.wholesale_code ? ' · ' + escapeHtml(f.wholesale_code) : ''}</span>
+            </td>
+            <td>${escapeHtml(f.email || '')}</td>
+            <td>${escapeHtml(f.country || '')}</td>
+            <td><strong>${escapeHtml(String(f.credit_balance || 0))}</strong> credits</td>
+            <td>${escapeHtml(String(f.low_credit_threshold || 5))} credits</td>
+            <td><span class="status-pill ${f.active ? 'approved' : 'rejected'}">${f.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-soft btn-sm" onclick="openModal('florist', '${f.id}')">✏️ Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEntity('florists', '${f.id}')">🗑️ Delete</button>
+              </div>
+            </td>
+          </tr>
+        `).join('') : '<tr class="empty-row"><td colspan="7">No florist partners found.</td></tr>';
+        
+        renderPaginationControls('florists-pagination', data.total, page, paginationState.florists.limit, 'loadFlorists');
+        setMsg(msgEl, '', false);
+      } catch (err) { setMsg(msgEl, err.message, true); }
+    }
+
+    // Generic pagination rendering
+    function renderPaginationControls(containerId, totalItems, currentPage, itemsPerPage, onPageChange) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+      const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+      const endItem = Math.min(totalItems, currentPage * itemsPerPage);
+      
+      container.innerHTML = `
+        <div style="font-size: 0.82rem; color: var(--muted); display: flex; align-items: center; gap: 8px;">
+          Showing <strong>${startItem}</strong> to <strong>${endItem}</strong> of <strong>${totalItems}</strong> entries
+        </div>
+        <div class="pagination-buttons" style="display: flex; gap: 6px;">
+          <button class="btn btn-soft btn-sm" type="button" ${currentPage <= 1 ? 'disabled' : ''} onclick="${onPageChange}(${currentPage - 1})">Prev</button>
+          <span style="font-weight: 600; padding: 0 8px; align-self: center; font-size: 0.85rem;">Page ${currentPage} of ${totalPages}</span>
+          <button class="btn btn-soft btn-sm" type="button" ${currentPage >= totalPages ? 'disabled' : ''} onclick="${onPageChange}(${currentPage + 1})">Next</button>
+        </div>
+      `;
+    }
+
+    /* ── FAMOUS BIRTHDAYS ── */
+    async function loadBirthdays(page = 1) {
+      paginationState.birthdays.page = page;
+      setMsg(birthdaysMessage, 'Loading famous birthdays…', false);
+      try {
+        const status = document.getElementById('birthday-status-filter').value;
+        const r = await apiFetch(`/api/admin/famous-birthdays?status=${encodeURIComponent(status)}&page=${page}&limit=${paginationState.birthdays.limit}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to load famous birthdays.');
+        paginationState.birthdays.total = data.total;
+        state.birthdays = data.birthdays || data.items || [];
+        renderBirthdays();
+        renderPaginationControls('birthdays-pagination', paginationState.birthdays.total, page, paginationState.birthdays.limit, 'loadBirthdays');
+        setMsg(birthdaysMessage, state.birthdays.length ? '' : 'No rows for this filter.', false);
+      } catch (err) { setMsg(birthdaysMessage, err.message, true); }
+    }
+
+    function renderBirthdays() {
+      birthdaysBody.innerHTML = state.birthdays.length
+        ? state.birthdays.map(b => `
+            <tr>
+              <td>
+                <input id="birthday-name-${b.id}" type="text" class="inline-select" value="${escapeAttr(b.fullName)}" style="width:100%;min-width:140px;" />
+                <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">${escapeHtml(b.wikipediaTitle || '')}</div>
+              </td>
+              <td style="white-space:nowrap;font-size:.83rem;color:var(--muted);">
+                ${escapeHtml(String(b.birthDay))}/${escapeHtml(String(b.birthMonth))}${b.birthYear ? `/${escapeHtml(String(b.birthYear))}` : ''}
+              </td>
+              <td>
+                <select id="birthday-country-${b.id}" class="inline-select" style="min-width:130px;">
+                  ${birthdayCountryOptions(b.mainPublicCountry)}
+                </select>
+                <div style="margin-top:6px;">
+                  <label style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Priority</label>
+                  <input id="birthday-priority-${b.id}" type="number" class="inline-select" value="${escapeAttr(String(b.displayPriority))}" style="margin-top:3px;width:80px;" />
+                </div>
+              </td>
+              <td>
+                <textarea id="birthday-summary-${b.id}" rows="3" class="inline-select" style="width:100%;min-width:180px;resize:vertical;">${escapeHtml(b.shortBio)}</textarea>
+                <div style="font-size:.72rem;color:var(--muted);margin-top:3px;">${escapeHtml((b.rawExtract || '').slice(0, 160))}</div>
+              </td>
+              <td class="tc">
+                <span class="status-pill ${escapeHtml(b.curationStatus)}">${escapeHtml(b.curationStatus)}</span>
+              </td>
+              <td class="tc">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:100px;">
+                  <button class="btn btn-soft btn-sm" type="button" onclick="saveBirthday('${b.id}')">💾 Save</button>
+                  <button class="btn btn-green btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'approved')">✓ Approve</button>
+                  <button class="btn btn-ghost btn-sm" type="button" onclick="setBirthdayStatus('${b.id}', 'rejected')" style="color:#A1442A;border-color:#A1442A;">✕ Reject</button>
+                  <button class="btn btn-danger btn-sm" type="button" onclick="deleteEntity('famous-birthdays', '${b.id}')">🗑️ Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')
+        : '<tr class="empty-row"><td colspan="6">No famous birthday rows for this filter.</td></tr>';
+    }
+
+    function birthdayCountryOptions(selected) {
+      return ['New Zealand','Australia','Philippines','United Kingdom','Ireland','United States','South Africa','Canada','Singapore']
+        .map(c => `<option value="${escapeHtml(c)}" ${c === selected ? 'selected' : ''}>${escapeHtml(c)}</option>`)
+        .join('');
+    }
+
+    async function saveBirthday(id, status) {
+      setMsg(birthdaysMessage, 'Saving…', false);
+      try {
+        const payload = {
+          fullName:         document.getElementById(`birthday-name-${id}`).value,
+          mainPublicCountry:document.getElementById(`birthday-country-${id}`).value,
+          shortBio:         document.getElementById(`birthday-summary-${id}`).value,
+          displayPriority:  Number(document.getElementById(`birthday-priority-${id}`).value || 100),
+        };
+        if (status) payload.curationStatus = status;
+        const r    = await apiFetch(`/api/admin/famous-birthdays/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to save.');
+        setMsg(birthdaysMessage, status ? `✓ Birthday ${status}.` : '✓ Birthday saved.', false);
+        await loadBirthdays();
+      } catch (err) { setMsg(birthdaysMessage, err.message, true); }
+    }
+
+    function setBirthdayStatus(id, status) { return saveBirthday(id, status); }
+
+    /* ── ORDER STATUS ── */
+    async function updateOrderStatus(orderId, status) {
+      setMsg(queueMessage, 'Updating status…', false);
+      try {
+        const r = await apiFetch(`/api/admin/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Unable to update status.');
+        setMsg(queueMessage, data.emailSent ? '✓ Status updated — dispatch email sent.' : '✓ Status updated.', false);
+        await loadQueue();
+      } catch (err) { setMsg(queueMessage, err.message, true); }
+    }
+
+    async function markPosted(orderId) { return updateOrderStatus(orderId, 'posted'); }
+
+    async function downloadPdf(orderId, orderNumber) {
+      setMsg(queueMessage, `Preparing PDF for ${orderNumber}…`, false);
+      try {
+        const r = await apiFetch(`/api/admin/orders/${orderId}/download-pdf`);
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.error || 'Unable to download PDF.');
+        }
+        // Read as ArrayBuffer and create blob with explicit MIME type
+        const arrayBuffer = await r.arrayBuffer();
+        const blob   = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url    = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href     = url;
+        anchor.download = `${orderNumber}.pdf`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        // Delay revoke so browser can finish reading the blob
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        setMsg(queueMessage, '✓ PDF download started.', false);
+      } catch (err) { setMsg(queueMessage, err.message, true); }
+    }
+
+    /* ── AUTH / LOGOUT ── */
+    async function apiFetch(url, options = {}) {
+      // The httpOnly session cookie is attached by the browser
+      // automatically for same-origin requests — nothing for this code to
+      // read or send by hand anymore.
+      return fetch(url, {
+        ...options,
+        credentials: 'same-origin',
+        headers: { ...(options.headers || {}) },
+      });
+    }
+
+    async function logout() {
+      // Clears the httpOnly cookie server-side — client JS has no way to
+      // remove it itself, so this round-trip is required, not optional.
+      try { await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
+      state.admin = null; state.orders = [];
+      state.summary = null; state.attribution = null; state.birthdays = [];
+      setQueueBodyMsg('Sign in to load the queue.');
+      summaryGrid.innerHTML = '';
+      attributionSummaryGrid.innerHTML = '';
+      attributionReportBody.innerHTML = '<tr class="empty-row"><td colspan="4">Sign in to load attribution.</td></tr>';
+      promoCodeBody.innerHTML  = '<tr class="empty-row"><td colspan="4">No promo codes loaded.</td></tr>';
+      territoryBody.innerHTML  = '<tr class="empty-row"><td colspan="4">No territories loaded.</td></tr>';
+      birthdaysBody.innerHTML  = '<tr class="empty-row"><td colspan="6">Sign in to load famous birthdays.</td></tr>';
+      renderAdminMeta();
+      setMsg(loginMessage, '', false);
+      setMsg(queueMessage, '', false);
+      setMsg(attributionMessage, '', false);
+      setMsg(birthdaysMessage, '', false);
+      document.getElementById('admin-password').value = '';
+      syncPasswordToggle();
+      showLogin();
+    }
+
+    /* ── PASSWORD TOGGLE ── */
+    function togglePasswordVisibility() {
+      const input  = document.getElementById('admin-password');
+      const toggle = document.getElementById('password-toggle');
+      const hide   = input.type === 'password';
+      input.type   = hide ? 'text' : 'password';
+      toggle.textContent = hide ? '🙈' : '👁';
+      toggle.setAttribute('aria-pressed', String(hide));
+      toggle.setAttribute('aria-label',   hide ? 'Hide password' : 'Show password');
+    }
+    function syncPasswordToggle() {
+      const input  = document.getElementById('admin-password');
+      const toggle = document.getElementById('password-toggle');
+      toggle.textContent = input.type === 'password' ? '👁' : '🙈';
+    }
+
+    /* ── HELPERS ── */
+    function setMsg(el, text, isError) {
+      el.textContent = text;
+      el.classList.toggle('error', Boolean(isError));
+    }
+    function setLoginMessage(text, isError) { setMsg(loginMessage, text, isError); }
+
+    function formatDate(value) {
+      if (!value) return '';
+      return new Intl.DateTimeFormat('en-NZ', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    }
+    function formatMoney(value) {
+      return `NZ$${Number(value || 0).toFixed(2)}`;
+    }
+    function formatTerritoryMatch(t) {
+      if (t.match_type === 'range')  return `${t.postcode_start} – ${t.postcode_end}`;
+      if (t.match_type === 'prefix') return `${t.postcode_start}*`;
+      return t.postcode_start || '';
+    }
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function escapeAttr(v) { return escapeHtml(v).replace(/`/g,'&#96;'); }
+    function escapeJs(v)   { return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+    async function submitPasswordUpdate(event) {
+      event.preventDefault();
+      // Same fix as saveConsultant() above — see that comment.
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      const oldPassword = document.getElementById('settings-old-password').value;
+      const newPassword = document.getElementById('settings-new-password').value;
+      const errorDiv = document.getElementById('settings-password-error');
+      const successDiv = document.getElementById('settings-password-success');
+
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+
+      try {
+        const response = await apiFetch('/api/admin/auth/update-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update password.');
+        }
+        successDiv.style.display = 'block';
+        document.getElementById('settings-old-password').value = '';
+        document.getElementById('settings-new-password').value = '';
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.style.display = 'block';
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+  </script>
+  <!-- ── POPUP MODALS ── -->
+
+  <!-- Consultant Modal -->
+  <div class="modal-overlay" id="consultant-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="consultant-modal-title">Add Sales Consultant</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('consultant')">&times;</button>
+      </div>
+      <form id="consultant-form" onsubmit="saveConsultant(event)">
+        <input type="hidden" id="consultant-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-consultant-name">Full Name</label>
+            <input id="modal-consultant-name" type="text" placeholder="Sarah Jones" required />
+          </div>
+          <div class="fld">
+            <label for="modal-consultant-email">Email Address</label>
+            <input id="modal-consultant-email" type="email" placeholder="sarah@example.com" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('consultant')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Promo Code Modal -->
+  <div class="modal-overlay" id="promo-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="promo-modal-title">Add Promo Code</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('promo')">&times;</button>
+      </div>
+      <form id="promo-form" onsubmit="savePromoCode(event)">
+        <input type="hidden" id="promo-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-promo-consultant">Consultant</label>
+            <select id="modal-promo-consultant" required><option value="">— select consultant —</option></select>
+          </div>
+          <div class="fld">
+            <label for="modal-promo-code">Promo Code</label>
+            <input id="modal-promo-code" type="text" placeholder="SARAH5" required />
+          </div>
+          <div class="fld">
+            <label for="modal-promo-limit">Monthly Free Demos</label>
+            <input id="modal-promo-limit" type="number" min="0" value="5" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('promo')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Campaign Codes Batch Modal -->
+  <div class="modal-overlay" id="campaign-batch-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create Campaign Codes</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('campaign-batch')">&times;</button>
+      </div>
+      <form id="campaign-batch-form" onsubmit="createCampaignBatch(event)">
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-campaign-label">Campaign / Batch Label</label>
+            <input id="modal-campaign-label" type="text" placeholder="Jhe-Ann Facebook Promo — Aug 2026" required />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-single-code">Single Code (optional — leave blank to generate a batch instead)</label>
+            <input id="modal-campaign-single-code" type="text" placeholder="e.g. WELCOME20" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-quantity">Quantity (ignored if a single code is set above)</label>
+            <input id="modal-campaign-quantity" type="number" min="1" max="500" value="1" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-prefix">Code Prefix (optional, for generated batches)</label>
+            <input id="modal-campaign-prefix" type="text" placeholder="e.g. WELCOME" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-discount-type">Discount Type</label>
+            <select id="modal-campaign-discount-type">
+              <option value="percent">Percentage off</option>
+              <option value="fixed">Fixed amount off (NZ$)</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-discount-value">Discount Value</label>
+            <input id="modal-campaign-discount-value" type="number" min="0.01" step="0.01" placeholder="e.g. 20" required />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-country">Country (optional — leave blank for all countries)</label>
+            <input id="modal-campaign-country" type="text" placeholder="e.g. Philippines" />
+          </div>
+          <div class="fld">
+            <label for="modal-campaign-valid-until">Valid Until (optional)</label>
+            <input id="modal-campaign-valid-until" type="date" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('campaign-batch')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Territory Modal -->
+  <div class="modal-overlay" id="territory-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="territory-modal-title">Add Postcode Territory</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('territory')">&times;</button>
+      </div>
+      <form id="territory-form" onsubmit="saveTerritory(event)">
+        <input type="hidden" id="territory-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-territory-consultant">Consultant</label>
+            <select id="modal-territory-consultant" required><option value="">— select —</option></select>
+          </div>
+          <div class="fld">
+            <label for="modal-territory-name">Territory Name</label>
+            <input id="modal-territory-name" type="text" placeholder="North Auckland" required />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-country">Country</label>
+            <input id="modal-territory-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-match-type">Match Type</label>
+            <select id="modal-territory-match-type" required>
+              <option value="exact">Exact</option>
+              <option value="prefix">Prefix</option>
+              <option value="range">Range</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label for="modal-territory-postcode-start">Postcode / Start</label>
+            <input id="modal-territory-postcode-start" type="text" placeholder="1010" required />
+          </div>
+          <div class="fld" id="modal-territory-postcode-end-wrap">
+            <label for="modal-territory-postcode-end">End (Range only)</label>
+            <input id="modal-territory-postcode-end" type="text" placeholder="1099" />
+          </div>
+          <div class="fld">
+            <label for="modal-territory-priority">Priority</label>
+            <input id="modal-territory-priority" type="number" value="100" required />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('territory')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Station Manager Modal -->
+  <div class="modal-overlay" id="station-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="station-modal-title">Add Station Manager</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('station')">&times;</button>
+      </div>
+      <form id="station-form" onsubmit="saveStation(event)">
+        <input type="hidden" id="station-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-station-name">Station Name</label>
+            <input id="modal-station-name" type="text" placeholder="River FM" required />
+          </div>
+          <div class="fld">
+            <label for="modal-station-email">Manager Email</label>
+            <input id="modal-station-email" type="email" placeholder="manager@riverfm.co.nz" required />
+          </div>
+          <div class="fld" id="modal-station-password-wrap">
+            <label for="modal-station-password">Temporary Password</label>
+            <input id="modal-station-password" type="text" placeholder="Enter password" />
+          </div>
+          <div class="fld">
+            <label for="modal-station-country">Country</label>
+            <input id="modal-station-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld">
+            <label for="modal-station-tier">Tier</label>
+            <select id="modal-station-tier" required>
+              <option value="community">Community</option>
+              <option value="regional">Regional</option>
+              <option value="city">City</option>
+              <option value="national">National</option>
+            </select>
+          </div>
+          <div class="fld" id="modal-station-active-wrap" style="display:none; flex-direction:row; align-items:center; gap:8px;">
+            <input id="modal-station-active" type="checkbox" checked style="width:auto; margin:0;" />
+            <label for="modal-station-active" style="margin:0; text-transform:none;">Account Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('station')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Florist Partner Modal -->
+  <div class="modal-overlay" id="florist-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-florist-title">Add Florist Partner</h3>
+        <button class="close-modal-btn" type="button" onclick="closeModal('florist')">&times;</button>
+      </div>
+      <form id="florist-form" onsubmit="saveFlorist(event)">
+        <input type="hidden" id="florist-id" />
+        <div class="modal-body">
+          <div class="fld">
+            <label for="modal-florist-name">Store Name</label>
+            <input id="modal-florist-name" type="text" placeholder="Blossom Florist" required />
+          </div>
+          <!-- Business Type — client request, 19 Aug 2026: gift shops and
+               cake shops added as partner types, reusing this exact same
+               florist form/credit system (see admin-fulfilment.js's
+               FLORIST_LIKE_ACCOUNT_TYPES) rather than duplicating the
+               whole florist setup twice more. Defaults to Florist so
+               existing behaviour/muscle-memory for admin is unchanged
+               unless this is deliberately switched. -->
+          <div class="fld" id="modal-florist-account-type-wrap">
+            <label for="modal-florist-account-type">Business Type</label>
+            <select id="modal-florist-account-type">
+              <option value="florist">Florist</option>
+              <option value="gift_shop">Gift Shop</option>
+              <option value="cake_shop">Cake Shop</option>
+            </select>
+          </div>
+          <div class="fld" id="modal-florist-wholesale-code-wrap" style="display:none;">
+            <label for="modal-florist-wholesale-code">Wholesale Buying Code</label>
+            <input id="modal-florist-wholesale-code" type="text" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
+          </div>
+          <div class="fld">
+            <label for="modal-florist-email">Email Address</label>
+            <input id="modal-florist-email" type="email" placeholder="hello@blossom.co.nz" required />
+          </div>
+          <div class="fld" id="modal-florist-password-wrap">
+            <label for="modal-florist-password">Temporary Password</label>
+            <input id="modal-florist-password" type="text" placeholder="Enter password" />
+          </div>
+          <div class="fld">
+            <label for="modal-florist-country">Country</label>
+            <input id="modal-florist-country" type="text" value="New Zealand" required />
+          </div>
+          <div class="fld" id="modal-florist-initial-credits-wrap">
+            <label for="modal-florist-credits">Initial Credits / Balance</label>
+            <input id="modal-florist-credits" type="number" min="0" value="30" required />
+          </div>
+          <div id="modal-florist-credit-edit-wrap" style="display:none;">
+            <div class="fld">
+              <label for="modal-florist-current-credits">Current Credits</label>
+              <input id="modal-florist-current-credits" type="number" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
+            </div>
+            <div class="fld">
+              <label for="modal-florist-new-credits">New Credits (amount to add)</label>
+              <input id="modal-florist-new-credits" type="number" value="0" oninput="updateFloristCreditTotalPreview()" />
+            </div>
+            <div class="fld">
+              <label for="modal-florist-total-credits">Total Credits (after save)</label>
+              <input id="modal-florist-total-credits" type="number" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
+            </div>
+          </div>
+          <div class="fld" id="modal-florist-threshold-wrap" style="display:none;">
+            <label for="modal-florist-threshold">Low Credit Threshold</label>
+            <input id="modal-florist-threshold" type="number" min="0" value="5" />
+          </div>
+          <div class="fld" id="modal-florist-active-wrap" style="display:none; flex-direction:row; align-items:center; gap:8px;">
+            <input id="modal-florist-active" type="checkbox" checked style="width:auto; margin:0;" />
+            <label for="modal-florist-active" style="margin:0; text-transform:none;">Account Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" type="button" onclick="closeModal('florist')">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Close modal when clicking on backdrop -->
+  <script>
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target !== overlay) return;
+        // See the lastModalOpenAt comment above openModal() — skips a
+        // backdrop "click" that's really just the trailing half of the
+        // double-click gesture that opened this exact modal, so it isn't
+        // closed the instant it opens.
+        if (Date.now() - lastModalOpenAt < 400) return;
+        const type = overlay.id.replace('-modal', '');
+        closeModal(type);
+      });
+    });
+  </script>
+</body>
+</html>

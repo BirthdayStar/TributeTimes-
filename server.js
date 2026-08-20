@@ -4,13 +4,24 @@ const fetch = require('node-fetch');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const multer = require('multer');
+const { registerAdminFulfilmentRoutes, authAdmin } = require('./src/phase2/admin-fulfilment');
+const { registerGcashPaymentRoutes } = require('./src/phase2/gcash-payment-requests');
+const { registerPublicCheckoutRoutes } = require('./src/phase2/public-checkout');
+const { registerPdfRoutes } = require('./src/phase2/pdf-routes');
 const { createClient } = require('@supabase/supabase-js');
+const { FLORIST_CREDIT_PACK_TYPES, FLORIST_WHOLESALE_PRICING, FLORIST_WHOLESALE_MAX_QUANTITY } = require('./src/phase2/constants');
 const Stripe = require('stripe');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const {
+  sendEmail,
+  buildStationWelcomeEmail,
+  buildFloristLowCreditEmail
+} = require('./src/phase2/email-service');
 
 // ── CLIENTS ──
 const supabase = createClient(
@@ -19,6 +30,23 @@ const supabase = createClient(
 );
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const STATIC_ASSET_PATTERN = /\.(?:avif|css|gif|ico|jpe?g|js|json|map|png|svg|txt|webmanifest|webp|woff2?|ttf|otf|eot|xml)$/i;
+const CSP_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "img-src 'self' data: blob: https:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://api.anthropic.com https://*.supabase.co https://en.wikipedia.org https://upload.wikimedia.org",
+  "script-src 'self' 'unsafe-inline'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  "media-src 'self' data: https:"
+].join('; ');
 
 // ── PRICING ──
 const TIERS = {
@@ -31,12 +59,43 @@ const FRAMES_PRICE_NZD = 1.20;
 const FRAMES_GST = 0.15;
 const FRAMES_MIN_QTY = 100;
 
+app.disable('x-powered-by');
+app.set('trust proxy', true);
 app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/webhooks/stripe') return next();
   return express.json({ limit: '10mb' })(req, res, next);
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(PUBLIC_DIR, { index: false }));
+
+require('./tribute-times-server-update')(app, { supabase, sendEmail, buildFloristLowCreditEmail });
+registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe });
+registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail });
+registerGcashPaymentRoutes(app, {
+  supabase,
+  sendEmail,
+  authAdmin,
+  stationBilling: {
+    tiers: TIERS,
+    frames: {
+      unitPriceNzd: FRAMES_PRICE_NZD,
+      gstRate: FRAMES_GST,
+      minQty: FRAMES_MIN_QTY,
+    },
+  },
+});
+registerPdfRoutes(app, { supabase, authStation });
 
 // ── AUTH MIDDLEWARE ──
 function authStation(req, res, next) {
@@ -161,12 +220,45 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // Station login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  // Client-reported bug (11 Aug 2026, urgent — florist account created via
+  // admin panel couldn't log in on the florist portal, 401 "Invalid email
+  // or password" every time, despite the account showing Active with the
+  // right credit balance in admin): this query was case- and whitespace-
+  // sensitive on email (`.eq('email', email)` against the raw request
+  // body), while the admin login route two files over already normalizes
+  // and matches case-insensitively (`.ilike('email', ...)` in
+  // admin-fulfilment.js) — an inconsistency between the two login systems
+  // in this same codebase. Reproduced directly: a florist created with a
+  // lowercase email logs in fine with that exact casing, but fails 401 the
+  // moment the email arrives with a different case (e.g. autocapitalized
+  // by a mobile keyboard/autofill — Col's own message specifically
+  // suspected "autofill") or a stray leading/trailing space (a common
+  // copy-paste artifact from pasting an email out of the admin directory).
+  // The account was never missing; the lookup just couldn't find it.
+  const email = String(req.body?.email || '').trim().toLowerCase();
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   try {
-    const { data: station } = await supabase.from('stations').select('*').eq('email', email).single();
+    const { data: station } = await supabase.from('stations').select('*').ilike('email', email).single();
     if (!station) return res.status(401).json({ error: 'Invalid email or password' });
+
+    // Restrict florist-portal accounts logging in here unless florist portal
+    // directly requests. Gift shop / cake shop accounts (added 19 Aug
+    // 2026 — client request, same florist credit infrastructure reused
+    // for these two new partner types) log in via the same florist portal
+    // as florists, so they're included here too — a gift shop account
+    // would otherwise be rejected by this exact gate despite being fully
+    // set up, the same shape of bug as the 11 Aug email-casing issue
+    // above this block.
+    const isFloristReq = req.body.portal === 'florist' || req.headers.referer?.includes('/florist');
+    const isFloristPortalAccountType = ['florist', 'gift_shop', 'cake_shop'].includes(station.account_type);
+    if (!isFloristReq && isFloristPortalAccountType) {
+      return res.status(403).json({ error: 'Florist partners must log in via the florist portal.' });
+    }
+    if (isFloristReq && !isFloristPortalAccountType) {
+      return res.status(403).json({ error: 'Station managers must log in via the station portal.' });
+    }
 
     const valid = await bcrypt.compare(password, station.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid email or password' });
@@ -174,7 +266,7 @@ app.post('/api/auth/login', async (req, res) => {
     await supabase.from('stations').update({ last_login: new Date().toISOString() }).eq('id', station.id);
 
     const token = jwt.sign(
-      { id: station.id, type: 'station', name: station.name, email: station.email, tier: station.tier },
+      { id: station.id, type: 'station', name: station.name, email: station.email, tier: station.tier, role: station.account_type },
       process.env.JWT_SECRET, { expiresIn: '30d' }
     );
     res.json({ token, station: sanitizeStation(station) });
@@ -184,11 +276,83 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Get list of active radio stations / station managers for public dropdown
+app.get('/api/public/stations', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('stations')
+      .select('id, name')
+      .eq('active', true)
+      .eq('account_type', 'radio');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('List stations error:', err);
+    res.status(500).json({ error: 'Failed to load stations' });
+  }
+});
+
+// Live keepsake count for the landing page social-proof counter
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const { count, error } = await supabase
+      .from('keepsakes')
+      .select('*', { count: 'exact', head: true });
+    if (error) throw error;
+    res.json({ keepsakesCreated: count || 0 });
+  } catch (err) {
+    console.error('Public stats error:', err);
+    res.status(500).json({ error: 'Failed to load stats' });
+  }
+});
+
+// Send email inquiry to a specific station manager
+app.post('/api/public/stations/inquiry', async (req, res) => {
+  const { stationId, senderName, senderEmail, message } = req.body;
+  if (!stationId || !senderName || !senderEmail || !message) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+  try {
+    const { data: station, error } = await supabase
+      .from('stations')
+      .select('name, email')
+      .eq('id', stationId)
+      .single();
+    if (error || !station) {
+      return res.status(404).json({ error: 'Station manager not found' });
+    }
+
+    await sendEmail({
+      to: station.email,
+      subject: `New Station Inquiry from ${senderName}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #DED9BE; border-radius: 8px;">
+          <h2 style="color: #8A6A1F; margin-top: 0;">New Listener Inquiry</h2>
+          <p>You have received a new message regarding your Tribute Times station edition:</p>
+          <hr style="border: 0; border-top: 1px solid #DED9BE; margin: 20px 0;" />
+          <p><strong>From:</strong> ${senderName} (${senderEmail})</p>
+          <p><strong>Message:</strong></p>
+          <p style="background: #F4F0DE; padding: 15px; border-radius: 6px; border-left: 4px solid #8A6A1F; white-space: pre-wrap;">${message}</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Inquiry sent successfully' });
+  } catch (err) {
+    console.error('Send inquiry error:', err);
+    res.status(500).json({ error: 'Failed to send inquiry' });
+  }
+});
+
 // DJ login
 app.post('/api/auth/dj-login', async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  // Same case/whitespace-sensitivity fix as the station/florist login
+  // above — identical anti-pattern, same file, checked while investigating
+  // the client-reported florist login bug.
+  const email = String(req.body?.email || '').trim().toLowerCase();
   try {
-    const { data: dj } = await supabase.from('djs').select('*, stations(*)').eq('email', email).single();
+    const { data: dj } = await supabase.from('djs').select('*, stations(*)').ilike('email', email).single();
     if (!dj) return res.status(401).json({ error: 'Invalid email or password' });
 
     const valid = await bcrypt.compare(password, dj.password_hash);
@@ -210,6 +374,52 @@ app.post('/api/auth/dj-login', async (req, res) => {
   } catch (err) {
     console.error('DJ login error:', err);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Update password for Florist / Station Managers
+app.post('/api/auth/update-password', authStation, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Old password and new password are required' });
+  }
+  try {
+    const { data: station } = await supabase.from('stations').select('*').eq('id', req.station.id).single();
+    if (!station) return res.status(404).json({ error: 'Account not found' });
+
+    const valid = await bcrypt.compare(oldPassword, station.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Incorrect current password' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('stations').update({ password_hash: newHash }).eq('id', station.id);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Update password error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// Update password for DJs
+app.post('/api/auth/dj/update-password', authDJ, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Old password and new password are required' });
+  }
+  try {
+    const { data: dj } = await supabase.from('djs').select('*').eq('id', req.dj.id).single();
+    if (!dj) return res.status(404).json({ error: 'Account not found' });
+
+    const valid = await bcrypt.compare(oldPassword, dj.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Incorrect current password' });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await supabase.from('djs').update({ password_hash: newHash }).eq('id', dj.id);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Update DJ password error:', err);
+    res.status(500).json({ error: 'Failed to update password' });
   }
 });
 
@@ -275,6 +485,57 @@ app.get('/api/station/stats', authStation, async (req, res) => {
   });
 });
 
+// Florist wholesale credit checkout — pay-as-you-use, client decision
+// 19-20 Aug 2026 (Col): "removing all boundaries... buy as they use so no
+// presales no stock on hand" + "The wholesale price is a 35% discount."
+// Replaces the fixed-pack checkout (getFloristCreditPack) with a quantity
+// the partner chooses themselves, priced at the flat wholesale rate.
+app.post('/api/florist/credits/checkout-session', authStation, async (req, res) => {
+  try {
+    const { packType, quantity } = req.body || {};
+    const purchase = calculateWholesaleCreditPurchase(packType, quantity);
+    const { data: station } = await supabase.from('stations').select('*').eq('id', req.station.id).single();
+    // Gift shop / cake shop accounts (added 19 Aug 2026) reuse this same
+    // florist wholesale credit purchasing — without this, a gift shop
+    // could sign up and get a wholesale code but never be able to buy a
+    // single credit through the only purchase path that currently exists,
+    // which would be a dead end.
+    if (!station || station.active === false || !['florist', 'gift_shop', 'cake_shop'].includes(station.account_type)) {
+      return res.status(403).json({ error: 'Florist account required.' });
+    }
+
+    const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+    const session = await stripe.checkout.sessions.create({
+      customer: station.stripe_customer_id || undefined,
+      customer_email: station.stripe_customer_id ? undefined : station.email,
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'nzd',
+          unit_amount: purchase.unitPriceCents,
+          product_data: { name: `The Tribute Times - ${purchase.packType.label} wholesale credit` },
+        },
+        quantity: purchase.quantity,
+      }],
+      mode: 'payment',
+      success_url: `${appUrl}/florist?credits=success`,
+      cancel_url: `${appUrl}/florist?credits=cancelled`,
+      metadata: {
+        type: 'florist_credits',
+        station_id: station.id,
+        pack_type: purchase.packType.code,
+        credits: String(purchase.quantity),
+        unit_price_cents: String(purchase.unitPriceCents),
+      },
+    });
+
+    return res.json({ url: session.url });
+  } catch (error) {
+    console.error('Florist credit checkout error:', error);
+    return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to start florist credit checkout.' });
+  }
+});
+
 // ── DJ MANAGEMENT ──
 app.get('/api/station/djs', authStation, async (req, res) => {
   const { data } = await supabase.from('djs').select('id,name,email,active,created_at,last_login').eq('station_id', req.station.id);
@@ -302,198 +563,6 @@ app.post('/api/station/djs', authStation, async (req, res) => {
 app.delete('/api/station/djs/:id', authStation, async (req, res) => {
   await supabase.from('djs').update({ active: false }).eq('id', req.params.id).eq('station_id', req.station.id);
   res.json({ success: true });
-});
-
-// ════════════════════════════════════════
-//  KEEPSAKE GENERATION
-// ════════════════════════════════════════
-
-app.post('/api/generate', authDJ, async (req, res) => {
-  const { occasion, listener_name, listener_dob, country, dj_message } = req.body;
-  if (!listener_name || !listener_dob || !country) return res.status(400).json({ error: 'Missing required fields' });
-
-  // Check keepsake limit
-  const { data: station } = await supabase.from('stations').select('*').eq('id', req.dj.station_id).single();
-  if (!station?.active) return res.status(403).json({ error: 'Station account inactive' });
-  if (station.subscription_status === 'trial' && new Date(station.trial_ends_at) < new Date())
-    return res.status(403).json({ error: 'Trial expired. Please subscribe to continue.' });
-
-  const tier = TIERS[station.tier];
-  if (station.keepsakes_this_month >= tier.keepsakes)
-    return res.status(403).json({ error: `Monthly limit of ${tier.keepsakes} keepsakes reached. Please upgrade your plan.` });
-
-  const dob = new Date(listener_dob + 'T12:00:00');
-  const year = dob.getFullYear();
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const formattedDate = `${dob.getDate()} ${months[dob.getMonth()]} ${year}`;
-  const dayOfWeek = days[dob.getDay()];
-  const age = Math.floor((new Date() - dob) / (365.25 * 24 * 60 * 60 * 1000));
-
-  const CURR = {
-    'New Zealand': { s: 'NZ$', n: 'New Zealand dollars' },
-    'Australia': { s: 'A$', n: 'Australian dollars' },
-    'United Kingdom': { s: '£', n: 'British pounds' },
-    'Ireland': { s: year >= 2002 ? '€' : '£', n: year >= 2002 ? 'euros' : 'Irish pounds' },
-    'Canada': { s: 'C$', n: 'Canadian dollars' },
-    'United States': { s: '$', n: 'US dollars' },
-    'South Africa': { s: 'R', n: 'South African rand' },
-    'Philippines': { s: '₱', n: 'Philippine pesos' },
-    'India': { s: '₹', n: 'Indian rupees' },
-    'Germany': { s: year >= 2002 ? '€' : 'DM', n: year >= 2002 ? 'euros' : 'Deutschmarks' },
-    'France': { s: year >= 2002 ? '€' : '₣', n: year >= 2002 ? 'euros' : 'French francs' },
-    'Japan': { s: '¥', n: 'Japanese yen' },
-    'Singapore': { s: 'S$', n: 'Singapore dollars' },
-    'Malaysia': { s: 'RM', n: 'Malaysian ringgit' },
-    'Nigeria': { s: '₦', n: 'Nigerian naira' },
-    'Kenya': { s: 'KSh', n: 'Kenyan shillings' },
-    'Brazil': { s: 'R$', n: 'Brazilian reais' },
-    'Jamaica': { s: 'J$', n: 'Jamaican dollars' },
-  };
-  const currency = CURR[country] || { s: '$', n: 'local currency' };
-
-  const occasionLabels = {
-    birthday: 'Birthday', anniversary: 'Anniversary', wedding: 'Wedding Day',
-    retirement: 'Retirement', graduation: 'Graduation', newbaby: 'New Arrival',
-    memorial: 'In Memoriam', custom: 'Special Edition'
-  };
-  const occasionLabel = occasionLabels[occasion] || 'Birthday';
-
-  const prompt = `You are a research journalist for "The Tribute Times" personalised keepsake newspaper.
-
-OCCASION: ${occasionLabel}
-LISTENER: ${listener_name}
-DATE: ${listener_dob} — ${dayOfWeek}, ${formattedDate}
-COUNTRY: ${country}
-AGE: ${age}
-
-CRITICAL RULES:
-1. ALL content from ${country}'s perspective. Not American unless country IS USA.
-2. MUSIC: Real ${country} chart songs from ${listener_dob}. Official chart name for ${country}.
-3. NEWS: Real events in ${country} and world on ${listener_dob}.
-4. WEATHER: Realistic for ${country} geography and season. Celsius temp as number only.
-5. PRICES: ${currency.n} (${currency.s}). Amount = digits/decimal only, NO symbols.
-6. HOROSCOPE: Based on birth date ${listener_dob}.
-7. DJ SCRIPT: Write a warm, engaging 30-second on-air script the DJ reads verbatim. Use the listener's name naturally. Reference specific facts from the content.
-8. Write warmly — this is a treasured keepsake and a great radio moment.
-
-Return ONLY valid JSON, no markdown:
-{
-  "national_headline": "Main ${country} news headline on ${listener_dob}",
-  "national_deck": "Short subheadline",
-  "national_story": "3 sentences flowing prose.",
-  "world_headline": "Biggest world headline on ${listener_dob}",
-  "world_story": "2 sentences.",
-  "sport_headline": "Sports story relevant to ${country}",
-  "sport_story": "2 sentences.",
-  "local_headline": "Human interest story from ${country}",
-  "local_story": "2 warm sentences.",
-  "chart_title": "Official ${country} singles chart name",
-  "number_one": "Song title — Artist (the actual #1 on that date)",
-  "music_chart": [
-    {"pos":1,"title":"Song","artist":"Artist"},
-    {"pos":2,"title":"Song","artist":"Artist"},
-    {"pos":3,"title":"Song","artist":"Artist"},
-    {"pos":4,"title":"Song","artist":"Artist"},
-    {"pos":5,"title":"Song","artist":"Artist"},
-    {"pos":6,"title":"Song","artist":"Artist"},
-    {"pos":7,"title":"Song","artist":"Artist"},
-    {"pos":8,"title":"Song","artist":"Artist"},
-    {"pos":9,"title":"Song","artist":"Artist"},
-    {"pos":10,"title":"Song","artist":"Artist"}
-  ],
-  "prices": [
-    {"item":"Loaf of bread","amount":"0"},
-    {"item":"Pint of milk","amount":"0"},
-    {"item":"Dozen eggs","amount":"0"},
-    {"item":"Litre of petrol","amount":"0"},
-    {"item":"Cinema ticket","amount":"0"},
-    {"item":"Daily newspaper","amount":"0"},
-    {"item":"Average house price","amount":"0"},
-    {"item":"Pint of beer","amount":"0"}
-  ],
-  "famous_people": [
-    {"name":"Full Name","note":"what known for, relevant to ${country} audience"},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."},
-    {"name":"Full Name","note":"..."}
-  ],
-  "weather": {
-    "temp_c": "number only",
-    "conditions": "e.g. Cold southerly with showers",
-    "forecast": "One sentence next-day forecast.",
-    "season": "e.g. Mid-winter"
-  },
-  "cinema": [
-    {"title":"Film title","note":"1 sentence why notable or what it's about"},
-    {"title":"Film title","note":"..."},
-    {"title":"Film title","note":"..."}
-  ],
-  "number_one_book": {"title":"Bestselling book title","author":"Author","note":"1 sentence about the book"},
-  "science_tech": "1-2 sentences about a real science or tech breakthrough from ${year}.",
-  "horoscope": {
-    "sign": "Star sign for ${listener_dob}",
-    "sign_dates": "Date range e.g. 23 Jul – 22 Aug",
-    "reading": "2 sentences fun horoscope in 1970s newspaper style"
-  },
-  "vintage_ad": {
-    "product": "Real product or brand from ${country} in ${year}",
-    "slogan": "Period advertising slogan",
-    "copy": "2 sentences vintage ad copy"
-  },
-  "fun_fact": "2 warm nostalgic sentences about ${listener_dob}.",
-  "cartoon_emoji": "2-3 emojis for the era",
-  "now_vs_then": {
-    "item": "Average house price",
-    "then": "Price in ${year} with currency symbol",
-    "now": "Approximate current ${country} price with currency symbol",
-    "shock": "One punchy sentence comparing the two for the DJ to read on air"
-  },
-  "dj_script": "A warm engaging 30-second on-air script (about 75 words) the DJ reads verbatim when presenting this keepsake. Use ${listener_name}'s name. Reference the number one song, one news event, and one price. End with something warm about the keepsake being on its way.",
-  "conversation_starters": [
-    "Question or topic the DJ can use to have a live chat — references a specific fact",
-    "Another conversation starter",
-    "Another conversation starter",
-    "Another conversation starter",
-    "Another conversation starter"
-  ],
-  "image_search_query": "4-6 words to find a real historical photo of the main news event on ${listener_dob}"
-}`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept-Encoding': 'identity',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 5000, messages: [{ role: 'user', content: prompt }] }),
-      compress: false
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-    const text = data.content.map(b => b.text || '').join('');
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON in response');
-    const info = JSON.parse(match[0]);
-
-    // Save keepsake record
-    const { data: keepsake } = await supabase.from('keepsakes').insert({
-      station_id: req.dj.station_id, dj_id: req.dj.id, dj_name: req.dj.name,
-      occasion, listener_name, listener_dob, country, dj_message, content: info
-    }).select().single();
-
-    // Increment monthly counter
-    await supabase.from('stations').update({ keepsakes_this_month: (station.keepsakes_this_month || 0) + 1 }).eq('id', station.id);
-
-    res.json({ info, keepsake_id: keepsake.id, currency, formattedDate, dayOfWeek, year, age });
-  } catch (err) {
-    console.error('Generate error:', err);
-    res.status(500).json({ error: 'Generation failed: ' + err.message });
-  }
 });
 
 // ════════════════════════════════════════
@@ -573,7 +642,27 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
-      if (session.metadata?.type === 'frames') {
+      if (session.metadata?.type === 'florist_credits') {
+        const { station_id, pack_size, credits } = session.metadata;
+        const creditAmount = Number(credits || pack_size || 0);
+        const { data: st } = await supabase
+          .from('stations')
+          .select('name,email,florist_credit_balance')
+          .eq('id', station_id)
+          .single();
+        await supabase.from('stations').update({
+          florist_credit_balance: Number(st?.florist_credit_balance || 0) + creditAmount,
+          florist_last_pack_size: creditAmount,
+          florist_credit_updated_at: new Date().toISOString(),
+        }).eq('id', station_id);
+        if (st?.email) {
+          await sendEmail({
+            to: st.email,
+            subject: 'Your Tribute Times florist credits are active',
+            html: `<p>Hi ${st.name || 'there'},</p><p>${creditAmount} florist credits have been added to your account.</p>`,
+          });
+        }
+      } else if (session.metadata?.type === 'frames') {
         // Frame order paid
         const { station_id, quantity, delivery_name, delivery_address, delivery_city, delivery_postcode, delivery_country } = session.metadata;
         const qty = parseInt(quantity);
@@ -630,57 +719,145 @@ app.post('/api/billing/portal', authStation, async (req, res) => {
 // ════════════════════════════════════════
 
 function sanitizeStation(s) {
+  if (!s) return null;
   const { password_hash, stripe_customer_id, stripe_subscription_id, ...safe } = s;
   return safe;
 }
 
-async function sendEmail({ to, subject, html }) {
-  if (!process.env.RESEND_API_KEY) return;
-  try {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-      body: JSON.stringify({ from: 'The Tribute Times <hello@tributetimes.co.nz>', to, subject, html })
-    });
-  } catch (e) { console.error('Email failed:', e.message); }
+function isStaticAssetRequest(requestPath) {
+  return requestPath.startsWith('/icons/')
+    || requestPath.startsWith('/fonts/')
+    || requestPath.startsWith('/screenshots/')
+    || STATIC_ASSET_PATTERN.test(requestPath);
 }
 
-function welcomeEmail(name, tier) {
-  return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Welcome to The Tribute Times</h1>
-    <p>Hi ${name},</p>
-    <p>Your <strong>${TIERS[tier]?.label}</strong> station account is ready. You have a 14-day free trial — no card required.</p>
-    <p>Log in at <a href="https://tributetimes.co.nz/login">tributetimes.co.nz</a> to set up your station branding, add your DJs, and start creating your first birthday keepsakes.</p>
-    <p>Questions? Reply to this email — we're here to help.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
-  </div>`;
+function getFloristCreditPack(packTypeValue, packSizeValue) {
+  const packTypeCode = String(packTypeValue || '').trim();
+  const size = Number(packSizeValue || 0);
+  const packType = FLORIST_CREDIT_PACK_TYPES[packTypeCode];
+  const price = packType?.packs?.[size];
+  if (!packType || !price) {
+    const error = new Error('Invalid florist credit pack.');
+    error.statusCode = 400;
+    throw error;
+  }
+  return { packType, size, price };
 }
+
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col):
+// replaces getFloristCreditPack() above (kept in place, unused, rather
+// than deleted) — partners now buy any quantity of credits at a flat
+// per-unit wholesale rate (35% off the matching retail tier — see
+// FLORIST_WHOLESALE_PRICING in constants.js) instead of picking from
+// fixed 30/60/120-credit packs. No minimum purchase.
+function calculateWholesaleCreditPurchase(packTypeValue, quantityValue) {
+  const packTypeCode = String(packTypeValue || '').trim();
+  const quantity = Math.floor(Number(quantityValue));
+  const packType = FLORIST_WHOLESALE_PRICING[packTypeCode];
+
+  if (!packType) {
+    const error = new Error('Invalid credit type. Choose Standard or Premium Floral.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    const error = new Error('Please enter a quantity of at least 1 credit.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (quantity > FLORIST_WHOLESALE_MAX_QUANTITY) {
+    const error = new Error(`Quantity cannot exceed ${FLORIST_WHOLESALE_MAX_QUANTITY} credits per purchase.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const totalCents = packType.unitPriceCents * quantity;
+  return {
+    packType,
+    quantity,
+    unitPriceCents: packType.unitPriceCents,
+    unitPriceNzd: packType.unitPriceNzd,
+    totalCents,
+    totalNzd: Number((totalCents / 100).toFixed(2)),
+  };
+}
+
+
 
 function djWelcomeEmail(name, email, password) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Your Tribute Times DJ Account</h1>
+    <h1 style="color:#8A6A1F;">Your Tribute Times DJ Account</h1>
     <p>Hi ${name},</p>
     <p>Your station manager has set up your DJ account on The Tribute Times.</p>
     <p><strong>Login:</strong> <a href="https://tributetimes.co.nz/dj">tributetimes.co.nz/dj</a><br/>
     <strong>Email:</strong> ${email}<br/>
     <strong>Password:</strong> ${password}</p>
     <p>Please change your password after first login.</p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
 function subscriptionActiveEmail(name, tier) {
   return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h1 style="color:#8b1010;">Subscription Active</h1>
+    <h1 style="color:#8A6A1F;">Subscription Active</h1>
     <p>Hi ${name},</p>
     <p>Your <strong>${TIERS[tier]?.label}</strong> plan is now active. You can generate up to ${TIERS[tier]?.keepsakes} keepsakes per month.</p>
     <p>Log in at <a href="https://tributetimes.co.nz/dashboard">tributetimes.co.nz/dashboard</a></p>
-    <p style="color:#8b1010;font-weight:bold;">The Tribute Times Team</p>
+    <p style="color:#8A6A1F;font-weight:bold;">The Tribute Times Team</p>
   </div>`;
 }
 
+// 3-edition front-end form (radio / florist / public)
+function sendEditionTemplate(res, edition) {
+  const template = fs.readFileSync(path.join(__dirname, 'public/form-template.html'), 'utf8');
+  // Always read fresh from disk (above), but without this the browser can
+  // still serve a stale cached copy of the page itself on a normal
+  // navigation/reload — causing genuine, already-fixed bugs to appear
+  // "still broken" simply because the tester's browser never re-fetched
+  // the updated HTML. This has caused confusion multiple times during
+  // testing (new_changes.md, Aug 2026) — explicit no-store removes that
+  // whole class of false negative going forward.
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.send(template.replace('{{EDITION}}', edition));
+}
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/landing.html'));
+});
+
+app.get(['/radio', '/florist', '/public'], (req, res) => {
+  const edition = req.path.replace('/', '');
+  sendEditionTemplate(res, edition);
+});
+
+app.get(['/station', '/dashboard'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/station.html'));
+});
+
+// Terms & Conditions / Privacy Policy (new_changes.md Step 18) — general,
+// standard terms for a NZ-based personalised-keepsake business, per the
+// client's instruction to proceed with standard terms rather than wait.
+// Worth a quick read-through, but not blocking further work on it.
+app.get('/legal/:slug', (req, res) => {
+  const files = { terms: 'terms.html', privacy: 'privacy.html' };
+  const file = files[req.params.slug];
+  if (!file) return res.status(404).send('Not found');
+  res.sendFile(path.join(__dirname, 'public/legal', file));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
+});
+
+app.use((req, res, next) => {
+  if ((req.method === 'GET' || req.method === 'HEAD') && isStaticAssetRequest(req.path)) {
+    return res.status(404).type('text/plain').send('Not found');
+  }
+  return next();
+});
+
 // Catch-all
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => sendEditionTemplate(res, 'public'));
 
 app.listen(PORT, () => {
   console.log(`🗞️  The Tribute Times running on port ${PORT}`);

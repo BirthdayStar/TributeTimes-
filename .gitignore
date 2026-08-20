@@ -1,7 +1,7 @@
 .env
 .env.*
 !.env.example
-
+.env.example
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -12,3 +12,9 @@ pnpm-debug.log*
 *.log
 
 .omx/
+
+# ── Scratch / test / one-off scripts ──
+scratch_*.js
+
+# ── Personal Claude Code overrides (not shared with the team) ──
+.claude/settings.local.json

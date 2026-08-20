@@ -1,0 +1,58 @@
+/*
+  The Tribute Times — shared theme tokens (cream / olive / gold)
+  Single source of truth for color across every page. See THEME_MIGRATION_STRATEGY.md
+  at the project root for the full rationale and rollout plan.
+*/
+
+:root {
+  /* Core palette (from client reference image) */
+  --color-cream:        #FCF9E8;   /* lightest bg */
+  --color-cream-soft:   #F4F0DE;   /* secondary panels/cards */
+  --color-cream-deep:   #ECE5C8;   /* pressed/active surface on cream */
+
+  --color-olive:        #54592F;   /* AA-adjusted from client's #5A6239 for text on cream */
+  --color-olive-deep:   #3D4122;   /* headers, high-emphasis text */
+  --color-olive-soft:   #8A9160;   /* muted text, secondary labels */
+
+  --color-gold:         #B08A2E;   /* CTAs, prices, active states */
+  --color-gold-deep:    #8A6A1F;   /* CTA hover/pressed */
+  --color-gold-soft:    #E8D9AE;   /* badges, subtle highlight bg */
+
+  /* Semantic tokens — components should reference these, not the raw colors above */
+  --bg-page:            var(--color-cream);
+  --bg-card:            #FFFFFF;
+  --bg-card-alt:        var(--color-cream-soft);
+  --bg-card-pressed:    var(--color-cream-deep);
+
+  --text-primary:       var(--color-olive-deep);
+  --text-secondary:     var(--color-olive-soft);
+  --text-on-accent:     var(--color-cream);
+  --text-on-dark-accent: var(--color-cream);
+
+  --border-default:     #DED9BE;
+  --border-strong:      var(--color-olive-soft);
+
+  /* --accent-primary is for gold used as a large surface (badges, dividers, icon
+     fills) where it's only ever paired with dark text. Anywhere gold sits BEHIND
+     light/cream text (buttons, filled badges) must use --accent-primary-solid
+     instead — plain --color-gold only clears ~3:1 against cream, which fails
+     WCAG AA for button/badge label text; the deepened tone clears 4.77:1. */
+  --accent-primary:        var(--color-gold);
+  --accent-primary-solid:  var(--color-gold-deep);
+  --accent-primary-hov:    #6F5418;
+  --accent-secondary:    var(--color-olive);
+  --accent-secondary-hov: var(--color-olive-deep);
+
+  --shadow-card:         0 8px 24px rgba(61, 65, 34, 0.10);
+  --shadow-card-lift:    0 14px 34px rgba(61, 65, 34, 0.16);
+
+  /* Status colors — warm-toned relatives of the base family, not generic red/green/blue */
+  --status-success:      #4C7A3D;
+  --status-success-bg:   #E8F0DE;
+  --status-error:        #A1442A;
+  --status-error-bg:     #F5E4DD;
+  --status-warning:      #B08A2E;
+  --status-warning-bg:   var(--color-gold-soft);
+  --status-info:         #4A6E82;
+  --status-info-bg:      #E3EDF1;
+}
