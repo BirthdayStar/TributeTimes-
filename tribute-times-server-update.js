@@ -656,7 +656,13 @@ async function loadAuthenticatedFlorist(req, supabase) {
   if (!station.active) {
     return { statusCode: 403, error: 'Florist account is inactive.' };
   }
-  if (station.account_type !== SOURCE_PORTALS.florist) {
+  // Gift shop / cake shop accounts (added 19 Aug 2026 — client request,
+  // same florist credit infrastructure reused for these two new partner
+  // types) generate keepsakes through this exact same florist portal, so
+  // they're included here too — without this they'd be able to log in
+  // (see server.js's login gate, fixed the same day) but every generate
+  // request would then fail this check right after.
+  if (!['florist', 'gift_shop', 'cake_shop'].includes(station.account_type)) {
     return { statusCode: 403, error: 'Please use a florist account for the florist portal.' };
   }
 

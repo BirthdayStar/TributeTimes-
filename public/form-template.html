@@ -1144,17 +1144,32 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
       </label>
     </div>
   </div>
-  <div class="purchase-note">Standard packs: plain cream envelope.</div>
-  <div class="purchase-actions">
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',30)">Standard 30 - NZ$90</button>
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',60)">Standard 60 - NZ$192</button>
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('standard',120)">Standard 120 - NZ$380</button>
+  <!-- WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col): "removing
+       all boundaries... buy as they use so no presales no stock on hand"
+       + "The wholesale price is a 35% discount." Replaces the 6 fixed
+       30/60/120-credit pack buttons with a quantity the partner chooses
+       themselves — no minimum, no pre-set pack sizes. Per-unit prices
+       below are 35% off the matching retail printed tier (Standard
+       $24.95 -> $16.22, Premium Floral/Premium $34.95 -> $22.72), kept in
+       sync with src/phase2/constants.js's FLORIST_WHOLESALE_PRICING,
+       which is the actual source used server-side for the real charge —
+       these numbers are display text only. -->
+  <div class="field-row">
+    <div class="field">
+      <label for="florist-wholesale-type">Credit Type</label>
+      <select id="florist-wholesale-type" onchange="updateWholesaleCreditTotal()">
+        <option value="standard">Standard (plain cream envelope) — NZ$16.22/credit</option>
+        <option value="premiumFloral">Premium Floral (floral embossed envelope) — NZ$22.72/credit</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="florist-wholesale-quantity">Quantity</label>
+      <input type="number" id="florist-wholesale-quantity" min="1" value="10" oninput="updateWholesaleCreditTotal()" />
+    </div>
   </div>
-  <div class="purchase-note">Premium Floral packs: floral embossed envelope.</div>
+  <div class="purchase-note" id="florist-wholesale-total">Total: NZ$162.20</div>
   <div class="purchase-actions">
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',30)">Premium Floral 30 - NZ$110</button>
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',60)">Premium Floral 60 - NZ$230</button>
-    <button class="action-btn secondary-btn" type="button" onclick="buyFloristPack('premiumFloral',120)">Premium Floral 120 - NZ$450</button>
+    <button class="action-btn secondary-btn" type="button" onclick="buyWholesaleCredits()">Buy Credits</button>
   </div>
   <div class="purchase-note" id="florist-credit-note">Each printed florist keepsake uses 1 credit.</div>
   <div class="purchase-actions" style="margin-top:20px; gap:10px; display:flex;">
@@ -1353,15 +1368,18 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
     </div>
     <!-- Standard ($24.95) and Premium ($34.95) printed tiers dropped per
          client decision (new_changes.md bug #12, 7 Aug 2026) — public
-         portal is Digital-only at $14.95 for now. Hidden rather than
-         deleted so this is a fast, safe revert if printed tiers come
-         back later — see selectProductTier() and orderPrintedCopy(),
-         which now both hard-enforce digital-only regardless of this
-         markup, so this hiding isn't the only thing preventing a sale. -->
+         portal is Digital-only. Hidden rather than deleted so this is a
+         fast, safe revert if printed tiers come back later — see
+         selectProductTier() and orderPrintedCopy(), which now both
+         hard-enforce digital-only regardless of this markup, so this
+         hiding isn't the only thing preventing a sale. Digital price
+         corrected 19 Aug 2026 (Col: "NZ price is 9.95 its still showing
+         as 14.95") — was $14.95, real charge now matches at
+         src/phase2/constants.js's PRODUCT_TIERS.digital. -->
     <div class="tier-grid" id="tier-grid">
       <div class="tier-card primary selected" data-tier="digital" onclick="selectProductTier('digital')">
         <span class="tier-name">Digital</span>
-        <span class="tier-price">NZ$14.95</span>
+        <span class="tier-price">NZ$9.95</span>
         <span class="tier-price-local" data-tier-local="digital"></span>
         <span class="tier-copy">Instant clean PDF access after payment.</span>
       </div>
@@ -1494,7 +1512,7 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
       <button class="pay-btn" id="pay-btn" type="button" onclick="proceedToPayment()">Pay by Card</button>
       <button class="action-btn new-btn" type="button" onclick="startAgain()">New Keepsake</button>
     </div>
-    <div class="purchase-note" id="purchase-note">Selected option: Digital. Total today: NZ$14.95.</div>
+    <div class="purchase-note" id="purchase-note">Selected option: Digital. Total today: NZ$9.95.</div>
   </div>
   <div class="gcash-modal-overlay" id="gcash-modal" role="dialog" aria-modal="true" aria-labelledby="gcash-modal-title">
     <div class="gcash-modal-card">
@@ -1582,7 +1600,11 @@ const CHECKOUT_FX = {
   'Australia':      { symbol: '$',   rate: 8.95 / 9.95 },
   'Philippines':    { symbol: '₱',   rate: 199 / 9.95 },
 };
-const CHECKOUT_TIER_NZD = { digital: 14.95, standard: 24.95, premium: 34.95 };
+// Digital price corrected 19 Aug 2026 (was 14.95) — see the matching fix
+// in src/phase2/constants.js's PRODUCT_TIERS.digital, which is the real
+// server-side charge amount; this is purely the local-currency estimate
+// text, kept in sync with it.
+const CHECKOUT_TIER_NZD = { digital: 9.95, standard: 24.95, premium: 34.95 };
 let checkoutPricingCountry = 'New Zealand';
 
 let selectedOccasion = null;
@@ -1626,8 +1648,10 @@ const PUBLIC_PRODUCT_LABELS = {
   premium: 'Premium',
 };
 
+// Digital price corrected 19 Aug 2026 (was 14.95) — matches the real
+// server-side charge in src/phase2/constants.js's PRODUCT_TIERS.digital.
 const PUBLIC_PRODUCT_PRICES = {
-  digital: 14.95,
+  digital: 9.95,
   standard: 24.95,
   premium: 34.95,
 };
@@ -1638,6 +1662,8 @@ const DELIVERY_SURCHARGES = {
   overnight: 12,
 };
 
+// Kept in place (unused by the new purchase flow) rather than deleted —
+// see FLORIST_WHOLESALE_UNIT_PRICES below for the replacement.
 const FLORIST_CREDIT_PACK_PRICES = {
   standard: {
     30: 90,
@@ -1650,6 +1676,18 @@ const FLORIST_CREDIT_PACK_PRICES = {
     120: 450,
   },
 };
+
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col).
+// Display-only mirror of src/phase2/constants.js's FLORIST_WHOLESALE_PRICING
+// (the real source used server-side for the actual charge) — this is only
+// used to show a live running total as the partner adjusts quantity;
+// the server independently recomputes and enforces the real total from
+// its own copy, so this can never be tampered with client-side to pay less.
+const FLORIST_WHOLESALE_UNIT_PRICES = {
+  standard: 16.22,
+  premiumFloral: 22.72,
+};
+const FLORIST_WHOLESALE_MAX_QUANTITY = 500;
 
 const GENERATE_BUTTON_DEFAULT = 'â˜…  Generate The Tribute Times  â˜…';
 const GENERATE_BUTTON_LOADING = 'â˜…  Generating your keepsake...  â˜…';
@@ -2166,6 +2204,7 @@ function updateFloristPortalUi() {
     creditPanel.classList.remove('is-hidden');
     authNote.textContent = `Signed in as ${floristProfile?.name || floristProfile?.email || 'florist account'}.`;
     renderFloristCredits();
+    updateWholesaleCreditTotal();
   } else {
     authPanel.classList.remove('is-hidden');
     loginBtn.classList.remove('is-hidden');
@@ -2226,7 +2265,11 @@ async function loginFlorist() {
     if (!response.ok) {
       throw new Error(data.error || 'Unable to sign in.');
     }
-    if (data.station?.account_type !== 'florist') {
+    // Gift shop / cake shop accounts (added 19 Aug 2026) share this same
+    // florist portal login — see server.js/tribute-times-server-update.js
+    // for the matching backend fixes to the login and generate-keepsake
+    // gates that were the same florist-only check.
+    if (!['florist', 'gift_shop', 'cake_shop'].includes(data.station?.account_type)) {
       throw new Error('This account is not set up as a florist account.');
     }
 
@@ -2270,34 +2313,61 @@ function getFloristPaymentMethod() {
   return selected ? selected.value : 'card';
 }
 
+// Kept in place (unused) rather than deleted — see buyWholesaleCredits() below.
 function getFloristPackPrice(packType, packSize) {
   return Number(FLORIST_CREDIT_PACK_PRICES[packType]?.[packSize] || 0);
 }
 
-async function buyFloristPack(packType, packSize) {
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col).
+// Live running total shown as the partner picks a type/quantity — purely
+// informational, the server independently recomputes the real charge from
+// its own copy of the pricing (src/phase2/constants.js), so this can't be
+// tampered with to pay less.
+function getWholesaleCreditTotal() {
+  const packType = document.getElementById('florist-wholesale-type').value;
+  const quantity = Math.floor(Number(document.getElementById('florist-wholesale-quantity').value || 0));
+  const unitPrice = FLORIST_WHOLESALE_UNIT_PRICES[packType] || 0;
+  return { packType, quantity, unitPrice, total: Number((unitPrice * quantity).toFixed(2)) };
+}
+
+function updateWholesaleCreditTotal() {
+  const { quantity, total } = getWholesaleCreditTotal();
+  const el = document.getElementById('florist-wholesale-total');
+  if (!el) return;
+  el.textContent = quantity >= 1
+    ? `Total: NZ$${total.toFixed(2)} for ${quantity} credit${quantity === 1 ? '' : 's'}`
+    : 'Enter a quantity of at least 1 credit.';
+}
+
+async function buyWholesaleCredits() {
   const note = document.getElementById('florist-credit-note');
   if (!isFloristAuthenticated()) {
-    note.textContent = 'Sign in before buying a florist credit pack.';
+    note.textContent = 'Sign in before buying wholesale credits.';
+    return;
+  }
+
+  const { packType, quantity, total } = getWholesaleCreditTotal();
+  if (!quantity || quantity < 1) {
+    note.textContent = 'Please enter a quantity of at least 1 credit.';
+    return;
+  }
+  if (quantity > FLORIST_WHOLESALE_MAX_QUANTITY) {
+    note.textContent = `Quantity cannot exceed ${FLORIST_WHOLESALE_MAX_QUANTITY} credits per purchase.`;
     return;
   }
 
   const packLabel = packType === 'premiumFloral' ? 'Premium Floral' : 'Standard';
   if (getFloristPaymentMethod() === 'gcash') {
-    await openFloristCreditGcashModal(packType, packSize, packLabel);
+    await openFloristCreditGcashModal(packType, quantity, packLabel, total);
     return;
   }
 
-  // Six separate buttons (one per pack) call this same function — found
-  // during a site-wide UI audit (17 Aug 2026) that none of them disabled
-  // during the request, so a fast double-click (or clicking a second pack
-  // before the first request finished) could fire two concurrent
-  // checkout-session requests. Disabling every pack button in this panel
-  // for the duration, not just the one clicked, since any of them
-  // starting a second request while one is already in flight is the same
-  // problem.
-  const panelButtons = Array.from(document.querySelectorAll('#florist-credit-panel .secondary-btn'));
-  panelButtons.forEach(btn => { btn.disabled = true; });
-  note.textContent = `Starting ${packLabel} ${packSize}-credit card checkout...`;
+  // Same double-click guard as the old fixed-pack buttons (site-wide UI
+  // audit, 17 Aug 2026) — now just one button instead of six, but the
+  // same fast-double-click race is just as possible on a single button.
+  const buyBtn = document.querySelector('#florist-credit-panel .purchase-actions .secondary-btn');
+  if (buyBtn) buyBtn.disabled = true;
+  note.textContent = `Starting ${packLabel} ${quantity}-credit card checkout...`;
 
   try {
     const response = await fetch('/api/florist/credits/checkout-session', {
@@ -2306,7 +2376,7 @@ async function buyFloristPack(packType, packSize) {
         'Content-Type': 'application/json',
         ...getFloristAuthHeaders(),
       },
-      body: JSON.stringify({ packType, packSize }),
+      body: JSON.stringify({ packType, quantity }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -2315,29 +2385,28 @@ async function buyFloristPack(packType, packSize) {
     window.location.href = data.url;
   } catch (error) {
     note.textContent = error.message || 'Unable to start florist credit checkout.';
-    panelButtons.forEach(btn => { btn.disabled = false; });
+    if (buyBtn) buyBtn.disabled = false;
   }
 }
 
-async function openFloristCreditGcashModal(packType, packSize, packLabel) {
-  const price = getFloristPackPrice(packType, packSize);
-  if (!price) {
-    document.getElementById('florist-credit-note').textContent = 'Invalid florist credit pack.';
+async function openFloristCreditGcashModal(packType, quantity, packLabel, total) {
+  if (!total) {
+    document.getElementById('florist-credit-note').textContent = 'Invalid wholesale credit purchase.';
     return;
   }
 
   await openGcashModal({
     packType,
-    packSize,
+    quantity,
     customerName: floristProfile?.name || '',
     customerEmail: floristProfile?.email || '',
   }, {
     context: 'florist_credits',
     endpoint: '/api/gcash/florist/credits/payment-request',
     headers: getFloristAuthHeaders(),
-    totalNzd: price,
-    itemLabel: `${packLabel} ${packSize}-credit pack`,
-    successMessage: `GCash proof received for ${packLabel} ${packSize}-credit pack. After admin verification, credits will be added to this florist account.`,
+    totalNzd: total,
+    itemLabel: `${packLabel} wholesale credits × ${quantity}`,
+    successMessage: `GCash proof received for ${quantity} ${packLabel} wholesale credit(s). After admin verification, credits will be added to this florist account.`,
   });
 }
 
@@ -3170,6 +3239,37 @@ async function generateKeepsake() {
   if (isMemorial && !dateOfPassing) { errorEl.textContent = 'Please enter the date of passing.'; return; }
   if (isMemorial && dateOfPassing < dob) { errorEl.textContent = 'Date of passing cannot be before the date of birth.'; return; }
   if (isCoupleOccasion && !partnerName) { errorEl.textContent = 'Please enter the partner\'s name.'; return; }
+  // Client-reported bug (19 Aug 2026, Col): selected "Golden Anniversary"
+  // by mistake, but the keepsake generated anyway with the wedding date
+  // entered (1989) despite that being ~37 years ago, not the 50 "Golden"
+  // implies — nothing caught the mismatch between the specific milestone
+  // occasion chosen and the actual year gap from the date entered. This
+  // checks that before generating: if a specific-milestone anniversary
+  // occasion is selected, the wedding date must actually be that many
+  // years ago (today's year minus the wedding year — the same rough
+  // arithmetic Col himself used to notice the bug, not requiring exact
+  // month/day precision). Blocks generation with a clear explanation
+  // rather than silently producing a mismatched keepsake, or silently
+  // "correcting" a choice the user may have made deliberately (e.g.
+  // building a Golden-themed keepsake slightly early isn't necessarily a
+  // mistake) — the safer default is to make them confirm which one they
+  // actually meant.
+  const ANNIVERSARY_MILESTONE_YEARS = {
+    'Golden Anniversary': 50,
+    'Silver Anniversary': 25,
+    'Diamond Anniversary': 60,
+  };
+  if (ANNIVERSARY_MILESTONE_YEARS[selectedOccasion] && dob) {
+    const weddingYear = new Date(dob).getFullYear();
+    if (!Number.isNaN(weddingYear)) {
+      const actualYears = new Date().getFullYear() - weddingYear;
+      const expectedYears = ANNIVERSARY_MILESTONE_YEARS[selectedOccasion];
+      if (actualYears !== expectedYears) {
+        errorEl.textContent = `"${selectedOccasion}" means ${expectedYears} years together, but the date entered is ${actualYears} years ago. Please check the date, or choose "Anniversary" instead if this isn't exactly a ${expectedYears}th anniversary.`;
+        return;
+      }
+    }
+  }
   if (isCustomEdition && !customEditionType) { errorEl.textContent = 'Please describe the occasion for this Custom Edition.'; return; }
   if (isRadioEdition() && !isRadioAuthenticated()) {
     errorEl.textContent = 'Please sign in with the DJ account before generating a radio keepsake.';

@@ -11,6 +11,8 @@ const {
   SUPPORTED_COUNTRIES,
   WATERMARK_STATUS,
   FLORIST_CREDIT_PACK_TYPES,
+  FLORIST_WHOLESALE_PRICING,
+  FLORIST_WHOLESALE_MAX_QUANTITY,
 } = require('./constants');
 const { PHASE2_CONFIG } = require('./config');
 const { getNextOrderNumber } = require('./order-number');
@@ -68,7 +70,7 @@ function registerGcashPaymentRoutes(app, { supabase, sendEmail, authAdmin, stati
 
   app.post('/api/gcash/florist/credits/payment-request', async (req, res) => {
     try {
-      const station = await loadAuthenticatedStationFromRequest(supabase, req, { accountType: 'florist' });
+      const station = await loadAuthenticatedStationFromRequest(supabase, req, { accountType: ['florist', 'gift_shop', 'cake_shop'] });
       const settings = await getGcashSettings();
       const request = await createFloristCreditGcashPaymentRequest({
         supabase,
@@ -96,7 +98,7 @@ function registerGcashPaymentRoutes(app, { supabase, sendEmail, authAdmin, stati
 
   app.post('/api/gcash/station/subscription/payment-request', async (req, res) => {
     try {
-      const station = await loadAuthenticatedStationFromRequest(supabase, req, { excludeAccountType: 'florist' });
+      const station = await loadAuthenticatedStationFromRequest(supabase, req, { excludeAccountType: ['florist', 'gift_shop', 'cake_shop'] });
       const settings = await getGcashSettings();
       const request = await createStationSubscriptionGcashPaymentRequest({
         supabase,
@@ -125,7 +127,7 @@ function registerGcashPaymentRoutes(app, { supabase, sendEmail, authAdmin, stati
 
   app.post('/api/gcash/station/frames/payment-request', async (req, res) => {
     try {
-      const station = await loadAuthenticatedStationFromRequest(supabase, req, { excludeAccountType: 'florist' });
+      const station = await loadAuthenticatedStationFromRequest(supabase, req, { excludeAccountType: ['florist', 'gift_shop', 'cake_shop'] });
       const settings = await getGcashSettings();
       const request = await createStationFrameGcashPaymentRequest({
         supabase,
@@ -552,9 +554,12 @@ async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, g
   return data;
 }
 
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col).
+// Replaces the fixed-pack version — body now carries {packType, quantity}
+// instead of {packType, packSize}.
 async function createFloristCreditGcashPaymentRequest({ supabase, station, body, settings }) {
-  const pack = getFloristCreditPack(body.packType, body.packSize);
-  const label = `${pack.packType.label} ${pack.size}-credit pack`;
+  const purchase = calculateWholesaleCreditPurchase(body.packType, body.quantity);
+  const label = `${purchase.packType.label} wholesale credits × ${purchase.quantity}`;
   return createAccountGcashPaymentRequest({
     supabase,
     settings,
@@ -563,14 +568,14 @@ async function createFloristCreditGcashPaymentRequest({ supabase, station, body,
     customerName: String(body.customerName || station.name || '').trim(),
     customerEmail: String(body.customerEmail || station.email || '').trim().toLowerCase(),
     itemLabel: label,
-    itemCode: `${pack.packType.code}:${pack.size}`,
-    quantity: pack.size,
-    totalAmountNzd: pack.price.priceNzd,
+    itemCode: `${purchase.packType.code}:${purchase.quantity}`,
+    quantity: purchase.quantity,
+    totalAmountNzd: purchase.totalNzd,
     actionPayload: {
-      packType: pack.packType.code,
-      packSize: pack.size,
-      credits: pack.price.credits,
-      priceNzd: pack.price.priceNzd,
+      packType: purchase.packType.code,
+      credits: purchase.quantity,
+      unitPriceNzd: purchase.unitPriceNzd,
+      totalNzd: purchase.totalNzd,
     },
     gcashSenderName: body.gcashSenderName,
     gcashReferenceId: body.gcashReferenceId,
@@ -1250,11 +1255,23 @@ async function loadAuthenticatedStationFromRequest(supabase, req, options = {}) 
   if (station.active === false) {
     throwStatus(403, 'This account is inactive.');
   }
-  if (options.accountType && station.account_type !== options.accountType) {
-    throwStatus(403, `This payment requires a ${options.accountType} account.`);
+  // Gift shop / cake shop accounts (added 19 Aug 2026 — client request,
+  // same florist credit infrastructure reused for these two new partner
+  // types) need to pass the same checks a florist account does here, and
+  // be excluded the same way a florist account is from station-only GCash
+  // flows — so both options now accept either a single account type
+  // (unchanged, existing callers still work) or an array of them.
+  if (options.accountType) {
+    const allowed = Array.isArray(options.accountType) ? options.accountType : [options.accountType];
+    if (!allowed.includes(station.account_type)) {
+      throwStatus(403, `This payment requires a ${allowed.join('/')} account.`);
+    }
   }
-  if (options.excludeAccountType && station.account_type === options.excludeAccountType) {
-    throwStatus(403, 'This payment is not available for this account type.');
+  if (options.excludeAccountType) {
+    const excluded = Array.isArray(options.excludeAccountType) ? options.excludeAccountType : [options.excludeAccountType];
+    if (excluded.includes(station.account_type)) {
+      throwStatus(403, 'This payment is not available for this account type.');
+    }
   }
 
   return station;
@@ -1269,6 +1286,37 @@ function getFloristCreditPack(packTypeValue, packSizeValue) {
     throwStatus(400, 'Invalid florist credit pack.');
   }
   return { packType, size, price };
+}
+
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col).
+// Same logic/reasoning as the matching function in server.js — kept as a
+// separate copy here rather than a shared import since this file already
+// duplicates getFloristCreditPack() above independently from server.js
+// (existing pattern in this codebase, not something this change invents).
+function calculateWholesaleCreditPurchase(packTypeValue, quantityValue) {
+  const packTypeCode = String(packTypeValue || '').trim();
+  const quantity = Math.floor(Number(quantityValue));
+  const packType = FLORIST_WHOLESALE_PRICING[packTypeCode];
+
+  if (!packType) {
+    throwStatus(400, 'Invalid credit type. Choose Standard or Premium Floral.');
+  }
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    throwStatus(400, 'Please enter a quantity of at least 1 credit.');
+  }
+  if (quantity > FLORIST_WHOLESALE_MAX_QUANTITY) {
+    throwStatus(400, `Quantity cannot exceed ${FLORIST_WHOLESALE_MAX_QUANTITY} credits per purchase.`);
+  }
+
+  const totalCents = packType.unitPriceCents * quantity;
+  return {
+    packType,
+    quantity,
+    unitPriceCents: packType.unitPriceCents,
+    unitPriceNzd: packType.unitPriceNzd,
+    totalCents,
+    totalNzd: Number((totalCents / 100).toFixed(2)),
+  };
 }
 
 function normalizeBillingInterval(value) {
