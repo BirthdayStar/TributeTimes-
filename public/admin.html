@@ -1622,6 +1622,21 @@
           document.getElementById('modal-florist-email').value = data.email || '';
           document.getElementById('modal-florist-country').value = data.country || 'New Zealand';
 
+          // Business type is locked once created — changing it after the
+          // wholesale code and credit history already exist under the old
+          // type is a bigger decision than an inline edit should make
+          // silently. Shown read-only for reference instead.
+          const typeSelect = document.getElementById('modal-florist-account-type');
+          if (typeSelect) {
+            typeSelect.value = data.account_type || 'florist';
+            typeSelect.disabled = true;
+          }
+          const codeWrap = document.getElementById('modal-florist-wholesale-code-wrap');
+          if (codeWrap) {
+            codeWrap.style.display = data.wholesale_code ? 'block' : 'none';
+            document.getElementById('modal-florist-wholesale-code').value = data.wholesale_code || '';
+          }
+
           // Editing an existing florist: show Current/New/Total instead of the
           // single "Initial Credits" field (that field only makes sense when
           // there's no existing balance yet, i.e. creating a brand new florist).
@@ -1699,6 +1714,15 @@
           if (initialWrap) initialWrap.style.display = 'block';
           const creditEditWrap = document.getElementById('modal-florist-credit-edit-wrap');
           if (creditEditWrap) creditEditWrap.style.display = 'none';
+          // Business type is only locked (read-only) once a partner
+          // already exists — form.reset() above resets the select's
+          // VALUE but not a JS-set `disabled` property, so this has to be
+          // re-enabled explicitly for a fresh "Add" open. Wholesale code
+          // doesn't exist yet for a not-yet-created partner.
+          const typeSelect = document.getElementById('modal-florist-account-type');
+          if (typeSelect) typeSelect.disabled = false;
+          const codeWrap = document.getElementById('modal-florist-wholesale-code-wrap');
+          if (codeWrap) codeWrap.style.display = 'none';
         }
       }
       modal.style.display = 'flex';
@@ -1858,6 +1882,11 @@
         payload.password = document.getElementById('modal-florist-password').value;
         // New florist: no existing balance yet, so this is an absolute starting value.
         payload.initial_credit_balance = Number(document.getElementById('modal-florist-credits').value || 30);
+        // Business type — client request, 19 Aug 2026: gift shops and cake
+        // shops reuse this exact same form/endpoint (see server's
+        // FLORIST_LIKE_ACCOUNT_TYPES). Only sent on create — the type is
+        // locked after that (see loadEntityForEdit above).
+        payload.account_type = document.getElementById('modal-florist-account-type').value;
       } else {
         payload.active = document.getElementById('modal-florist-active').checked;
         payload.low_credit_threshold = Number(document.getElementById('modal-florist-threshold').value || 5);
@@ -1878,10 +1907,27 @@
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
         closeModal('florist');
         await loadFlorists(paginationState.florists.page);
+        const msgEl = document.getElementById('florists-message');
         if (id && creditsBeingAdded) {
-          const msgEl = document.getElementById('florists-message');
           if (msgEl) {
             msgEl.textContent = `Added ${creditsBeingAdded} credits — ${floristNameForConfirmation} now has ${data.newCreditBalance} credits.`;
+            msgEl.classList.remove('error');
+            msgEl.classList.add('ok');
+          }
+        } else if (!id) {
+          // UX audit fix, 20 Aug 2026: creating a new partner previously
+          // gave no success confirmation at all, and the wholesale code
+          // the server just generated (data.florist.wholesale_code) was
+          // only ever shown later if the admin happened to reopen this
+          // same record in Edit — with no immediate way to see the code
+          // they actually need to hand to the new partner. Additive only:
+          // surfaces the same data the server already returns, doesn't
+          // change what's created or how.
+          if (msgEl) {
+            const code = data.florist?.wholesale_code;
+            msgEl.textContent = code
+              ? `✓ ${floristNameForConfirmation} created — wholesale code: ${code}`
+              : `✓ ${floristNameForConfirmation} created.`;
             msgEl.classList.remove('error');
             msgEl.classList.add('ok');
           }
@@ -2178,7 +2224,14 @@
       return `${Number(code.discount_value)}% off`;
     }
 
-    async function toggleCampaignCodeActive(id, nextActive) {
+    // UX audit fix, 20 Aug 2026: these two had no loading/success feedback
+    // and no double-click guard, unlike their siblings on this same page
+    // (deleteEntity, saveBirthday, approveGcashPayment) which already use
+    // this exact disable+setMsg pattern. Additive only — the PATCH/DELETE
+    // calls and their payloads are unchanged.
+    async function toggleCampaignCodeActive(id, nextActive, btnEl) {
+      const msgEl = document.getElementById('campaign-codes-message');
+      if (btnEl) btnEl.disabled = true;
       try {
         const r = await apiFetch(`/api/admin/campaign-codes/${id}`, {
           method: 'PATCH',
@@ -2187,18 +2240,28 @@
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to update.');
-        loadCampaignCodes(paginationState.campaignCodes.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+        await loadCampaignCodes(paginationState.campaignCodes.page);
+        setMsg(msgEl, nextActive ? '✓ Code activated.' : '✓ Code deactivated.', false);
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
     }
 
-    async function deleteCampaignCode(id) {
+    async function deleteCampaignCode(id, btnEl) {
       if (!confirm('Delete this campaign code? This only works for codes that have never been used.')) return;
+      const msgEl = document.getElementById('campaign-codes-message');
+      if (btnEl) btnEl.disabled = true;
       try {
         const r = await apiFetch(`/api/admin/campaign-codes/${id}`, { method: 'DELETE' });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to delete.');
-        loadCampaignCodes(paginationState.campaignCodes.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+        await loadCampaignCodes(paginationState.campaignCodes.page);
+        setMsg(msgEl, '✓ Code deleted.', false);
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
     }
 
     async function loadCampaignCodes(page = 1) {
@@ -2224,8 +2287,8 @@
             <td><span class="status-pill ${code.active ? 'approved' : 'rejected'}">${code.active ? 'Active' : 'Inactive'}</span></td>
             <td>
               <div style="display:flex; gap:6px;">
-                <button class="btn btn-soft btn-sm" onclick="toggleCampaignCodeActive('${code.id}', ${code.active ? 'false' : 'true'})">${code.active ? '⏸ Deactivate' : '▶ Activate'}</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteCampaignCode('${code.id}')">🗑️ Delete</button>
+                <button class="btn btn-soft btn-sm" onclick="toggleCampaignCodeActive('${code.id}', ${code.active ? 'false' : 'true'}, this)">${code.active ? '⏸ Deactivate' : '▶ Activate'}</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCampaignCode('${code.id}', this)">🗑️ Delete</button>
               </div>
             </td>
           </tr>
@@ -2284,9 +2347,15 @@
         paginationState.stations.total = data.total;
         
         const body = document.getElementById('stations-table-body');
+        // Wholesale code shown as a subtitle under the name — client
+        // request, 19 Aug 2026: "should also follow through for... radio
+        // stations." Same reasoning as the florists table above for not
+        // adding a new column.
         body.innerHTML = data.items.length ? data.items.map(s => `
           <tr>
-            <td><strong>${escapeHtml(s.name)}</strong></td>
+            <td>
+              <strong>${escapeHtml(s.name)}</strong>${s.wholesale_code ? `<br/><span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(s.wholesale_code)}</span>` : ''}
+            </td>
             <td>${escapeHtml(s.email || '')}</td>
             <td>${escapeHtml(s.country || '')}</td>
             <td style="text-transform:capitalize;">${escapeHtml(s.tier || 'community')}</td>
@@ -2318,9 +2387,18 @@
         paginationState.florists.total = data.total;
         
         const body = document.getElementById('florists-table-body');
+        // Business type + wholesale code shown as a subtitle under the
+        // name (client request, 19 Aug 2026) rather than as new table
+        // columns — avoids touching the table's <thead>/colspan, which
+        // would risk breaking the empty-state row and other layout code
+        // that assumes a fixed column count.
+        const ACCOUNT_TYPE_LABELS = { florist: 'Florist', gift_shop: 'Gift Shop', cake_shop: 'Cake Shop' };
         body.innerHTML = data.items.length ? data.items.map(f => `
           <tr>
-            <td><strong>${escapeHtml(f.name)}</strong></td>
+            <td>
+              <strong>${escapeHtml(f.name)}</strong><br/>
+              <span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(ACCOUNT_TYPE_LABELS[f.account_type] || 'Florist')}${f.wholesale_code ? ' · ' + escapeHtml(f.wholesale_code) : ''}</span>
+            </td>
             <td>${escapeHtml(f.email || '')}</td>
             <td>${escapeHtml(f.country || '')}</td>
             <td><strong>${escapeHtml(String(f.credit_balance || 0))}</strong> credits</td>
@@ -2826,6 +2904,25 @@
           <div class="fld">
             <label for="modal-florist-name">Store Name</label>
             <input id="modal-florist-name" type="text" placeholder="Blossom Florist" required />
+          </div>
+          <!-- Business Type — client request, 19 Aug 2026: gift shops and
+               cake shops added as partner types, reusing this exact same
+               florist form/credit system (see admin-fulfilment.js's
+               FLORIST_LIKE_ACCOUNT_TYPES) rather than duplicating the
+               whole florist setup twice more. Defaults to Florist so
+               existing behaviour/muscle-memory for admin is unchanged
+               unless this is deliberately switched. -->
+          <div class="fld" id="modal-florist-account-type-wrap">
+            <label for="modal-florist-account-type">Business Type</label>
+            <select id="modal-florist-account-type">
+              <option value="florist">Florist</option>
+              <option value="gift_shop">Gift Shop</option>
+              <option value="cake_shop">Cake Shop</option>
+            </select>
+          </div>
+          <div class="fld" id="modal-florist-wholesale-code-wrap" style="display:none;">
+            <label for="modal-florist-wholesale-code">Wholesale Buying Code</label>
+            <input id="modal-florist-wholesale-code" type="text" readonly disabled style="background:var(--panel, #F4F0DE); cursor:not-allowed;" />
           </div>
           <div class="fld">
             <label for="modal-florist-email">Email Address</label>

@@ -874,73 +874,85 @@ body {
 .pricing-section {
   margin-bottom: 90px;
 }
+/* Single-edition layout — client decision, 18 Aug 2026: Standard/Premium
+   tiers removed (already hidden on the checkout page itself, see
+   form-template.html's own tier-grid comment), Digital is now the only
+   product. A single card centered in what used to be a 3-column
+   comparison grid would read as a leftover/incomplete layout, so this is
+   restyled as one deliberately-featured "premium" card instead of just
+   deleting two columns: centered, wider, a gold top accent bar, a small
+   icon, and a divider before the price — designed to look intentional on
+   its own rather than like a comparison table missing two entries. */
 .pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  display: flex;
+  justify-content: center;
 }
 .pricing-card {
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 18px;
-  padding: 36px 28px;
+  border: 1.5px solid var(--card-border);
+  border-radius: 20px;
+  padding: 44px 40px 36px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
   transition: all 0.2s;
+  max-width: 440px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(61, 65, 34, 0.1);
+}
+.pricing-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--accent-red-hover), var(--accent-red), var(--accent-red-hover));
 }
 .pricing-card:hover {
   background: #F4F0DE;
   border-color: #8A9160;
   transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(61, 65, 34, 0.14);
 }
-.pricing-card.popular {
-  border-color: var(--accent-red);
-  background: rgba(176, 138, 46, 0.08);
-}
-.pricing-card.popular:hover {
-  background: rgba(176, 138, 46, 0.14);
-  border-color: var(--accent-red-hover);
-}
-.popular-badge {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--accent-red);
-  color: var(--text-on-accent);
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 12px;
+.tier-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(138, 106, 31, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin: 0 auto 16px;
 }
 .tier-title {
   font-family: var(--font-serif);
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 8px;
+  text-align: center;
 }
 .tier-description {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: var(--text-muted);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  text-align: center;
 }
 .tier-price-val {
   font-family: var(--font-sans);
-  font-size: 2.2rem;
+  font-size: 2.6rem;
   font-weight: 800;
   color: var(--text-main);
   margin-bottom: 24px;
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: 4px;
 }
 .price-currency {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -948,50 +960,46 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--card-border);
 }
 .tier-feature-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   color: var(--text-main);
   text-align: left;
 }
 .tier-feature-check {
   color: #8A6A1F;
   font-weight: 800;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 .btn-tier {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--text-main);
-  text-decoration: none;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 14px;
-  border-radius: 8px;
-  transition: all 0.2s;
-  width: 100%;
-}
-.btn-tier:hover {
-  background: #F4F0DE;
-}
-.pricing-card.popular .btn-tier {
   background: var(--accent-red);
   border: none;
   color: var(--text-on-accent);
-  box-shadow: 0 4px 12px rgba(138, 106, 31, 0.28);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 16px;
+  border-radius: 10px;
+  transition: all 0.2s;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(138, 106, 31, 0.3);
 }
-.pricing-card.popular .btn-tier:hover {
+.btn-tier:hover {
   background: var(--accent-red-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(138, 106, 31, 0.38);
 }
 
 /* LOCAL PRICING STRIP — client-requested, 13 Aug 2026. Deliberately
@@ -1074,7 +1082,7 @@ body {
   .cta-banner { flex-direction: column; text-align: center; }
   .cta-banner-left { flex-direction: column; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
-  .pricing-grid { grid-template-columns: 1fr; gap: 24px; }
+  .pricing-card { padding: 36px 28px 28px; }
 }
 
 @media (max-width: 680px) {
@@ -1140,7 +1148,7 @@ body {
       </div>
 
       <a href="/public" class="btn-primary">CREATE YOUR NEWSPAPER</a>
-      <div class="hero-price">From NZ$14.95</div>
+      <div class="hero-price">From NZ$9.95</div>
     </div>
 
     <div class="hero-visual">
@@ -1277,7 +1285,7 @@ body {
       </ul>
 
       <a href="/public" class="btn-primary">CREATE YOURS TODAY</a>
-      <div class="hero-price">From NZ$14.95</div>
+      <div class="hero-price">From NZ$9.95</div>
     </div>
 
     <div class="hero-visual">
@@ -1295,12 +1303,15 @@ body {
     </div>
 
     <div class="pricing-grid">
-      <!-- Digital Edition -->
+      <!-- Digital Edition — only product offered, 18 Aug 2026 client
+           decision (Standard/Premium removed; already digital-only on the
+           checkout page itself, see form-template.html). -->
       <div class="pricing-card">
         <div>
+          <div class="tier-icon">📜</div>
           <h3 class="tier-title">Digital Edition</h3>
           <p class="tier-description">Perfect for instant gifts, remote sharing, and self-printing.</p>
-          <div class="tier-price-val"><span class="price-currency">NZ$</span>14.95</div>
+          <div class="tier-price-val"><span class="price-currency">NZ$</span>9.95</div>
           <ul class="tier-features-list">
             <li class="tier-feature-item"><span class="tier-feature-check">✓</span> High-resolution digital PDF download</li>
             <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Locked A4 single-page template geometry</li>
@@ -1309,39 +1320,6 @@ body {
           </ul>
         </div>
         <a href="/public?tier=digital" class="btn-tier">Get Digital Edition</a>
-      </div>
-
-      <!-- Standard Edition -->
-      <div class="pricing-card popular">
-        <div class="popular-badge">Most Popular</div>
-        <div>
-          <h3 class="tier-title">Standard Edition</h3>
-          <p class="tier-description">Our signature physical keepsake, printed on authentic premium paper.</p>
-          <div class="tier-price-val"><span class="price-currency">NZ$</span>24.95</div>
-          <ul class="tier-features-list">
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> High-resolution digital PDF copy included</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Printed on premium vintage-toned paper</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Local printing & flat-lay safe packaging</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Hand-packed & dispatched across New Zealand</li>
-          </ul>
-        </div>
-        <a href="/public?tier=standard" class="btn-tier">Get Standard Edition</a>
-      </div>
-
-      <!-- Premium Edition -->
-      <div class="pricing-card">
-        <div>
-          <h3 class="tier-title">Premium Edition</h3>
-          <p class="tier-description">The ultimate commemorative package with textured linen presentation.</p>
-          <div class="tier-price-val"><span class="price-currency">NZ$</span>34.95</div>
-          <ul class="tier-features-list">
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Digital PDF and standard print included</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Printed on heavy linen textured stock</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Hand-stamped custom serial number</li>
-            <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Priority local NZ packaging & express dispatch</li>
-          </ul>
-        </div>
-        <a href="/public?tier=premium" class="btn-tier">Get Premium Edition</a>
       </div>
     </div>
   </section>
@@ -1434,7 +1412,7 @@ body {
     </div>
     <div style="text-align: center;">
       <a href="/public" class="btn-primary">CREATE YOUR NEWSPAPER</a>
-      <div class="hero-price" style="margin-top:6px;">From NZ$14.95</div>
+      <div class="hero-price" style="margin-top:6px;">From NZ$9.95</div>
     </div>
   </section>
 

@@ -7,6 +7,7 @@ const { DELIVERY_OPTIONS, QUEUE_STATUS, SOURCE_PORTALS } = require('./constants'
 const { normalizePromoCode } = require('./attribution');
 const { normalizeCountry } = require('./famous-birthdays');
 const { buildPostedOrderCustomerEmail } = require('./email-service');
+const { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode } = require('./wholesale-code');
 
 // Security fix (Col McCabe, 7 Aug 2026 — "Admin session token exposed on
 // public site"): admin auth previously fell back to sharing JWT_SECRET
@@ -1070,6 +1071,11 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
+        // Wholesale buying code — client request, 19 Aug 2026 (Col): same
+        // WS+name format as florist/gift-shop/cake-shop accounts, "should
+        // also follow through for... radio stations." See
+        // src/phase2/wholesale-code.js.
+        const wholesaleCode = await createUniqueWholesaleCode(supabase, name);
 
         const { data: dbStation, error } = await supabase
           .from('stations')
@@ -1080,6 +1086,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
             country,
             tier,
             account_type: 'radio',
+            wholesale_code: wholesaleCode,
             active: true
           })
           .select()
@@ -1101,6 +1108,11 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
 
         if (!name || !email) throw new Error('Name and email are required.');
 
+        const existingMockCodes = new Set(
+          mockDb.stations.filter(s => s.wholesale_code).map(s => String(s.wholesale_code).toLowerCase())
+        );
+        const wholesaleCode = resolveAvailableCode(buildBaseWholesaleCode(name), existingMockCodes);
+
         station = {
           id: 's_' + Date.now(),
           name,
@@ -1108,6 +1120,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           country,
           tier,
           account_type: 'radio',
+          wholesale_code: wholesaleCode,
           active: true
         };
         mockDb.stations.push(station);
@@ -1195,6 +1208,16 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
     return florist;
   }
 
+  // Partner types that reuse the exact same florist credit-balance
+  // infrastructure — client request, 19 Aug 2026 (Col): "This should also
+  // follow through for gift shops cake shops and radio stations using the
+  // same format WS - business name." Gift shops and cake shops are
+  // functionally identical to florists in this system (same
+  // credit-per-printed-keepsake model), so they're listed/created via
+  // this same endpoint family with a selectable account_type rather than
+  // duplicating the whole florist code path for two more copies of it.
+  const FLORIST_LIKE_ACCOUNT_TYPES = ['florist', 'gift_shop', 'cake_shop'];
+
   app.get('/api/admin/florists', authAdmin, async (req, res) => {
     try {
       const page = Math.max(Number(req.query.page) || 1, 1);
@@ -1208,7 +1231,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         const { data, count, error } = await supabase
           .from('stations')
           .select('*', { count: 'exact' })
-          .eq('account_type', 'florist')
+          .in('account_type', FLORIST_LIKE_ACCOUNT_TYPES)
           .order('name', { ascending: true })
           .range(start, end);
 
@@ -1217,7 +1240,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         total = count;
       } catch (err) {
         console.warn('GET florists online failed, falling back to local mockDb.');
-        const list = mockDb.stations.filter(s => s.account_type === 'florist');
+        const list = mockDb.stations.filter(s => FLORIST_LIKE_ACCOUNT_TYPES.includes(s.account_type));
         const result = paginateArray(list, page, limit);
         items = result.items;
         total = result.total;
@@ -1233,6 +1256,8 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
   app.post('/api/admin/florists', authAdmin, async (req, res) => {
     try {
       let florist;
+      const requestedType = String(req.body?.account_type || 'florist').trim();
+      const accountType = FLORIST_LIKE_ACCOUNT_TYPES.includes(requestedType) ? requestedType : 'florist';
       try {
         const name = String(req.body?.name || '').trim();
         const email = String(req.body?.email || '').trim().toLowerCase();
@@ -1245,6 +1270,10 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         }
 
         const passwordHash = await bcrypt.hash(password, 12);
+        // Wholesale buying code — client spec, 19 Aug 2026 (Col): "WS" +
+        // lowercased business name, special characters stripped, numbered
+        // suffix on collision. See src/phase2/wholesale-code.js.
+        const wholesaleCode = await createUniqueWholesaleCode(supabase, name);
 
         const { data: dbFlorist, error } = await supabase
           .from('stations')
@@ -1253,7 +1282,8 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
             email,
             password_hash: passwordHash,
             country,
-            account_type: 'florist',
+            account_type: accountType,
+            wholesale_code: wholesaleCode,
             florist_credit_balance: initialCredit,
             florist_low_credit_threshold: 10,
             florist_credit_updated_at: new Date().toISOString(),
@@ -1278,12 +1308,21 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
 
         if (!name || !email) throw new Error('Name and email are required.');
 
+        // Same wholesale-code logic, but resolved against the in-memory
+        // mockDb (no Supabase connection in this fallback path) rather
+        // than the DB-aware createUniqueWholesaleCode().
+        const existingMockCodes = new Set(
+          mockDb.stations.filter(s => s.wholesale_code).map(s => String(s.wholesale_code).toLowerCase())
+        );
+        const wholesaleCode = resolveAvailableCode(buildBaseWholesaleCode(name), existingMockCodes);
+
         florist = {
           id: 'f_' + Date.now(),
           name,
           email,
           country,
-          account_type: 'florist',
+          account_type: accountType,
+          wholesale_code: wholesaleCode,
           florist_credit_balance: initialCredit,
           florist_low_credit_threshold: 10,
           active: true
@@ -1306,12 +1345,12 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .from('stations')
           .select('*')
           .eq('id', req.params.id)
-          .eq('account_type', 'florist')
+          .in('account_type', FLORIST_LIKE_ACCOUNT_TYPES)
           .single();
         if (error) throw error;
         florist = data;
       } catch (err) {
-        florist = mockDb.stations.find(s => s.id === req.params.id && s.account_type === 'florist');
+        florist = mockDb.stations.find(s => s.id === req.params.id && FLORIST_LIKE_ACCOUNT_TYPES.includes(s.account_type));
         if (!florist) return res.status(404).json({ error: 'Florist not found' });
       }
       normalizeFloristCreditFields(florist);
@@ -1349,7 +1388,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .from('stations')
           .select('florist_credit_balance')
           .eq('id', req.params.id)
-          .eq('account_type', 'florist')
+          .in('account_type', FLORIST_LIKE_ACCOUNT_TYPES)
           .single();
         if (fetchError || !currentFlorist) {
           return res.status(404).json({ error: 'Florist partner not found' });
@@ -1371,7 +1410,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .from('stations')
           .update(patch)
           .eq('id', req.params.id)
-          .eq('account_type', 'florist')
+          .in('account_type', FLORIST_LIKE_ACCOUNT_TYPES)
           .select('*')
           .single();
 
@@ -1379,7 +1418,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         florist = data;
       } catch (err) {
         console.warn('PUT florist online failed, falling back to local mockDb.');
-        const idx = mockDb.stations.findIndex(s => s.id === req.params.id && s.account_type === 'florist');
+        const idx = mockDb.stations.findIndex(s => s.id === req.params.id && FLORIST_LIKE_ACCOUNT_TYPES.includes(s.account_type));
         if (idx === -1) return res.status(404).json({ error: 'Florist partner not found' });
         florist = { ...mockDb.stations[idx], ...patch };
         mockDb.stations[idx] = florist;
@@ -1403,12 +1442,12 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .from('stations')
           .delete()
           .eq('id', req.params.id)
-          .eq('account_type', 'florist');
+          .in('account_type', FLORIST_LIKE_ACCOUNT_TYPES);
 
         if (error) throw error;
       } catch (err) {
         console.warn('DELETE florist online failed, falling back to local mockDb.');
-        const idx = mockDb.stations.findIndex(s => s.id === req.params.id && s.account_type === 'florist');
+        const idx = mockDb.stations.findIndex(s => s.id === req.params.id && FLORIST_LIKE_ACCOUNT_TYPES.includes(s.account_type));
         if (idx === -1) return res.status(404).json({ error: 'Florist partner not found' });
         mockDb.stations.splice(idx, 1);
       }

@@ -12,7 +12,7 @@ const { registerGcashPaymentRoutes } = require('./src/phase2/gcash-payment-reque
 const { registerPublicCheckoutRoutes } = require('./src/phase2/public-checkout');
 const { registerPdfRoutes } = require('./src/phase2/pdf-routes');
 const { createClient } = require('@supabase/supabase-js');
-const { FLORIST_CREDIT_PACK_TYPES } = require('./src/phase2/constants');
+const { FLORIST_CREDIT_PACK_TYPES, FLORIST_WHOLESALE_PRICING, FLORIST_WHOLESALE_MAX_QUANTITY } = require('./src/phase2/constants');
 const Stripe = require('stripe');
 
 const app = express();
@@ -243,12 +243,20 @@ app.post('/api/auth/login', async (req, res) => {
     const { data: station } = await supabase.from('stations').select('*').ilike('email', email).single();
     if (!station) return res.status(401).json({ error: 'Invalid email or password' });
 
-    // Restrict florist accounts logging in here unless florist portal directly requests
+    // Restrict florist-portal accounts logging in here unless florist portal
+    // directly requests. Gift shop / cake shop accounts (added 19 Aug
+    // 2026 — client request, same florist credit infrastructure reused
+    // for these two new partner types) log in via the same florist portal
+    // as florists, so they're included here too — a gift shop account
+    // would otherwise be rejected by this exact gate despite being fully
+    // set up, the same shape of bug as the 11 Aug email-casing issue
+    // above this block.
     const isFloristReq = req.body.portal === 'florist' || req.headers.referer?.includes('/florist');
-    if (!isFloristReq && station.account_type === 'florist') {
+    const isFloristPortalAccountType = ['florist', 'gift_shop', 'cake_shop'].includes(station.account_type);
+    if (!isFloristReq && isFloristPortalAccountType) {
       return res.status(403).json({ error: 'Florist partners must log in via the florist portal.' });
     }
-    if (isFloristReq && station.account_type !== 'florist') {
+    if (isFloristReq && !isFloristPortalAccountType) {
       return res.status(403).json({ error: 'Station managers must log in via the station portal.' });
     }
 
@@ -477,13 +485,22 @@ app.get('/api/station/stats', authStation, async (req, res) => {
   });
 });
 
-// Florist credit pack checkout
+// Florist wholesale credit checkout — pay-as-you-use, client decision
+// 19-20 Aug 2026 (Col): "removing all boundaries... buy as they use so no
+// presales no stock on hand" + "The wholesale price is a 35% discount."
+// Replaces the fixed-pack checkout (getFloristCreditPack) with a quantity
+// the partner chooses themselves, priced at the flat wholesale rate.
 app.post('/api/florist/credits/checkout-session', authStation, async (req, res) => {
   try {
-    const { packType, packSize } = req.body || {};
-    const pack = getFloristCreditPack(packType, packSize);
+    const { packType, quantity } = req.body || {};
+    const purchase = calculateWholesaleCreditPurchase(packType, quantity);
     const { data: station } = await supabase.from('stations').select('*').eq('id', req.station.id).single();
-    if (!station || station.active === false || station.account_type !== 'florist') {
+    // Gift shop / cake shop accounts (added 19 Aug 2026) reuse this same
+    // florist wholesale credit purchasing — without this, a gift shop
+    // could sign up and get a wholesale code but never be able to buy a
+    // single credit through the only purchase path that currently exists,
+    // which would be a dead end.
+    if (!station || station.active === false || !['florist', 'gift_shop', 'cake_shop'].includes(station.account_type)) {
       return res.status(403).json({ error: 'Florist account required.' });
     }
 
@@ -495,10 +512,10 @@ app.post('/api/florist/credits/checkout-session', authStation, async (req, res) 
       line_items: [{
         price_data: {
           currency: 'nzd',
-          unit_amount: pack.price.priceCents,
-          product_data: { name: `The Tribute Times - ${pack.packType.label} ${pack.size}-credit pack` },
+          unit_amount: purchase.unitPriceCents,
+          product_data: { name: `The Tribute Times - ${purchase.packType.label} wholesale credit` },
         },
-        quantity: 1,
+        quantity: purchase.quantity,
       }],
       mode: 'payment',
       success_url: `${appUrl}/florist?credits=success`,
@@ -506,9 +523,9 @@ app.post('/api/florist/credits/checkout-session', authStation, async (req, res) 
       metadata: {
         type: 'florist_credits',
         station_id: station.id,
-        pack_type: pack.packType.code,
-        pack_size: String(pack.size),
-        credits: String(pack.price.credits),
+        pack_type: purchase.packType.code,
+        credits: String(purchase.quantity),
+        unit_price_cents: String(purchase.unitPriceCents),
       },
     });
 
@@ -725,6 +742,44 @@ function getFloristCreditPack(packTypeValue, packSizeValue) {
     throw error;
   }
   return { packType, size, price };
+}
+
+// PAY-AS-YOU-USE WHOLESALE CREDITS — client decision, 19-20 Aug 2026 (Col):
+// replaces getFloristCreditPack() above (kept in place, unused, rather
+// than deleted) — partners now buy any quantity of credits at a flat
+// per-unit wholesale rate (35% off the matching retail tier — see
+// FLORIST_WHOLESALE_PRICING in constants.js) instead of picking from
+// fixed 30/60/120-credit packs. No minimum purchase.
+function calculateWholesaleCreditPurchase(packTypeValue, quantityValue) {
+  const packTypeCode = String(packTypeValue || '').trim();
+  const quantity = Math.floor(Number(quantityValue));
+  const packType = FLORIST_WHOLESALE_PRICING[packTypeCode];
+
+  if (!packType) {
+    const error = new Error('Invalid credit type. Choose Standard or Premium Floral.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    const error = new Error('Please enter a quantity of at least 1 credit.');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (quantity > FLORIST_WHOLESALE_MAX_QUANTITY) {
+    const error = new Error(`Quantity cannot exceed ${FLORIST_WHOLESALE_MAX_QUANTITY} credits per purchase.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const totalCents = packType.unitPriceCents * quantity;
+  return {
+    packType,
+    quantity,
+    unitPriceCents: packType.unitPriceCents,
+    unitPriceNzd: packType.unitPriceNzd,
+    totalCents,
+    totalNzd: Number((totalCents / 100).toFixed(2)),
+  };
 }
 
 
