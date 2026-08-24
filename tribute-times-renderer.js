@@ -7,6 +7,7 @@
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
 const { daysElapsedToNzToday } = require('./src/phase2/nz-time');
+const { cornerOrnamentsHtml, KEEPSAKE_FRAME_CSS } = require('./src/phase2/keepsake-frame');
 
 function titleCase(value) {
   return String(value || '')
@@ -48,7 +49,9 @@ function cleanTruncate(text, maxLength) {
   if (str.length <= maxLength) return str;
 
   // Try to truncate at the last sentence boundary (. ! ?)
-  const sentenceRegex = /[.!?]\s+/g;
+  // Also treat a terminal ".!?" at end-of-string as a real sentence end
+  // (the trailing-\s+ requirement would otherwise skip the final sentence).
+  const sentenceRegex = /[.!?](?:\s+|$)/g;
   let match;
   let lastSentenceIndex = -1;
 
@@ -83,9 +86,30 @@ function cleanTruncate(text, maxLength) {
     return str.slice(0, lastSentenceIndex).trim();
   }
 
+  // Client report 24 Aug 2026 (Also On This Day — Ireland Live Aid): AI often
+  // returns ONE long sentence, so the sentence-boundary pass never fires and
+  // the old word-cut produced "...raise funds for the...". Prefer the last
+  // comma/semicolon/dash clause inside the budget and close it with a period
+  // so the line reads as a finished thought with no ellipsis.
+  const clauseRegex = /[,;—–]\s+/g;
+  let lastClauseIndex = -1;
+  while ((match = clauseRegex.exec(str)) !== null) {
+    if (match.index > maxLength) break;
+    // Need enough of the clause left to read as a real sentence (≥ 40 chars).
+    if (match.index >= 40) lastClauseIndex = match.index;
+  }
+  if (lastClauseIndex > 0) {
+    return str.slice(0, lastClauseIndex).trim().replace(/[,;—–]+$/, '') + '.';
+  }
+
   // Fallback to word boundary. If the last whole word before the cut is
   // itself an abbreviation (e.g. "...and Dr."), back up one more word so the
   // ellipsis doesn't land right after it (avoids an odd-looking "Dr....").
+  const WEAK_TRAILING = new Set([
+    'the', 'a', 'an', 'for', 'of', 'to', 'and', 'or', 'in', 'on', 'at', 'with',
+    'from', 'by', 'as', 'part', 'into', 'over', 'their', 'its', 'his', 'her',
+    'our', 'your', 'this', 'that', 'these', 'those', 'than', 'then',
+  ]);
   const sliced = str.slice(0, maxLength);
   let lastSpace = sliced.lastIndexOf(' ');
   if (lastSpace > 0) {
@@ -98,6 +122,13 @@ function cleanTruncate(text, maxLength) {
       const priorSpace = candidate.lastIndexOf(' ');
       if (priorSpace > 0) candidate = candidate.slice(0, priorSpace).trim();
     }
+    // Strip trailing weak words so we never end on "for the..." etc.
+    for (;;) {
+      const weak = candidate.match(/\s+([A-Za-z']+)$/);
+      if (!weak || !WEAK_TRAILING.has(weak[1].toLowerCase())) break;
+      candidate = candidate.slice(0, candidate.length - weak[0].length).trim();
+    }
+    if (candidate.length >= 40) return candidate + '.';
     return candidate + '...';
   }
 
@@ -188,21 +219,25 @@ function enforceLocalIndexLabel(ticker, localIndexLabel) {
 }
 
 function getVintageHoroscope(signName) {
+  // Kept short on purpose (client report 24 Aug 2026): longer copy always
+  // overflowed the 6-line box and got hard-cut mid-word by CSS
+  // ("...to void min..") after cleanTruncate had already done a clean cut.
+  // Each text is 2–3 complete sentences that fit the printed slot.
   const horoscopes = {
-    Aries: "The stars align to grant you immense energy and pioneering spirit. Your natural leadership will shine in professional endeavors. Avoid rash decisions in financial matters; patience yields the greatest rewards. In personal relationships, a warm gesture from an old friend brings unexpected joy. Keep your focus on long-term goals.",
-    Taurus: "A period of stability and grounded growth awaits you. Trust your instincts when navigating complex career choices. Financial prudence today ensures prosperous returns tomorrow. A pleasant surprise in your domestic sphere will warm your heart. Take time to appreciate the quiet beauties of life.",
-    Gemini: "Your intellectual curiosity is heightened under the current celestial influence. New avenues of learning and communication open up. Strive for clarity in your interactions to avoid minor misunderstandings. A spontaneous conversation may spark an exciting new project. Balance your busy mind with rest.",
-    Cancer: "Sensitivities are heightened, guiding you toward deep emotional insights. Nurture your home environment, as it remains your ultimate sanctuary. An old creative pursuit calls for your attention; do not hesitate to revisit it. Warmth in family circles brings comfort. Trust the natural flow of events.",
-    Leo: "Your innate radiance and courage take center stage. Professional recognition is well within reach if you stay true to your vision. Be generous with your warmth, but ensure your personal boundaries remain intact. A joyous social gathering will highlight your weekend. Lead with your heart.",
-    Virgo: "Meticulous planning and attention to detail bring excellent results. Your analytical mind resolves a long-standing challenge at work. Remember to balance productivity with self-care to avoid burnout. A thoughtful letter or message from afar brings pleasant news. Trust in your unique skills.",
-    Libra: "Harmonious energies surround you, promoting balance in all areas of life. Creative endeavors are highly favored; let your artistic expression flow freely. A key relationship benefits from open, heartfelt communication. Seek beauty in your surroundings. A financial decision requires careful weighing.",
-    Scorpio: "Intense focus and determination unlock new paths of transformation. Your passion guides you toward resolving a major personal goal. Trust your inner wisdom when faced with career transitions. A deep connection with a close confidant is strengthened. Embrace the changes coming your way.",
-    Sagittarius: "An adventurous spirit prompts you to explore new horizons, either in mind or travel. Optimism opens doors that previously seemed closed. Stay focused on your core values amidst busy schedules. A warm encounter brings laughter and joy. Keep looking forward with confidence.",
-    Capricorn: "Patience and hard work lay the foundation for long-term success. Your professional dedication is noted by peers. Practical financial choices serve you well under current transits. A quiet evening spent with loved ones brings deep contentment. Your strength is your steady anchor.",
-    Aquarius: "Innovative thoughts and unique perspectives set you apart. Collaboration on a shared community goal brings deep satisfaction. Stay receptive to unconventional ideas that come your way. A surprise encounter sparks inspiration. Keep nurturing your independent spirit.",
-    Pisces: "Intuition and artistic vision guide your steps through this period. A gentle, compassionate approach resolves a complex family matter. Trust your dreams, as they hold keys to your creative growth. A serene moment near water brings clarity and peace. Let your heart lead."
+    Aries: "The stars grant you energy and pioneering spirit. Lead with patience in money matters, and a warm gesture from an old friend brings unexpected joy.",
+    Taurus: "Stability and grounded growth await you. Trust your instincts in career choices, and take time to appreciate the quiet beauties close to home.",
+    Gemini: "Your curiosity opens new paths of learning and conversation. Speak with clarity, and a spontaneous chat may spark an exciting new project.",
+    Cancer: "Heightened feeling guides you toward deep insight. Nurture your home as sanctuary, and warmth in family circles brings real comfort.",
+    Leo: "Your radiance and courage take center stage. Stay true to your vision, keep your boundaries, and lead with your heart.",
+    Virgo: "Careful planning brings excellent results. Balance work with self-care, and a thoughtful message from afar brings pleasant news.",
+    Libra: "Harmonious energy favors balance and creative flow. Speak openly in a key relationship, and weigh financial choices with care.",
+    Scorpio: "Focus and determination unlock fresh transformation. Trust your inner wisdom, and a deep bond with a close confidant grows stronger.",
+    Sagittarius: "An adventurous spirit urges you toward new horizons. Stay true to your values, and a warm encounter brings laughter and joy.",
+    Capricorn: "Patience and hard work lay foundations for lasting success. Practical choices serve you well, and quiet time with loved ones brings contentment.",
+    Aquarius: "Fresh ideas and unique perspectives set you apart. Stay open to the unconventional, and keep nurturing your independent spirit.",
+    Pisces: "Intuition and artistic vision guide your steps. Trust your dreams, and a serene moment brings clarity and peace."
   };
-  return horoscopes[signName] || "The celestial transits indicate a year of remarkable personal growth, steady progress, and rewarding achievements. Trust your inner compass and embrace the opportunities that lay ahead.";
+  return horoscopes[signName] || "A year of steady growth and rewarding progress lies ahead. Trust your inner compass and welcome the opportunities that come your way.";
 }
 
 function renderNewspaper(data, content, fonts) {
@@ -356,12 +391,15 @@ function renderNewspaper(data, content, fonts) {
     <div class="bday"><b>${cleanTruncate(b.title, 45)}</b> by ${cleanTruncate(b.author, 25)} &mdash; <span class="desc">${cleanTruncate(b.note, 85)}</span></div>`).join('');
 
   // ── MUSIC CHART ──
-  // Single-line ellipsis truncation (white-space:nowrap + text-overflow)
-  // instead of -webkit-line-clamp:1, which combined with the counter
-  // pseudo-element left visible fragments of the second line bleeding
-  // in above the row's bottom border.
-  const chartsHTML = chart.entries.slice(0, 5).map(e => `
-    <li><span class="entry-text"><b>${e.title}</b> &mdash; <span class="artist">${e.artist}</span></span></li>`).join('');
+  // Client report 24 Aug 2026: single-line CSS ellipsis cut titles mid-name
+  // ("Auf Wiederseh'n Sweetheart ...", "Percy Faith & His O..."). Soft-
+  // truncate with cleanTruncate, then allow a 2-line wrap so the cut is
+  // word-safe rather than a hard CSS mid-word clip.
+  const chartsHTML = chart.entries.slice(0, 5).map(e => {
+    const title = cleanTruncate(e.title || '', 42);
+    const artist = cleanTruncate(e.artist || '', 28);
+    return `<li><span class="entry-text"><b>${title}</b> &mdash; <span class="artist">${artist}</span></span></li>`;
+  }).join('');
 
   // ── WEATHER CONTENT ──
   // Previously unbounded — always overflowed its 3-line clamp and got cut
@@ -445,12 +483,18 @@ function renderNewspaper(data, content, fonts) {
   // prefix renders bold/wider than the body's regular weight) keeps the
   // combined prefix+body within the same empirically-safe capacity these
   // budgets were originally measured against.
+  //
+  // Raised again 24 Aug 2026 (client screenshot — "New Zealand, 1907:
+  // ...cementing greater..." then Ireland Live Aid "...for the..."):
+  // long country labels + single long AI sentences still overflowed. Higher
+  // body budgets, taller box, and cleanTruncate's new clause-boundary cut
+  // keep these lines finishing as complete thoughts.
   const otd1Prefix = `${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}: `;
   const otd2Prefix = `${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}: `;
   const otd3Prefix = `${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}: `;
-  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, Math.max(80, 165 - Math.round(otd1Prefix.length * 1.15)))}`;
-  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, Math.max(80, 165 - Math.round(otd2Prefix.length * 1.15)))}`;
-  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, Math.max(55, 115 - Math.round(otd3Prefix.length * 1.15)))}`;
+  const otd1Text = `<b>${otd1Source.label}${otd1Source.year ? ', ' + formatDisplayYear(otd1Source.year) : ''}:</b> ${cleanTruncate(otd1Source.body, Math.max(120, 260 - Math.round(otd1Prefix.length * 1.15)))}`;
+  const otd2Text = `<b>${otd2Source.label}${otd2Source.year ? ', ' + formatDisplayYear(otd2Source.year) : ''}:</b> ${cleanTruncate(otd2Source.body, Math.max(120, 260 - Math.round(otd2Prefix.length * 1.15)))}`;
+  const otd3Text = `<b>${otd3Source.label}${otd3Source.year ? ', ' + formatDisplayYear(otd3Source.year) : ''}:</b> ${cleanTruncate(otd3Source.body, Math.max(120, 250 - Math.round(otd3Prefix.length * 1.15)))}`;
 
   // ── SPORT TEXT ──
   // The AI prompt deliberately asks for sport as headline-only, no body
@@ -469,7 +513,7 @@ function renderNewspaper(data, content, fonts) {
     sportEntry
       ? `${sportEntry.year ? sportEntry.year + ' — ' : ''}${sportEntry.headline || ''}${sportEntry.byline ? ` (${sportEntry.byline})` : ''}.`
       : 'No sporting results are available for this day.',
-    200
+    160
   );
 
   // ── DEDICATION MESSAGE OVERRIDE ──
@@ -484,9 +528,9 @@ function renderNewspaper(data, content, fonts) {
   const news1Body = cleanTruncate(worldNews[0]?.body || '', 295);
   const news2Body = cleanTruncate(localNews[0]?.body || '', 295);
 
-  // ── HOROSCOPE (previously unbounded — the static copy runs ~350-450
-  // characters, always overflowing its 6-line clamp box) ──
-  const horoscopeText = cleanTruncate(getVintageHoroscope(astro.starSign.name), 230);
+  // ── HOROSCOPE — source text is already short enough to fit the box;
+  // keep a soft safety cap so a future longer string still ends cleanly.
+  const horoscopeText = cleanTruncate(getVintageHoroscope(astro.starSign.name), 220);
 
   // ── NAME BANNER ── font size steps down for longer occasion/name
   // combinations (empirically measured, see banner_search.js), and the
@@ -617,6 +661,7 @@ function renderNewspaper(data, content, fonts) {
     margin: 10mm auto;
     box-shadow: 0 4px 24px rgba(0,0,0,.45);
     overflow: hidden;                  /* the hard guarantee */
+    position: relative;                /* Phase 5 Step 2 — lets .authenticity-seal position against the whole page, not just the footer strip; also now the anchor for the ::before border frame added in Step 3 */
     font-family: 'EB Garamond', Georgia, serif;
     /* Bumped 8.4pt -> 8.8pt (10 Aug 2026, requested directly, "lighter"
        increase) — this is the one base size everything without its own
@@ -764,7 +809,18 @@ function renderNewspaper(data, content, fonts) {
     overflow: hidden;
   }
   .col { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
-  .col + .col { border-left: .2mm solid #b9b09a; padding-left: 4mm; }
+  /* Phase 5 Step 5, client request 21 Aug 2026: "Add vertical rule lines
+     between columns." The rule already existed here at .2mm / #b9b09a —
+     found during audit (23 Aug 2026) to be genuinely too faint in the real
+     rendered PDF, easy to miss next to this page's other subtle dotted
+     separators (.bday, .datatable, ol.chart all use the same #b9b09a at
+     similar weight) — which explains why Col kept asking for it despite
+     it technically being present in the code. Darkened and widened
+     slightly, staying within the existing sepia/vintage palette (not a
+     stark black, which would clash with the Step 3 border frame — see
+     that section's own comment on two competing "line" elements needing
+     distinct weights) — a deliberate one-step-darker tweak, not a redesign. */
+  .col + .col { border-left: .3mm solid #8a8570; padding-left: 4mm; }
 
   /* Client-reported bug (new_changes.md, Aug 2026): "uneven blank gaps in
      columns... content isn't reflowing to fill the page." Root cause: every
@@ -790,6 +846,7 @@ function renderNewspaper(data, content, fonts) {
   .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+  .clamp5 { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
   .clamp6 { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
   /* Added 11 Aug 2026, used only by news1-body/news2-body below — the
      longer text now requested for those two fields (295-char cap, up
@@ -851,7 +908,7 @@ function renderNewspaper(data, content, fonts) {
      HTML entirely (see worldNumbersHTML/booksHTML above) when there's no
      data, so an empty section box is never rendered. */
   .s-worldnumbers { max-height: 20mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
-  .s-onthisday { max-height: 54mm; flex: 1 0 auto; }
+  .s-onthisday { max-height: 72mm; flex: 1 0 auto; }
   .s-message   { max-height: 72mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-birthdays { max-height: 52mm; margin-top: 3mm; flex: 1 0 auto; }
   /* Raised 20mm -> 26mm (11 Aug 2026) — measured directly against a real
@@ -860,10 +917,10 @@ function renderNewspaper(data, content, fonts) {
      26mm gives real margin above the measured 84px need. Only this one
      section's ceiling changed — no other section's budget touched. */
   .s-books     { max-height: 26mm; margin-top: 3mm; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
-  .s-charts    { max-height: 44mm; flex: 1 0 auto; }
+  .s-charts    { max-height: 52mm; flex: 1 0 auto; }
   .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-horoscope { max-height: 36mm; margin-top: 3mm; flex: 1 0 auto; }
+  .s-sport     { max-height: 28mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 0 auto; }
 
   /* tables & lists */
@@ -875,7 +932,12 @@ function renderNewspaper(data, content, fonts) {
     display: flex; align-items: baseline; gap: 1mm; }
   ol.chart li::before { content: counter(c) "."; font-weight: 600; flex-shrink: 0; }
   ol.chart li .entry-text {
-    min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
   }
   ol.chart .artist { font-style: italic; }
 
@@ -887,13 +949,13 @@ function renderNewspaper(data, content, fonts) {
     background: #fbf8ef;
   }
   .s-message .to { font-family:'Playfair Display', serif; font-size: 11pt; font-weight: 700; }
-  .s-message .msg { font-style: italic; font-size: 9pt;
+  .s-message .msg { font-style: italic; font-size: 9pt; text-align: justify;
     display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
   .s-message .from { font-size: 8.5pt; }
 
   .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
   .bday b { font-weight: 600; }
-  .bday .desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .bday .desc { text-align: justify; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
   .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
   .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
@@ -907,6 +969,9 @@ function renderNewspaper(data, content, fonts) {
     display: flex; align-items: center; justify-content: space-between;
     font-size: 7pt; letter-spacing: .3mm; text-transform: uppercase; margin-top: 2mm;
   }
+
+  /* ================= AUTHENTICITY SEAL + PAGE FRAME (ref side-design) ================= */
+  ${KEEPSAKE_FRAME_CSS}
 </style>
 </head>
 <body>
@@ -968,21 +1033,31 @@ function renderNewspaper(data, content, fonts) {
           ${worldNumbersHTML}
         </table>
       </section>` : ''}
+      <!-- Moved here from Column 3, Phase 5 Step 1 (client request, 21 Aug
+           2026 — "The Night Sky" needed to vacate the bottom-right corner
+           to make room for the Seal of Authenticity, Step 2). Section
+           itself unchanged — only its position moved. -->
+      <section class="s-starmap">
+        <h3>The Night Sky</h3>
+        <div class="starmap-graphic">${starMap.svg}</div>
+        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
+        ${daysOldStr ? `<div class="agecount" data-field="days-old">${daysOldStr}</div>` : ''}
+      </section>
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
     <div class="col">
       <section class="s-onthisday">
         <h3>Also On This Day</h3>
-        <p class="clamp4" data-field="otd-1">${otd1Text}</p>
-        <p class="clamp4" data-field="otd-2" style="margin-top:1.5mm">${otd2Text}</p>
-        <p class="clamp3" data-field="otd-3" style="margin-top:1.5mm">${otd3Text}</p>
+        <p class="clamp5" data-field="otd-1">${otd1Text}</p>
+        <p class="clamp5" data-field="otd-2" style="margin-top:1.5mm">${otd2Text}</p>
+        <p class="clamp5" data-field="otd-3" style="margin-top:1.5mm">${otd3Text}</p>
       </section>
       <section class="s-message">
         <div class="box">
           <div class="to" data-field="msg-to">For ${cleanedRecipientName}</div>
           <div class="msg" data-field="msg-body">&ldquo;${finalMessage}&rdquo;</div>
-          <div class="from" data-field="msg-from">&mdash; With all our love, ${senderName}</div>
+          <div class="from" data-field="msg-from">&mdash; With all my love, ${senderName}</div>
         </div>
       </section>
       <section class="s-birthdays">
@@ -1016,12 +1091,6 @@ function renderNewspaper(data, content, fonts) {
         <h3>Sporting News</h3>
         <p class="clamp6" data-field="sport">${sportText}</p>
       </section>
-      <section class="s-starmap">
-        <h3>The Night Sky</h3>
-        <div class="starmap-graphic">${starMap.svg}</div>
-        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
-        ${daysOldStr ? `<div class="agecount" data-field="days-old">${daysOldStr}</div>` : ''}
-      </section>
     </div>
 
   </div>
@@ -1030,6 +1099,9 @@ function renderNewspaper(data, content, fonts) {
     <span>The Tribute Times &mdash; tributetimes.co.nz</span>
     <span data-field="foot-code">Keepsake Ref: TT-${Math.floor(1000 + Math.random() * 9000)}</span>
   </footer>
+
+  <img class="authenticity-seal" src="data:image/png;base64,${fonts.sealAuthenticity}" alt="" />
+  ${cornerOrnamentsHtml()}
 
   </div>
 </div>

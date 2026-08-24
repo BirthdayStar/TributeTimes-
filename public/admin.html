@@ -90,8 +90,9 @@
     body.logged-in .sidebar { display: flex; }
 
     .sidebar-header {
-      padding: 24px 20px;
+      padding: 16px 18px;
       border-bottom: 1px solid rgba(252,249,232,0.15);
+      flex-shrink: 0;
     }
     .sidebar-logo {
       font-family: 'Playfair Display', Georgia, serif;
@@ -115,18 +116,19 @@
 
     .sidebar-nav {
       flex: 1;
-      padding: 20px 12px;
+      min-height: 0;
+      padding: 10px 10px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      overflow-y: auto;
+      gap: 2px;
+      overflow: hidden;
     }
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 16px;
-      font-size: 0.9rem;
+      gap: 10px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
       font-weight: 600;
       color: rgba(252,249,232,0.78);
       background: transparent;
@@ -137,6 +139,7 @@
       width: 100%;
       font-family: inherit;
       transition: background var(--transition), color var(--transition);
+      flex-shrink: 0;
     }
     .nav-item:hover {
       background: rgba(252,249,232,0.12);
@@ -147,15 +150,12 @@
       color: #FCF9E8;
       box-shadow: 0 4px 12px rgba(138,106,31,0.35);
     }
-    .nav-item[onclick="navigateTo('consultants')"],
-    .nav-item[onclick="navigateTo('promo-codes')"] {
-      display: none;
-    }
 
     .sidebar-footer {
-      padding: 18px 20px;
+      padding: 12px 16px;
       border-top: 1px solid rgba(252,249,232,0.15);
       background: rgba(29,31,16,0.35);
+      flex-shrink: 0;
     }
     .sidebar-user {
       font-size: 0.8rem;
@@ -177,6 +177,8 @@
       padding: 30px 40px;
       transition: margin-left 0.3s ease;
       min-width: 0;
+      max-width: 100%;
+      overflow-x: hidden;
     }
     body:not(.logged-in) .main-content {
       margin-left: 0;
@@ -326,6 +328,8 @@
       box-shadow: var(--shadow-sm);
       overflow: hidden;
       margin-bottom: 24px;
+      min-width: 0;
+      max-width: 100%;
     }
     .section-head {
       display: flex;
@@ -350,6 +354,7 @@
       flex-wrap: wrap;
     }
     .section-body { padding: 20px 22px; }
+    #view-consultants .section-body { padding: 16px; }
 
     /* ── BUTTONS ── */
     .btn {
@@ -389,6 +394,7 @@
       border-radius: 14px;
       border: 1px solid var(--line);
       background: rgba(61,65,34,0.03);
+      max-width: 100%;
     }
     .data-table {
       width: 100%;
@@ -416,6 +422,71 @@
     .data-table td {
       padding: 14px 16px;
       vertical-align: middle;
+    }
+
+    /* Consultants: fit viewport — no horizontal scrollbar */
+    #view-consultants .table-wrap {
+      overflow-x: hidden;
+    }
+    #view-consultants .data-table {
+      table-layout: fixed;
+      width: 100%;
+      font-size: 0.78rem;
+    }
+    #view-consultants .data-table thead th {
+      white-space: normal;
+      line-height: 1.25;
+      padding: 10px 8px;
+      letter-spacing: 0.04em;
+      font-size: 0.65rem;
+    }
+    #view-consultants .data-table td {
+      padding: 10px 8px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+    #view-consultants .data-table th:nth-child(1),
+    #view-consultants .data-table td:nth-child(1) { width: 13%; }
+    #view-consultants .data-table th:nth-child(2),
+    #view-consultants .data-table td:nth-child(2) { width: 14%; }
+    #view-consultants .data-table th:nth-child(3),
+    #view-consultants .data-table td:nth-child(3) { width: 8%; }
+    #view-consultants .data-table th:nth-child(4),
+    #view-consultants .data-table td:nth-child(4) {
+      width: 9%;
+      min-width: 5.75rem;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+    #view-consultants .data-table th:nth-child(5),
+    #view-consultants .data-table td:nth-child(5) { width: 6%; }
+    #view-consultants .data-table th:nth-child(6),
+    #view-consultants .data-table td:nth-child(6) { width: 11%; }
+    #view-consultants .data-table th:nth-child(7),
+    #view-consultants .data-table td:nth-child(7) { width: 11%; }
+    #view-consultants .data-table th:nth-child(8),
+    #view-consultants .data-table td:nth-child(8) { width: 11%; }
+    #view-consultants .data-table th:nth-child(9),
+    #view-consultants .data-table td:nth-child(9) { width: 17%; }
+    #view-consultants .consultant-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: stretch;
+    }
+    #view-consultants .consultant-actions .btn {
+      width: 100%;
+      justify-content: center;
+      white-space: nowrap;
+      padding: 5px 8px;
+      font-size: 0.72rem;
+    }
+    #view-consultants .commission-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-start;
     }
 
     /* ── FORM ELEMENTS ── */
@@ -551,32 +622,36 @@
     .status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: capitalize;
+      padding: 5px 11px 5px 9px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      white-space: nowrap;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .status-pill::before {
       content: '';
-      width: 6px; height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .status-pill.pending   { background: rgba(245, 158, 11, 0.15); color: #92600A; }
+    .status-pill.pending   { background: rgba(245, 158, 11, 0.14); color: #92600A; }
     .status-pill.pending::before { background: #f59e0b; }
-    .status-pill.printed   { background: rgba(59, 130, 246, 0.15); color: #1E4D8C; }
+    .status-pill.printed   { background: rgba(59, 130, 246, 0.14); color: #1E4D8C; }
     .status-pill.printed::before { background: #3b82f6; }
-    .status-pill.posted    { background: rgba(34, 197, 94, 0.15); color: #3D5F30; }
+    .status-pill.posted    { background: rgba(34, 197, 94, 0.14); color: #3D5F30; }
     .status-pill.posted::before  { background: #22c55e; }
-    .status-pill.delivered { background: rgba(139, 92, 246, 0.15); color: #6B46C1; }
+    .status-pill.delivered { background: rgba(139, 92, 246, 0.14); color: #6B46C1; }
     .status-pill.delivered::before { background: #8b5cf6; }
-    .status-pill.approved  { background: rgba(34, 197, 94, 0.15); color: #3D5F30; }
-    .status-pill.approved::before { background: #22c55e; }
-    .status-pill.rejected  { background: rgba(239, 68, 68, 0.15); color: #A1442A; }
-    .status-pill.rejected::before { background: #ef4444; }
+    .status-pill.approved  { background: rgba(76, 122, 61, 0.14); color: #2F5A28; }
+    .status-pill.approved::before { background: #4C7A3D; }
+    .status-pill.rejected  { background: rgba(161, 68, 42, 0.12); color: #8B3820; }
+    .status-pill.rejected::before { background: #A1442A; }
 
     /* ── PAGINATION CONTROLS ── */
     .pagination-footer {
@@ -595,55 +670,71 @@
       gap: 8px;
     }
 
-    /* ── POPUP MODALS ── */
+    /* ── LEFT DRAWER PANELS (Stripe-style) ── */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(61,65,34,0.55);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      background: rgba(29, 31, 16, 0.42);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       display: none;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
+      justify-content: flex-start;
       z-index: 10000;
-      padding: 20px;
+      padding: 0;
     }
     .modal-card {
       background: #ffffff;
       color: #3D4122;
-      width: 100%;
-      max-width: 500px;
-      border-radius: 16px;
-      box-shadow: 0 20px 48px rgba(61,65,34,0.28);
-      border: 1px solid #DED9BE;
+      width: min(440px, 100%);
+      max-width: 100%;
+      height: 100%;
+      max-height: 100dvh;
+      border-radius: 0;
+      box-shadow: 12px 0 40px rgba(29, 31, 16, 0.22);
+      border: none;
+      border-right: 1px solid #DED9BE;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
     }
     body.logged-in .modal-card {
       background: #ffffff;
       color: #3D4122;
     }
+    .modal-overlay > form,
+    .modal-card > form {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
     .modal-header {
-      padding: 16px 20px;
+      padding: 18px 20px;
       border-bottom: 1px solid var(--line);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(61,65,34,0.05);
+      background: #F4F0DE;
+      flex-shrink: 0;
     }
     .modal-header h3 {
       margin: 0;
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       font-weight: 700;
     }
     .modal-body {
-      padding: 20px;
+      padding: 18px 20px 24px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .modal-footer {
       padding: 14px 20px;
@@ -651,20 +742,40 @@
       display: flex;
       justify-content: flex-end;
       gap: 10px;
-      background: rgba(61,65,34,0.05);
+      background: #FCF9E8;
+      flex-shrink: 0;
+    }
+    .modal-body .fld-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
     .close-modal-btn {
       background: transparent;
       border: none;
-      color: var(--ink);
-      font-size: 1.25rem;
-      cursor: pointer;
+      font-size: 1.4rem;
       line-height: 1;
-      padding: 4px;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 6px;
     }
-    @keyframes modalSlideUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
+    .close-modal-btn:hover {
+      background: rgba(61,65,34,0.08);
+      color: var(--ink);
+    }
+    @keyframes drawerSlideIn {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(0); }
+    }
+    @media (max-width: 576px) {
+      .modal-card {
+        width: 100%;
+        border-right: none;
+      }
+      .modal-body .fld-row {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ── RESPONSIVE MEDIA QUERIES ── */
@@ -910,13 +1021,20 @@
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Status</th>
+                    <th>Rate</th>
+                    <!-- Phase 8 — client request 23 Aug 2026 (Col): "Commission
+                         should show in its own column as a running total."
+                         A real <th>/<td> column this time (not the
+                         subtitle-under-name trick used for partner_type in
+                         Step 1) — Col explicitly asked for a column. -->
+                    <th>Commission Owed</th>
                     <th>Commission Notes</th>
                     <th>Admin Notes</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="consultants-table-body">
-                  <tr class="empty-row"><td colspan="7">No consultants loaded.</td></tr>
+                  <tr class="empty-row"><td colspan="9">No consultants loaded.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1592,6 +1710,17 @@
         if (type === 'consultant') {
           document.getElementById('modal-consultant-name').value = data.name || '';
           document.getElementById('modal-consultant-email').value = data.email || '';
+          // Partner type is locked once created (same reasoning as the
+          // florist Business Type field) — shown read-only for reference.
+          const typeSelect = document.getElementById('modal-consultant-type');
+          if (typeSelect) {
+            typeSelect.value = data.partner_type || 'individual';
+            typeSelect.disabled = true;
+          }
+          const commissionInput = document.getElementById('modal-consultant-commission');
+          if (commissionInput) commissionInput.value = data.commission_notes || '';
+          const rateInput = document.getElementById('modal-consultant-rate');
+          if (rateInput) rateInput.value = (data.commission_rate === null || data.commission_rate === undefined) ? '' : data.commission_rate;
         } else if (type === 'promo') {
           document.getElementById('modal-promo-consultant').value = data.consultant_id || '';
           document.getElementById('modal-promo-code').value = data.code || '';
@@ -1723,9 +1852,44 @@
           if (typeSelect) typeSelect.disabled = false;
           const codeWrap = document.getElementById('modal-florist-wholesale-code-wrap');
           if (codeWrap) codeWrap.style.display = 'none';
+        } else if (type === 'consultant') {
+          // Same reasoning as the florist Business Type re-enable above —
+          // form.reset() doesn't undo a JS-set `disabled` property.
+          const typeSelect = document.getElementById('modal-consultant-type');
+          if (typeSelect) typeSelect.disabled = false;
+        }
+        if (type === 'consultant') {
+          const commissionInput = document.getElementById('modal-consultant-commission');
+          if (commissionInput) commissionInput.value = '';
+          const rateInput = document.getElementById('modal-consultant-rate');
+          if (rateInput) rateInput.value = '';
+          // Pre-fill the business default (35%) for a fresh "Add" open,
+          // since the type select already defaults to its first option
+          // ("Individual / Sales Rep") — nothing to fill for that case.
+          onConsultantTypeChange();
         }
       }
       modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Phase 8 — client request 23 Aug 2026 (Col): "if they are a business
+    // they will basically have the same wholesale buying price." Auto-
+    // fills 35% (matching FLORIST_WHOLESALE stuff elsewhere / the
+    // existing wholesale discount rate) when a business partner type is
+    // selected, ONLY if the rate field is still empty — never overwrites
+    // a rate the admin already typed in, and only ever runs while adding
+    // a NEW consultant (the type selector is disabled/locked on edit, so
+    // this listener has no effect there). Mirrors the server-side default
+    // in createConsultant() — see admin-fulfilment.js — so the admin sees
+    // the same number that would apply anyway if they left it blank.
+    const BUSINESS_PARTNER_TYPES_CLIENT = ['radio_station', 'florist', 'cake_shop', 'gift_store'];
+    function onConsultantTypeChange() {
+      const typeSelect = document.getElementById('modal-consultant-type');
+      const rateInput = document.getElementById('modal-consultant-rate');
+      if (!typeSelect || !rateInput || typeSelect.disabled) return;
+      if (rateInput.value !== '') return; // don't clobber a value the admin already typed
+      rateInput.value = BUSINESS_PARTNER_TYPES_CLIENT.includes(typeSelect.value) ? '35' : '';
     }
 
     function updateFloristCreditTotalPreview() {
@@ -1737,6 +1901,8 @@
     function closeModal(type) {
       const modal = document.getElementById(`${type}-modal`);
       if (modal) modal.style.display = 'none';
+      const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some(el => el.style.display === 'flex');
+      if (!anyOpen) document.body.style.overflow = '';
     }
 
     function capitalize(s) {
@@ -1755,8 +1921,20 @@
       const id = document.getElementById('consultant-id').value;
       const payload = {
         name: document.getElementById('modal-consultant-name').value.trim(),
-        email: document.getElementById('modal-consultant-email').value.trim()
+        email: document.getElementById('modal-consultant-email').value.trim(),
+        commissionNotes: document.getElementById('modal-consultant-commission').value.trim()
       };
+      // Commission rate — sent on both create and edit, unlike partner
+      // type below, since Col confirmed the rate stays editable for the
+      // life of the partner. An empty field means "not set" (null), not 0
+      // — a genuine 0% and "no rate decided yet" are different things.
+      const rateRaw = document.getElementById('modal-consultant-rate').value.trim();
+      payload.commissionRate = rateRaw === '' ? null : Number(rateRaw);
+      // Partner type — only sent on create, matching the florist Business
+      // Type pattern (locked after creation, so PUT never touches it).
+      if (!id) {
+        payload.partnerType = document.getElementById('modal-consultant-type').value;
+      }
       const method = id ? 'PUT' : 'POST';
       const endpoint = id ? `/api/admin/consultants/${id}` : '/api/admin/consultants';
       try {
@@ -1770,8 +1948,86 @@
         closeModal('consultant');
         loadConsultants(paginationState.consultants.page);
         loadAttribution().catch(() => {});
+        // Phase 6/7 Step 4 — surface the auto-generated attribution code
+        // right away (create only; PUT responses never include a
+        // codeGenerated field). If auto-generation failed, tell the admin
+        // plainly rather than leaving a silent gap — they can retry via
+        // the "Generate Code" button in the list (see loadConsultants()).
+        if (!id) {
+          if (data.codeGenerated) {
+            alert(`✓ ${payload.name} created — code: ${data.code}`);
+          } else {
+            alert(`✓ ${payload.name} created, but the attribution code could not be generated (${data.codeError || 'unknown error'}). Use "Generate Code" in the list to retry.`);
+          }
+        }
       } catch (err) { alert(`Error: ${err.message}`); }
       finally { if (submitBtn) submitBtn.disabled = false; }
+    }
+
+    // Phase 6/7 Step 4 recovery path — calls the "Generate Code" button
+    // wired up in loadConsultants() below for a consultant whose
+    // auto-issued code failed at creation time (or never had one for any
+    // other reason).
+    //
+    // Bug fix, 23 Aug 2026 (second bug-hunt pass): originally took the
+    // consultant's name as a plain string argument interpolated straight
+    // into the onclick="..." attribute. escapeHtml() turns an apostrophe
+    // into &#39;, but the browser decodes HTML entities in attribute
+    // values BEFORE the JS engine parses the handler — so a name like
+    // "Mary's Flowers" (literally used as the example name in this
+    // codebase's own wholesale-code.js comments) decoded back to a raw
+    // apostrophe, terminated the string literal early, and broke the
+    // button with a JS syntax error for any name containing one. Passing
+    // the button element itself and reading the name back out of its row
+    // avoids ever putting untrusted text inside an HTML attribute string.
+    async function generateConsultantCode(id, btnEl) {
+      const row = btnEl ? btnEl.closest('tr') : null;
+      const name = row ? (row.querySelector('strong')?.textContent || 'this partner') : 'this partner';
+      // Deep-audit bug fix, 23 Aug 2026: this button never disabled itself
+      // during the request — the exact same "fast double-click creates two
+      // requests" bug class the 17 Aug 2026 site-wide UI audit already
+      // fixed on every save form (see saveConsultant() above), just never
+      // applied here since this button was added afterward. A double-click
+      // fired two concurrent generate-code calls — the backend's own
+      // duplicate-code guard (createPromoCode) meant it didn't actually
+      // corrupt data, but the admin got a confusing second "already has an
+      // active code" error alert right after the success one.
+      if (btnEl) btnEl.disabled = true;
+      try {
+        const r = await apiFetch(`/api/admin/consultants/${id}/generate-code`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to generate code.');
+        alert(`✓ Code generated for ${name}: ${data.code}`);
+        loadConsultants(paginationState.consultants.page);
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
+    }
+
+    // Phase 8 — client request 23 Aug 2026 (Col): "can be pulled by a date
+    // range." Lightweight prompt()-based date entry rather than a new
+    // modal/date-picker UI — matches the scope of this step (Col asked
+    // for the capability, not a specific UI for it). Same name-from-DOM
+    // pattern as generateConsultantCode() above (never interpolate a name
+    // into an onclick attribute).
+    async function pullConsultantCommission(id, btnEl) {
+      const row = btnEl ? btnEl.closest('tr') : null;
+      const name = row ? (row.querySelector('strong')?.textContent || 'this partner') : 'this partner';
+      const from = prompt(`Commission for ${name} — from date (YYYY-MM-DD, blank = since the beginning):`, '');
+      if (from === null) return; // cancelled
+      const to = prompt(`Commission for ${name} — to date (YYYY-MM-DD, blank = up to now):`, '');
+      if (to === null) return; // cancelled
+      try {
+        const params = new URLSearchParams();
+        if (from.trim()) params.set('from', from.trim());
+        if (to.trim()) params.set('to', to.trim());
+        const r = await apiFetch(`/api/admin/consultants/${id}/commission?${params.toString()}`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to pull commission.');
+        const rangeLabel = (data.from || data.to) ? `${data.from || 'the beginning'} to ${data.to || 'now'}` : 'all time';
+        alert(`${name} — commission for ${rangeLabel}:\n\n${data.orderCount} paid order(s)\nSales total: $${data.salesTotal.toFixed(2)}\nRate: ${data.commissionRate === null ? 'not set' : data.commissionRate + '%'}\nCommission owed: $${data.commissionOwed.toFixed(2)}`);
+      } catch (err) { alert(`Error: ${err.message}`); }
     }
 
     async function savePromoCode(e) {
@@ -2112,30 +2368,60 @@
       paginationState.consultants.page = page;
       const msgEl = document.getElementById('consultants-message');
       const body = document.getElementById('consultants-table-body');
-      if (body) body.innerHTML = loadingRow(7);
+      if (body) body.innerHTML = loadingRow(9);
       setMsg(msgEl, '', false);
       try {
         const r = await apiFetch(`/api/admin/consultants?page=${page}&limit=${paginationState.consultants.limit}`);
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to load.');
         paginationState.consultants.total = data.total;
-        
+
+        // Partner type shown as a subtitle under the name — same
+        // no-new-column approach used for the florist wholesale code and
+        // business type (Phase 6/7).
+        const PARTNER_TYPE_LABELS = { individual: 'Individual / Sales Rep', influencer: 'Influencer', florist: 'Florist', cake_shop: 'Cake Shop', gift_store: 'Gift Store', radio_station: 'Radio Station' };
         if (body) body.innerHTML = data.items.length ? data.items.map(c => `
           <tr>
-            <td><strong>${escapeHtml(c.name)}</strong></td>
+            <td>
+              <strong>${escapeHtml(c.name)}</strong><br/>
+              <span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(PARTNER_TYPE_LABELS[c.partner_type] || 'Individual / Sales Rep')}</span>
+            </td>
             <td>${escapeHtml(c.email || '')}</td>
             <td>${escapeHtml(c.phone || '—')}</td>
             <td><span class="status-pill ${c.active ? 'approved' : 'rejected'}">${c.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${c.commission_rate === null || c.commission_rate === undefined ? '<span style="color:#b23;">Not set</span>' : escapeHtml(String(c.commission_rate)) + '%'}</td>
+            <!-- Phase 8: commission_owed is a lifetime (all-time) running
+                 total computed server-side from every paid order attributed
+                 to this consultant (attachCommissionOwed() in
+                 admin-fulfilment.js) — null means the DB lookup itself
+                 failed (shown distinctly from a genuine $0.00), not that
+                 there's no commission. -->
+            <td>
+              <div class="commission-cell">
+                ${c.commission_owed === null || c.commission_owed === undefined ? '<span style="color:#8A6A1F;">—</span>' : '$' + Number(c.commission_owed).toFixed(2)}
+                <button class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:0.7rem;" onclick="pullConsultantCommission('${c.id}', this)" title="Pull commission for a specific date range">📅 By date</button>
+              </div>
+            </td>
             <td>${escapeHtml(c.commission_notes || '—')}</td>
             <td>${escapeHtml(c.admin_notes || '—')}</td>
             <td>
-              <div style="display:flex; gap:6px;">
+              <div class="consultant-actions">
                 <button class="btn btn-soft btn-sm" onclick="openModal('consultant', '${c.id}')">✏️ Edit</button>
+                <!-- Phase 6/7 Step 4 recovery path — always offered rather
+                     than conditionally hidden: the list endpoint doesn't
+                     join promo_codes, so we don't know client-side whether
+                     a code already exists. generateConsultantCode() calls
+                     the same createPromoCode() the backend already uses,
+                     which itself refuses (with a clear message naming the
+                     existing code) if one is already active — so clicking
+                     this on a consultant that already has a code is a safe
+                     no-op, not a silent duplicate. -->
+                <button class="btn btn-soft btn-sm" onclick="generateConsultantCode('${c.id}', this)">🔑 Generate Code</button>
                 <button class="btn btn-danger btn-sm" onclick="deleteEntity('consultants', '${c.id}')">🗑️ Delete</button>
               </div>
             </td>
           </tr>
-        `).join('') : '<tr class="empty-row"><td colspan="7">No consultants found.</td></tr>';
+        `).join('') : '<tr class="empty-row"><td colspan="9">No consultants found.</td></tr>';
         
         renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
         setMsg(msgEl, '', false);
@@ -2181,6 +2467,8 @@
       const form = document.getElementById('campaign-batch-form');
       if (form) form.reset();
       document.getElementById('campaign-batch-modal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      lastModalOpenAt = Date.now();
     }
 
     async function createCampaignBatch(e) {
@@ -2691,13 +2979,52 @@
       <form id="consultant-form" onsubmit="saveConsultant(event)">
         <input type="hidden" id="consultant-id" />
         <div class="modal-body">
-          <div class="fld">
-            <label for="modal-consultant-name">Full Name</label>
-            <input id="modal-consultant-name" type="text" placeholder="Sarah Jones" required />
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-consultant-name">Full Name</label>
+              <input id="modal-consultant-name" type="text" placeholder="Sarah Jones" required />
+            </div>
+            <div class="fld">
+              <label for="modal-consultant-email">Email Address</label>
+              <input id="modal-consultant-email" type="email" placeholder="sarah@example.com" required />
+            </div>
           </div>
-          <div class="fld">
-            <label for="modal-consultant-email">Email Address</label>
-            <input id="modal-consultant-email" type="email" placeholder="sarah@example.com" required />
+          <!-- Partner Type — Phase 6/7, client request 21 Aug 2026: "a
+               sales rep, an influencer, a florist, a cake shop - doesn't
+               matter who". Same locked-after-creation pattern already
+               used for the florist "Business Type" selector (earlier
+               phase) — see loadEntityForEdit's consultant branch below. -->
+          <div class="fld" id="modal-consultant-type-wrap">
+            <label for="modal-consultant-type">Partner Type</label>
+            <select id="modal-consultant-type" onchange="onConsultantTypeChange()">
+              <option value="individual">Individual / Sales Rep</option>
+              <option value="influencer">Influencer</option>
+              <option value="florist">Florist</option>
+              <option value="cake_shop">Cake Shop</option>
+              <option value="gift_store">Gift Store</option>
+              <option value="radio_station">Radio Station</option>
+            </select>
+          </div>
+          <!-- Commission rate — Phase 8, client request 23 Aug 2026 (Col):
+               "Automatic commission calculation (rate x sales) - yes
+               please, not the free-text notes field." A real numeric
+               field now, not the commission_notes free text below (which
+               stays for genuinely freeform notes, unrelated to the
+               calculation). Business partner types auto-fill the existing
+               35% wholesale rate on selection (onConsultantTypeChange()
+               below) since Col confirmed "if they are a business they
+               will basically have the same wholesale buying price" — but
+               it's still a plain number input, editable either way
+               ("yes rate should still be editable" — Col). -->
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-consultant-rate">Commission Rate (%)</label>
+              <input id="modal-consultant-rate" type="number" min="0" max="100" step="0.01" placeholder="e.g. 15" />
+            </div>
+            <div class="fld">
+              <label for="modal-consultant-commission">Commission Notes</label>
+              <input id="modal-consultant-commission" type="text" placeholder="e.g. paid monthly by bank transfer" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -2739,12 +3066,12 @@
     </div>
   </div>
 
-  <!-- Campaign Codes Batch Modal -->
+  <!-- Campaign Codes Batch Drawer -->
   <div class="modal-overlay" id="campaign-batch-modal">
     <div class="modal-card">
       <div class="modal-header">
         <h3>Create Campaign Codes</h3>
-        <button class="close-modal-btn" type="button" onclick="closeModal('campaign-batch')">&times;</button>
+        <button class="close-modal-btn" type="button" onclick="closeModal('campaign-batch')" aria-label="Close">&times;</button>
       </div>
       <form id="campaign-batch-form" onsubmit="createCampaignBatch(event)">
         <div class="modal-body">
@@ -2753,35 +3080,41 @@
             <input id="modal-campaign-label" type="text" placeholder="Jhe-Ann Facebook Promo — Aug 2026" required />
           </div>
           <div class="fld">
-            <label for="modal-campaign-single-code">Single Code (optional — leave blank to generate a batch instead)</label>
-            <input id="modal-campaign-single-code" type="text" placeholder="e.g. WELCOME20" />
+            <label for="modal-campaign-single-code">Single Code <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);">(optional)</span></label>
+            <input id="modal-campaign-single-code" type="text" placeholder="e.g. WELCOME20 — leave blank for a batch" />
           </div>
-          <div class="fld">
-            <label for="modal-campaign-quantity">Quantity (ignored if a single code is set above)</label>
-            <input id="modal-campaign-quantity" type="number" min="1" max="500" value="1" />
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-campaign-quantity">Quantity</label>
+              <input id="modal-campaign-quantity" type="number" min="1" max="500" value="1" />
+            </div>
+            <div class="fld">
+              <label for="modal-campaign-prefix">Code Prefix</label>
+              <input id="modal-campaign-prefix" type="text" placeholder="e.g. WELCOME" />
+            </div>
           </div>
-          <div class="fld">
-            <label for="modal-campaign-prefix">Code Prefix (optional, for generated batches)</label>
-            <input id="modal-campaign-prefix" type="text" placeholder="e.g. WELCOME" />
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-campaign-discount-type">Discount Type</label>
+              <select id="modal-campaign-discount-type">
+                <option value="percent">Percentage off</option>
+                <option value="fixed">Fixed amount (NZ$)</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label for="modal-campaign-discount-value">Discount Value</label>
+              <input id="modal-campaign-discount-value" type="number" min="0.01" step="0.01" placeholder="e.g. 20" required />
+            </div>
           </div>
-          <div class="fld">
-            <label for="modal-campaign-discount-type">Discount Type</label>
-            <select id="modal-campaign-discount-type">
-              <option value="percent">Percentage off</option>
-              <option value="fixed">Fixed amount off (NZ$)</option>
-            </select>
-          </div>
-          <div class="fld">
-            <label for="modal-campaign-discount-value">Discount Value</label>
-            <input id="modal-campaign-discount-value" type="number" min="0.01" step="0.01" placeholder="e.g. 20" required />
-          </div>
-          <div class="fld">
-            <label for="modal-campaign-country">Country (optional — leave blank for all countries)</label>
-            <input id="modal-campaign-country" type="text" placeholder="e.g. Philippines" />
-          </div>
-          <div class="fld">
-            <label for="modal-campaign-valid-until">Valid Until (optional)</label>
-            <input id="modal-campaign-valid-until" type="date" />
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-campaign-country">Country <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);">(optional)</span></label>
+              <input id="modal-campaign-country" type="text" placeholder="e.g. Philippines" />
+            </div>
+            <div class="fld">
+              <label for="modal-campaign-valid-until">Valid Until</label>
+              <input id="modal-campaign-valid-until" type="date" />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -2984,6 +3317,12 @@
         const type = overlay.id.replace('-modal', '');
         closeModal(type);
       });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const open = Array.from(document.querySelectorAll('.modal-overlay')).find(el => el.style.display === 'flex');
+      if (!open) return;
+      closeModal(open.id.replace('-modal', ''));
     });
   </script>
 </body>

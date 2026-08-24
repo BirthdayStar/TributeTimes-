@@ -15,6 +15,7 @@
 
 const { titleCase, cleanTruncate, enforceExactYearLead, enforceSportHasScore, enforceLocalIndexLabel, formatDisplayYear } = require('./tribute-times-renderer');
 const { buildStarMapSvg } = require('./src/phase2/star-map');
+const { cornerOrnamentsHtml, KEEPSAKE_FRAME_CSS } = require('./src/phase2/keepsake-frame');
 
 function vintageAnniversaryHoroscope(signName) {
   const horoscopes = {
@@ -225,6 +226,7 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     margin: 10mm auto;
     box-shadow: 0 4px 24px rgba(0,0,0,.45);
     overflow: hidden;
+    position: relative;                /* Phase 5 Step 2 — lets .authenticity-seal position against the whole page; also the anchor for the ::before border frame (Step 3) */
     font-family: 'EB Garamond', Georgia, serif;
     /* Bumped 8.4pt -> 8.8pt (10 Aug 2026) — see tribute-times-renderer.js
        for the full reasoning. */
@@ -331,7 +333,8 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     overflow: hidden;
   }
   .col { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
-  .col + .col { border-left: .2mm solid #b9b09a; padding-left: 4mm; }
+  /* Phase 5 Step 5 — darkened/widened to match birthday renderer (was .2mm / #b9b09a; too faint in PDF print). */
+  .col + .col { border-left: .3mm solid #8a8570; padding-left: 4mm; }
 
   /* See tribute-times-renderer.js for the full explanation of this fix
      (client-reported "excessive blank space" bug, 7 Aug 2026 QA session,
@@ -402,13 +405,13 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     background: #fbf8ef;
   }
   .s-message .to { font-family:'Playfair Display', serif; font-size: 11pt; font-weight: 700; }
-  .s-message .msg { font-style: italic; font-size: 9pt;
+  .s-message .msg { font-style: italic; font-size: 9pt; text-align: justify;
     display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
   .s-message .from { font-size: 8.5pt; }
 
   .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
   .bday b { font-weight: 600; }
-  .bday .desc { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .bday .desc { text-align: justify; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
   .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
   .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
@@ -421,6 +424,9 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     display: flex; align-items: center; justify-content: space-between;
     font-size: 7pt; letter-spacing: .3mm; text-transform: uppercase; margin-top: 2mm;
   }
+
+  /* ================= AUTHENTICITY SEAL + PAGE FRAME (ref side-design) ================= */
+  ${KEEPSAKE_FRAME_CSS}
 </style>
 </head>
 <body>
@@ -482,6 +488,15 @@ function renderAnniversaryNewspaper(data, content, fonts) {
           ${worldNumbersHTML}
         </table>
       </section>` : ''}
+      <!-- Moved here from Column 3, Phase 5 Step 1 (client request, 21 Aug
+           2026 — "The Night Sky" vacated bottom-right for the Seal of
+           Authenticity). Section itself unchanged — only its position moved. -->
+      <section class="s-starmap">
+        <h3>The Night Sky</h3>
+        <div class="starmap-graphic">${starMap.svg}</div>
+        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
+        ${yearsMarriedStr ? `<div class="agecount" data-field="years-married">${yearsMarriedStr}</div>` : ''}
+      </section>
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
@@ -530,12 +545,6 @@ function renderAnniversaryNewspaper(data, content, fonts) {
         <h3>Sporting News</h3>
         <p class="clamp6" data-field="sport">${sportText}</p>
       </section>
-      <section class="s-starmap">
-        <h3>The Night Sky</h3>
-        <div class="starmap-graphic">${starMap.svg}</div>
-        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
-        ${yearsMarriedStr ? `<div class="agecount" data-field="years-married">${yearsMarriedStr}</div>` : ''}
-      </section>
     </div>
 
   </div>
@@ -544,6 +553,9 @@ function renderAnniversaryNewspaper(data, content, fonts) {
     <span>The Tribute Times &mdash; tributetimes.co.nz</span>
     <span data-field="foot-code">Keepsake Ref: TT-${Math.floor(1000 + Math.random() * 9000)}</span>
   </footer>
+
+  <img class="authenticity-seal" src="data:image/png;base64,${fonts.sealAuthenticity}" alt="" />
+  ${cornerOrnamentsHtml()}
 
   </div>
 </div>

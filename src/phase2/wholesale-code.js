@@ -82,4 +82,33 @@ async function createUniqueWholesaleCode(supabase, businessName) {
   return resolveAvailableCode(baseCode, existingCodesSet);
 }
 
-module.exports = { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode };
+/**
+ * DB-aware version for ATTRIBUTION codes (Phase 6/7, client request 21 Aug
+ * 2026 — Col: "each one gets their own unique code"). Deliberately
+ * separate from createUniqueWholesaleCode() above, not a thin wrapper
+ * around it: that function checks collisions against `stations
+ * .wholesale_code`, a completely different namespace from `promo_codes
+ * .code` — reusing it as-is here would check the wrong table (see
+ * phase6.md Step 4 for the full reasoning). Reuses only the proven
+ * cleaning/truncation (buildBaseWholesaleCode) and numbering
+ * (resolveAvailableCode) logic, dropping the "WS" prefix (that prefix
+ * specifically means "wholesale credit-buying code" elsewhere in this
+ * app — keeping it here would visually misrepresent an unrelated
+ * attribution code as one) and matching promo_codes' own uppercase
+ * convention (see normalizePromoCode in attribution.js) instead of
+ * wholesale codes' lowercase one.
+ */
+async function createUniqueAttributionCode(supabase, partnerName) {
+  const baseCode = buildBaseWholesaleCode(partnerName).replace(/^WS/i, '') || 'PARTNER';
+  const { data, error } = await supabase
+    .from('promo_codes')
+    .select('code')
+    .ilike('code', `${baseCode}%`);
+
+  if (error) throw error;
+
+  const existingCodesSet = new Set((data || []).map(row => String(row.code || '').toLowerCase()));
+  return resolveAvailableCode(baseCode, existingCodesSet).toUpperCase();
+}
+
+module.exports = { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode, createUniqueAttributionCode };

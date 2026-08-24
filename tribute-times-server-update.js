@@ -46,6 +46,14 @@ const FONTS = {
   dejaVu:   fs.readFileSync(path.join(__dirname, 'public/fonts/DejaVuSerif.ttf')).toString('base64'),
   dejaVuB:  fs.readFileSync(path.join(__dirname, 'public/fonts/DejaVuSerif-Bold.ttf')).toString('base64'),
   dejaVuI:  fs.readFileSync(path.join(__dirname, 'public/fonts/DejaVuSerif-Italic.ttf')).toString('base64'),
+  // Seal of Authenticity — Phase 5 Step 2 (client request, 21 Aug 2026).
+  // Base64-embedded for the same reason as the fonts above: pdf-service.js
+  // renders via page.setContent(), which has no page origin to resolve a
+  // normal /path image reference against. Downscaled from the original
+  // 4096x4096/~7MB asset to 400x400/~260KB before this file was committed —
+  // the rendered seal is only ~18mm on the page, nowhere near needing the
+  // original resolution.
+  sealAuthenticity: fs.readFileSync(path.join(__dirname, 'public/tribute_times_seal.png')).toString('base64'),
 };
 
 // ── CURRENCY MAP ──
