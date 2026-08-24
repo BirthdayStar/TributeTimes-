@@ -3,11 +3,11 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { generatePdfFromHtml, sanitizeFilenamePart } = require('./pdf-service');
-const { DELIVERY_OPTIONS, QUEUE_STATUS, SOURCE_PORTALS } = require('./constants');
+const { DELIVERY_OPTIONS, QUEUE_STATUS, SOURCE_PORTALS, WHOLESALE_DISCOUNT_RATE } = require('./constants');
 const { normalizePromoCode } = require('./attribution');
 const { normalizeCountry } = require('./famous-birthdays');
 const { buildPostedOrderCustomerEmail } = require('./email-service');
-const { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode } = require('./wholesale-code');
+const { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode, createUniqueAttributionCode } = require('./wholesale-code');
 
 // Security fix (Col McCabe, 7 Aug 2026 — "Admin session token exposed on
 // public site"): admin auth previously fell back to sharing JWT_SECRET
@@ -385,10 +385,21 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         if (error) throw error;
         items = data;
         total = count;
+
+        // Phase 8 — client request 23 Aug 2026 (Col): "Commission should
+        // show in its own column as a running total." Lifetime (all-time,
+        // no date filter — that's what the /commission endpoint below is
+        // for) commission owed per consultant on THIS page only, computed
+        // from every PAID order attributed to them (the full chain already
+        // built in Phase 7 — direct/referral/repeat-purchase orders all
+        // carry the same sales_consultant_id, so summing by that column
+        // already covers the whole chain with no extra logic needed here,
+        // matching Col's confirmation that the full chain counts).
+        items = await attachCommissionOwed(supabase, items);
       } catch (err) {
         console.warn('GET consultants online failed, falling back to local mockDb.');
         const result = paginateArray(mockDb.sales_consultants, page, limit);
-        items = result.items;
+        items = result.items.map(c => ({ ...c, commission_owed: null })); // mockDb consultants have no real orders table linkage to sum against
         total = result.total;
       }
       return res.json({ items, total: total || 0, page, limit });
@@ -397,6 +408,103 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       return res.status(400).json({ error: err.message });
     }
   });
+
+  // Phase 8 — commission owed for a single consultant, optionally scoped
+  // to a date range ("Commission... can be pulled by a date range" — Col,
+  // 23 Aug 2026). Filters on orders.paid_at (when the money actually came
+  // in), not created_at — matches how "commission owed this month" would
+  // actually be read by Col. No `to` means "up to now"; no `from` means
+  // "since the beginning" (== the lifetime total already shown in the list).
+  app.get('/api/admin/consultants/:id/commission', authAdmin, async (req, res) => {
+    try {
+      const id = req.params.id;
+      let consultant;
+      if (!id.startsWith('c_')) {
+        const { data } = await supabase.from('sales_consultants').select('*').eq('id', id).maybeSingle();
+        consultant = data || null;
+      }
+      if (!consultant) consultant = mockDb.sales_consultants.find(c => c.id === id) || null;
+      if (!consultant) return res.status(404).json({ error: 'Consultant not found.' });
+
+      const { from, to } = req.query;
+      let query = supabase
+        .from('orders')
+        .select('total_amount_nzd')
+        .eq('sales_consultant_id', id)
+        .eq('payment_status', 'paid');
+      if (from) query = query.gte('paid_at', new Date(from).toISOString());
+      if (to) {
+        // inclusive of the whole "to" day
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        query = query.lte('paid_at', toDate.toISOString());
+      }
+      const { data: orders, error } = await query;
+      if (error) throw error;
+
+      const salesTotal = (orders || []).reduce((sum, o) => sum + Number(o.total_amount_nzd || 0), 0);
+
+      // Bug fix, 23 Aug 2026 (found in Step 6 testing): a plain select('*')
+      // silently omits a column that doesn't exist in the real DB yet —
+      // it doesn't error, the key is just absent from the row. Before this
+      // fix, `Number(consultant.commission_rate) || 0` treated that
+      // exact-same-as-a-genuine-0%-rate, so every commission calc quietly
+      // returned $0.00 while src/db.phase8.sql is still pending — which
+      // looks like a confirmed answer ("this partner earns nothing"),
+      // not the true state ("we don't know yet, the column isn't there").
+      // `'commission_rate' in consultant` tells the two apart: the key is
+      // present (even if its value is null) once the column exists.
+      const rateColumnMissing = !('commission_rate' in consultant);
+      const rate = rateColumnMissing ? null : Number(consultant.commission_rate) || 0;
+      const commissionOwed = rateColumnMissing ? null : Math.round(salesTotal * (rate / 100) * 100) / 100;
+
+      return res.json({
+        consultantId: id,
+        commissionRate: rateColumnMissing ? null : consultant.commission_rate,
+        orderCount: (orders || []).length,
+        salesTotal: Math.round(salesTotal * 100) / 100,
+        commissionOwed,
+        from: from || null,
+        to: to || null,
+        ...(rateColumnMissing ? { note: 'src/db.phase8.sql has not been run yet — commission_rate is not stored, so commission cannot be calculated. Sales total above is still accurate.' } : {}),
+      });
+    } catch (err) {
+      console.error('Admin GET consultant commission error:', err);
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Shared by the list endpoint above — batches ONE orders query for every
+  // consultant on the current page rather than one query per row (N+1).
+  async function attachCommissionOwed(supabase, consultants) {
+    const ids = (consultants || []).map(c => c.id).filter(Boolean);
+    if (!ids.length) return consultants;
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('sales_consultant_id, total_amount_nzd')
+      .eq('payment_status', 'paid')
+      .in('sales_consultant_id', ids);
+    if (error) {
+      console.warn('attachCommissionOwed: orders lookup failed, showing null commission for this page:', error.message);
+      return consultants.map(c => ({ ...c, commission_owed: null }));
+    }
+    const salesByConsultant = new Map();
+    for (const o of orders || []) {
+      const prev = salesByConsultant.get(o.sales_consultant_id) || 0;
+      salesByConsultant.set(o.sales_consultant_id, prev + Number(o.total_amount_nzd || 0));
+    }
+    return consultants.map(c => {
+      // Same missing-column-vs-genuine-zero distinction as the /commission
+      // endpoint above — see that comment for the full reasoning. Without
+      // this, the list would show a confident "$0.00" for every partner
+      // while src/db.phase8.sql is still pending, instead of correctly
+      // showing "unknown until migration runs."
+      if (!('commission_rate' in c)) return { ...c, commission_owed: null };
+      const rate = Number(c.commission_rate) || 0;
+      const sales = salesByConsultant.get(c.id) || 0;
+      return { ...c, commission_owed: Math.round(sales * (rate / 100) * 100) / 100 };
+    });
+  }
 
   // Single GET for edit modal
   app.get('/api/admin/consultants/:id', authAdmin, async (req, res) => {
@@ -423,6 +531,35 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
 
   app.post('/api/admin/consultants', authAdmin, async (req, res) => {
     try {
+      // Phase 7 bug fix, 22 Aug 2026: validated BEFORE the try/db-fallback
+      // block below, not inside createConsultant() — found during
+      // implementation that a validation error thrown from inside
+      // createConsultant() was being caught by the inner "DB failed, use
+      // mockDb" catch below (which treats ANY error as connectivity
+      // failure), silently falling through to mockDb creation instead of
+      // returning the clear 400 this validation is supposed to give. A bad
+      // partnerType would have silently "succeeded" via mockDb rather than
+      // being rejected. Validating here means a bad value never reaches
+      // that ambiguous catch at all.
+      const partnerTypeRaw = String(req.body?.partnerType || req.body?.partner_type || 'individual').trim();
+      if (!PARTNER_TYPES.includes(partnerTypeRaw)) {
+        return res.status(400).json({ error: `Invalid partner type. Must be one of: ${PARTNER_TYPES.join(', ')}.` });
+      }
+      // Phase 8 — same "validate before the ambiguous mockDb-fallback
+      // catch" fix as partner type above, so a bad rate gets a clear 400
+      // instead of silently succeeding via mockDb (or, in this specific
+      // case, throwing an unrelated-looking error from deep inside
+      // createConsultant's try block that gets swallowed as "DB failed").
+      let commissionRateRaw;
+      try {
+        commissionRateRaw = normalizeCommissionRate(req.body?.commissionRate !== undefined ? req.body.commissionRate : req.body?.commission_rate);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      if (commissionRateRaw === null && BUSINESS_PARTNER_TYPES.includes(partnerTypeRaw)) {
+        commissionRateRaw = DEFAULT_BUSINESS_COMMISSION_RATE;
+      }
+
       let consultant;
       try {
         consultant = await createConsultant(supabase, req.body || {});
@@ -438,19 +575,66 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           active: req.body.active !== false,
           commission_notes: String(req.body.commissionNotes || req.body.commission_notes || '').trim() || null,
           admin_notes: String(req.body.adminNotes || req.body.admin_notes || '').trim() || null,
+          partner_type: partnerTypeRaw,
+          commission_rate: commissionRateRaw,
         };
         mockDb.sales_consultants.unshift(consultant);
       }
-      return res.json({ consultant });
+
+      // Phase 6/7 Step 4 — auto-issue the partner's attribution code right
+      // after creation (both the real-DB and mockDb paths above land here).
+      // A failure here must never turn into a 400/500 for the whole
+      // request — the consultant row already exists at this point, so the
+      // response always reflects that success; codeGenerated tells the
+      // admin UI whether it also got a working code or needs to use the
+      // "Generate Code" recovery path instead.
+      const codeResult = await autoIssueAttributionCode(supabase, consultant);
+      return res.json({ consultant, ...codeResult });
     } catch (error) {
       console.error('Admin consultant create error:', error);
       return res.status(400).json({ error: error.message || 'Unable to create consultant.' });
     }
   });
 
+  // Phase 6/7 Step 4 recovery path — client request 21 Aug 2026 (Col):
+  // "What happens if consultant creation succeeds but the automatic
+  // promo-code creation fails right after?" This lets the admin retry
+  // issuing a code for an existing consultant that has none, instead of
+  // leaving them stuck with no way to get one. createPromoCode() itself
+  // already refuses to create a second active code for a consultant who
+  // already has one, so this is safe to expose even if called by mistake
+  // on a consultant that already has a working code.
+  app.post('/api/admin/consultants/:id/generate-code', authAdmin, async (req, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Consultant id is required.' });
+
+      let consultant = null;
+      if (!id.startsWith('c_')) {
+        const { data } = await supabase.from('sales_consultants').select('id, name').eq('id', id).maybeSingle();
+        consultant = data || null;
+      }
+      if (!consultant) {
+        consultant = mockDb.sales_consultants.find(c => c.id === id) || null;
+      }
+      if (!consultant) {
+        return res.status(404).json({ error: 'Consultant not found.' });
+      }
+
+      const codeResult = await autoIssueAttributionCode(supabase, consultant);
+      if (!codeResult.codeGenerated) {
+        return res.status(400).json({ error: codeResult.codeError || 'Unable to generate code.' });
+      }
+      return res.json(codeResult);
+    } catch (error) {
+      console.error('Admin generate-code error:', error);
+      return res.status(400).json({ error: error.message || 'Unable to generate code.' });
+    }
+  });
+
   app.put('/api/admin/consultants/:id', authAdmin, async (req, res) => {
     try {
-      const { name, email, phone, active, commissionNotes, adminNotes } = req.body;
+      const { name, email, phone, active, commissionNotes, adminNotes, commissionRate, commission_rate: commissionRateSnake } = req.body;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
       if (email !== undefined) patch.email = String(email).trim() || null;
@@ -458,15 +642,66 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       if (active !== undefined) patch.active = Boolean(active);
       if (commissionNotes !== undefined) patch.commission_notes = String(commissionNotes).trim() || null;
       if (adminNotes !== undefined) patch.admin_notes = String(adminNotes).trim() || null;
+      // Phase 8 — client request 23 Aug 2026 (Col): "yes rate should still
+      // be editable." Unlike partner_type (locked after creation), the
+      // commission rate is deliberately editable for the life of the
+      // partner — a business's deal can change, an individual's rate gets
+      // set here for the first time after sign-up if it wasn't known yet.
+      const commissionRateInput = commissionRate !== undefined ? commissionRate : commissionRateSnake;
+      if (commissionRateInput !== undefined) {
+        try {
+          patch.commission_rate = normalizeCommissionRate(commissionRateInput);
+        } catch (err) {
+          return res.status(400).json({ error: err.message });
+        }
+      }
 
       let consultant;
       try {
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('sales_consultants')
           .update(patch)
           .eq('id', req.params.id)
           .select('*')
           .single();
+
+        // Phase 8 graceful-degrade, 23 Aug 2026: without this, editing a
+        // consultant while src/db.phase8.sql is still pending would fall
+        // all the way through to the mockDb branch below for ANY edit
+        // (even just a name/email change unrelated to commission) — the
+        // moment commission_rate was included in the patch. That's a
+        // worse outcome than just dropping the one field the DB can't
+        // accept yet: the admin's real edits (name, active, notes) should
+        // still land in the real row. Same retry-without-the-missing-
+        // column pattern as createConsultant() above.
+        if (isMissingColumnError(error) && Object.prototype.hasOwnProperty.call(patch, 'commission_rate')) {
+          const requestedRate = patch.commission_rate;
+          delete patch.commission_rate;
+          // Bug fix, 23 Aug 2026 (found in Step 6 testing): if commission_rate
+          // was the ONLY field being patched (e.g. the admin only touched
+          // the rate field), stripping it leaves an EMPTY patch object.
+          // `.update({})` is not a no-op in PostgREST — it returns zero
+          // rows (PGRST116, "Cannot coerce the result to a single JSON
+          // object"), which isn't a missing-column error, so it fell
+          // through to `if (error) throw error` and from there into the
+          // mockDb fallback — which then 404'd because a real consultant's
+          // UUID is never found in mockDb. A real edit was being reported
+          // as "consultant not found." Skip the retry update entirely in
+          // that case and just re-fetch the current row instead — there's
+          // nothing left to write, but the response should still reflect
+          // the row as it stands (plus the rate the admin asked for).
+          if (Object.keys(patch).length === 0) {
+            ({ data, error } = await supabase.from('sales_consultants').select('*').eq('id', req.params.id).single());
+          } else {
+            ({ data, error } = await supabase
+              .from('sales_consultants')
+              .update(patch)
+              .eq('id', req.params.id)
+              .select('*')
+              .single());
+          }
+          if (data) data.commission_rate = requestedRate; // reflect requested value even though not persisted yet
+        }
 
         if (error) throw error;
         consultant = data;
@@ -1629,30 +1864,146 @@ function authAdmin(req, res, next) {
   }
 }
 
+// Phase 6/7 — partner type, client request 21 Aug 2026 (Col): "a sales
+// rep, an influencer, a florist, a cake shop - doesn't matter who", all the
+// same underlying code-holder concept. Matches the check constraint in
+// src/db.phase7.sql exactly — validated here too (not just left to the DB
+// constraint) so a bad value gets a clear 400 instead of a raw DB error
+// leaking to the client.
+const PARTNER_TYPES = ['individual', 'radio_station', 'florist', 'cake_shop', 'gift_store', 'influencer'];
+
+// Phase 8 — commission, client request 23 Aug 2026 (Col): "if they are a
+// business they will basically have the same wholesale buying price but
+// as individuals that could vary." The 4 physical/organisational partner
+// types (radio stations, florists, cake shops, gift stores — the ones
+// that already buy printed keepsakes wholesale elsewhere in this app)
+// default to the SAME rate as that existing wholesale discount
+// (WHOLESALE_DISCOUNT_RATE, 35%, src/phase2/constants.js). 'individual'
+// and 'influencer' are people, not businesses — Col was explicit these
+// vary person to person, so they get no default and must be set per
+// partner. Every rate stays editable regardless of type ("yes rate
+// should still be editable" — Col, 23 Aug 2026).
+const BUSINESS_PARTNER_TYPES = ['radio_station', 'florist', 'cake_shop', 'gift_store'];
+const DEFAULT_BUSINESS_COMMISSION_RATE = WHOLESALE_DISCOUNT_RATE * 100; // stored/displayed as a percentage number (35), not a 0-1 fraction
+
+// Validates a commission rate the same way sales_consultants_commission_rate_check
+// does in src/db.phase8.sql (null allowed — "not set yet" for an individual
+// Col hasn't priced out yet — or 0-100 inclusive). Not left to the DB
+// constraint alone, matching the same reasoning as PARTNER_TYPES validation
+// above: a bad value should get a clear 400, not a raw DB error.
+function normalizeCommissionRate(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new Error('Commission rate must be a number between 0 and 100.');
+  }
+  return Math.round(n * 100) / 100; // matches numeric(5,2) precision
+}
+
+// Same "missing column" detection used in public-checkout.js for the
+// Phase 7 graceful-degradation pattern (PGRST204 on INSERT, 42703 on
+// SELECT/filter — see that file's isMissingColumnError for the full
+// explanation). Kept as its own small local copy rather than a shared
+// import: these two files' Phase 7 work landed independently and this is
+// a two-line self-contained check, not worth coupling the files over.
+function isMissingColumnError(error) {
+  return error?.code === '42703' || error?.code === 'PGRST204';
+}
+
+// Optional columns added across Phase 7 (partner_type) and Phase 8
+// (commission_rate) that may not exist yet on the real DB until their
+// migrations (src/db.phase7.sql, src/db.phase8.sql) are run manually.
+// Kept as a list (not a single flag) because BOTH can be pending at once
+// — a single-column retry (Phase 7's original fix) would still fail a
+// second time on whichever of the two came second, so the retry below
+// strips all of them together and only needs one retry attempt no matter
+// how many of these are still missing.
+const OPTIONAL_CONSULTANT_COLUMNS = ['partner_type', 'commission_rate'];
+
 async function createConsultant(supabase, body) {
   const name = String(body.name || '').trim();
   if (!name) {
     throw new Error('Consultant name is required.');
   }
+  const partnerTypeRaw = String(body.partnerType || body.partner_type || 'individual').trim();
+  if (!PARTNER_TYPES.includes(partnerTypeRaw)) {
+    throw new Error(`Invalid partner type. Must be one of: ${PARTNER_TYPES.join(', ')}.`);
+  }
+  const commissionRateRaw = body.commissionRate !== undefined ? body.commissionRate : body.commission_rate;
+  let commissionRate = normalizeCommissionRate(commissionRateRaw);
+  // Phase 8 — business partners default to the wholesale rate unless the
+  // admin typed in something else; individuals/influencers get no default
+  // (Col: "as individuals that could vary" — must be set per-partner).
+  if (commissionRate === null && BUSINESS_PARTNER_TYPES.includes(partnerTypeRaw)) {
+    commissionRate = DEFAULT_BUSINESS_COMMISSION_RATE;
+  }
 
-  const { data, error } = await supabase
-    .from('sales_consultants')
-    .insert({
-      name,
-      email: String(body.email || '').trim() || null,
-      phone: String(body.phone || '').trim() || null,
-      active: body.active !== false,
-      commission_notes: String(body.commissionNotes || body.commission_notes || '').trim() || null,
-      admin_notes: String(body.adminNotes || body.admin_notes || '').trim() || null,
-    })
-    .select('*')
-    .single();
+  const insertRow = {
+    name,
+    email: String(body.email || '').trim() || null,
+    phone: String(body.phone || '').trim() || null,
+    active: body.active !== false,
+    commission_notes: String(body.commissionNotes || body.commission_notes || '').trim() || null,
+    admin_notes: String(body.adminNotes || body.admin_notes || '').trim() || null,
+    partner_type: partnerTypeRaw,
+    commission_rate: commissionRate,
+  };
+
+  let { data, error } = await supabase.from('sales_consultants').insert(insertRow).select('*').single();
+
+  // Phase 6/7 Step 4 bug fix, 23 Aug 2026 (extended for Phase 8): before
+  // this fix, a not-yet-run migration meant EVERY real consultant creation
+  // fell through to the mockDb fallback in the route handler below —
+  // including ones with no interest in the missing column at all. That's
+  // fine for the consultant row itself (mockDb has always been the safety
+  // net for connectivity failures), but it broke Step 4's auto-issued
+  // attribution code: promo_codes.consultant_id is a real DB foreign key,
+  // and a mockDb id (e.g. "c_1787463304639") isn't a valid UUID a real
+  // promo_codes row can reference. So during the entire pending-migration
+  // window, autoIssueAttributionCode() would always fail. Retrying the
+  // insert without the optional columns (same graceful-degrade pattern as
+  // viral_shares.origin_consultant_id in public-checkout.js) means the
+  // consultant still lands in the REAL table with a real UUID — just
+  // without partner_type/commission_rate persisted yet — so the auto-
+  // issued code keeps working right away, and both fields start
+  // persisting the moment their migrations are run, with no code change
+  // needed then.
+  if (isMissingColumnError(error)) {
+    OPTIONAL_CONSULTANT_COLUMNS.forEach(col => delete insertRow[col]);
+    ({ data, error } = await supabase.from('sales_consultants').insert(insertRow).select('*').single());
+    if (data) {
+      // reflect the requested values back to the caller even though they weren't persisted
+      data.partner_type = partnerTypeRaw;
+      data.commission_rate = commissionRate;
+    }
+  }
 
   if (error) {
     throw new Error(`Unable to create consultant: ${error.message}`);
   }
 
   return data;
+}
+
+// Phase 6/7 — client request 21 Aug 2026 (Col): "A simple way to create a
+// new person/business in the system... Each one gets their own unique
+// code." Auto-generates and attaches the partner's first buying/
+// attribution code right after they're created, so sign-up feels like one
+// action instead of two separate steps (create consultant, then
+// separately create a promo code for them). Returns a result object
+// rather than throwing on failure — a transient error generating the code
+// must never be reported as "consultant creation failed" when the
+// consultant row itself was created successfully; see the route below for
+// how the two outcomes are distinguished in the response.
+async function autoIssueAttributionCode(supabase, consultant) {
+  try {
+    const code = await createUniqueAttributionCode(supabase, consultant.name);
+    const promo = await createPromoCode(supabase, { consultantId: consultant.id, code });
+    return { code: promo.code, promoCodeId: promo.id, codeGenerated: true };
+  } catch (err) {
+    console.error('Auto-issue attribution code failed (consultant was still created):', err.message);
+    return { code: null, promoCodeId: null, codeGenerated: false, codeError: err.message };
+  }
 }
 
 async function createPromoCode(supabase, body) {

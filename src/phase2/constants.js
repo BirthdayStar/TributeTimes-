@@ -99,6 +99,12 @@ const ATTRIBUTION_SOURCE = Object.freeze({
   promoCode: 'promo_code',
   postcode: 'postcode',
   manual: 'manual',
+  // Phase 7 — client request 21 Aug 2026 (Col, Scenario A): a referred
+  // friend's purchase (no promo code typed, arrived via a "Share the
+  // Love" link) now falls back to the referral's origin consultant when
+  // no other attribution source won. Distinguished from promoCode so this
+  // isn't misrepresented as a typed-in code in reporting.
+  referral: 'referral',
 });
 
 const SUPPORTED_COUNTRIES = Object.freeze([

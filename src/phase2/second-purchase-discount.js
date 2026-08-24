@@ -52,7 +52,16 @@ function generateSecondPurchaseCode() {
 }
 
 // Creates one single-use, server-validated promo code and returns it.
-async function issueSecondPurchaseDiscountCode({ supabase, stripe }) {
+// Phase 7 — client request 21 Aug 2026 (Col, Scenario B): "The original
+// customer uses the repeat-purchase discount to buy a second keepsake...
+// does that second purchase still get credited to Jhe-Ann?" Previously
+// this code was issued with zero customer/order/consultant context, so
+// consultant_id was always null on it — the second purchase could never
+// attribute back to whoever originally referred the customer. `consultantId`
+// is optional and defaults to null (organic sales correctly still produce
+// an unattributed follow-up code, exactly as before) — no new migration
+// needed, promo_codes.consultant_id already exists (src/db.phase2.sql:49).
+async function issueSecondPurchaseDiscountCode({ supabase, stripe, consultantId }) {
   const coupon = await getOrCreateSecondPurchaseCoupon(stripe);
   const validUntil = new Date(Date.now() + SECOND_PURCHASE_VALID_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
@@ -73,6 +82,7 @@ async function issueSecondPurchaseDiscountCode({ supabase, stripe }) {
         batch_id: SECOND_PURCHASE_BATCH_ID,
         batch_label: SECOND_PURCHASE_BATCH_LABEL,
         stripe_coupon_id: coupon.id,
+        consultant_id: consultantId || null,
       })
       .select('*')
       .single();

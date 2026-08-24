@@ -46,6 +46,25 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
         postcode: payload.shippingPostcode,
         country: payload.shippingCountry || payload.country,
       });
+
+      // Phase 7 — client request 21 Aug 2026 (Col, Scenario A): moved
+      // resolveViralShareRow() up to run BEFORE createPendingOrder() below
+      // (it used to run much later, after the order was already created —
+      // found during implementation that a fallback added after that
+      // point would be too late, since the order's sales_consultant_id is
+      // set from `attribution` at creation time, not updated afterward).
+      // resolvePaidOrderAttribution() itself is untouched — its own
+      // priority order (promo code -> existing keepsake -> postcode) is
+      // exactly as before. This only fills in the gap when NONE of those
+      // three produced a consultant: an explicit promo code, or a real
+      // postcode-territory match, still always wins over an inherited
+      // referral attribution.
+      const viralShare = payload.referralCode ? await resolveViralShareRow(supabase, payload.referralCode) : null;
+      if (!attribution.salesConsultantId && viralShare?.origin_consultant_id) {
+        attribution.salesConsultantId = viralShare.origin_consultant_id;
+        attribution.attributionSource = ATTRIBUTION_SOURCE.referral;
+      }
+
       const keepsakeId = payload.keepsakeId || await createKeepsakeIfNeeded(supabase, payload, attribution);
       const tier = PRODUCT_TIERS[payload.productTier];
       const delivery = payload.deliveryOption ? DELIVERY_OPTIONS[payload.deliveryOption] : null;
@@ -61,7 +80,6 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
       });
 
       const lineItems = buildLineItems(tier, delivery);
-      const viralShare = payload.referralCode ? await resolveViralShareRow(supabase, payload.referralCode) : null;
       const campaignCode = payload.promoCode
         ? await resolveCampaignPromoCode(supabase, payload.promoCode, payload.shippingCountry || payload.country)
         : null;
@@ -206,30 +224,116 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
   });
 }
 
+// Phase 7 — true whenever Supabase/PostgREST reports a column that
+// doesn't exist yet (src/db.phase7.sql not yet run). Found during testing
+// that INSERT and SELECT report this differently through PostgREST — an
+// INSERT against an unknown column returns PGRST204 ("schema cache"
+// miss), while a SELECT/filter against one returns the raw Postgres
+// 42703 — so both codes need checking, not just one, or this only
+// half-works depending which operation hit the missing column.
+function isMissingColumnError(error) {
+  return error?.code === '42703' || error?.code === 'PGRST204';
+}
+
+// Phase 7 — client request 21 Aug 2026 (Col, Scenario A): looks up the
+// origin order/keepsake's sales_consultant_id (the same field
+// resolvePaidOrderAttribution() already reads from these exact tables) so
+// a referred friend's purchase can later be traced back to it. Returns
+// null (not an error) if the lookup fails or the origin never had a
+// consultant — that's a normal, valid case (an organic sale's referral
+// link correctly carries no attribution forward), not a failure.
+async function lookupOriginConsultantId(supabase, { keepsakeId, orderId }) {
+  try {
+    if (orderId) {
+      const { data } = await supabase.from('orders').select('sales_consultant_id').eq('id', orderId).maybeSingle();
+      return data?.sales_consultant_id || null;
+    }
+    if (keepsakeId) {
+      const { data } = await supabase.from('keepsakes').select('sales_consultant_id').eq('id', keepsakeId).maybeSingle();
+      return data?.sales_consultant_id || null;
+    }
+  } catch (err) {
+    console.warn('lookupOriginConsultantId failed, proceeding with no consultant link:', err.message);
+  }
+  return null;
+}
+
 async function createOrReuseShareCode(supabase, { keepsakeId, orderId, originType }) {
   const matchColumn = orderId ? 'origin_order_id' : 'origin_keepsake_id';
   const matchValue = orderId || keepsakeId;
 
-  const { data: existing } = await supabase
+  let { data: existing, error: existingErr } = await supabase
     .from('viral_shares')
-    .select('code')
+    .select('code, origin_consultant_id')
     .eq('origin_type', originType)
     .eq(matchColumn, matchValue)
     .maybeSingle();
-  if (existing) return existing.code;
+
+  // Bug found during review, 23 Aug 2026: this select previously ignored
+  // its own `error` entirely — with origin_consultant_id now in the
+  // select list, a missing-column error (migration pending) would make
+  // `existing` come back undefined even when a share code already DOES
+  // exist for this origin, causing the dedup check below to silently
+  // skip and create a SECOND code for the same origin instead of reusing
+  // the first — breaking the exact "same origin always gets the same
+  // code" guarantee this function exists to provide. Same graceful-degrade
+  // fallback as everywhere else in this file: retry with the old,
+  // narrower select the moment the new column isn't available yet.
+  if (isMissingColumnError(existingErr)) {
+    ({ data: existing, error: existingErr } = await supabase
+      .from('viral_shares')
+      .select('code')
+      .eq('origin_type', originType)
+      .eq(matchColumn, matchValue)
+      .maybeSingle());
+  }
+
+  if (existing) {
+    // Bug found during review, 23 Aug 2026: a share link created in the
+    // window before src/db.phase7.sql is run would otherwise never get
+    // origin_consultant_id backfilled, even after the migration runs
+    // later — this code path just returns the same existing code forever
+    // once created, so a link generated "too early" would permanently
+    // carry no attribution. Backfill it here on read if it's missing and
+    // now computable, rather than leaving a silent permanent gap.
+    if (existing.origin_consultant_id === undefined || existing.origin_consultant_id === null) {
+      const backfillId = await lookupOriginConsultantId(supabase, { keepsakeId, orderId });
+      if (backfillId) {
+        await supabase.from('viral_shares').update({ origin_consultant_id: backfillId })
+          .eq('origin_type', originType).eq(matchColumn, matchValue)
+          .then(() => {}, () => {}); // best-effort — migration may still be pending, don't fail the request over it
+      }
+    }
+    return existing.code;
+  }
+
+  const originConsultantId = await lookupOriginConsultantId(supabase, { keepsakeId, orderId });
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const { data, error } = await supabase
-      .from('viral_shares')
-      .insert({
-        code,
-        origin_type: originType,
-        origin_keepsake_id: keepsakeId || null,
-        origin_order_id: orderId || null,
-      })
-      .select('code')
-      .single();
+    const insertRow = {
+      code,
+      origin_type: originType,
+      origin_keepsake_id: keepsakeId || null,
+      origin_order_id: orderId || null,
+      origin_consultant_id: originConsultantId,
+    };
+    let { data, error } = await supabase.from('viral_shares').insert(insertRow).select('code').single();
+
+    // Found during testing, 22 Aug 2026: this feature previously worked
+    // fine and unconditionally included origin_consultant_id would break
+    // the entire "Share the Love" link generation with a 400 error for
+    // every user the moment this code shipped, until src/db.phase7.sql is
+    // run — reproduced directly (400, "Could not find the
+    // 'origin_consultant_id' column"). A working feature must never
+    // regress just because a *new, additive* column hasn't been migrated
+    // yet. If the column genuinely doesn't exist (Postgres 42703), retry
+    // once without it — same behavior as before this phase, just without
+    // the new attribution link until the migration runs.
+    if (isMissingColumnError(error)) {
+      delete insertRow.origin_consultant_id;
+      ({ data, error } = await supabase.from('viral_shares').insert(insertRow).select('code').single());
+    }
 
     if (!error) return data.code;
     if (error.code !== '23505') {
@@ -244,11 +348,25 @@ async function resolveViralShareRow(supabase, referralCode) {
   const code = String(referralCode || '').trim().toUpperCase();
   if (!code) return null;
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('viral_shares')
-    .select('id, redeemed_count')
+    .select('id, redeemed_count, origin_consultant_id')
     .ilike('code', code)
     .maybeSingle();
+
+  // Same graceful-degrade as createOrReuseShareCode above, and for the
+  // same reason: found during testing that selecting a not-yet-migrated
+  // column here silently broke the EXISTING, already-working 10%
+  // referral discount for every real referral code, since this function
+  // already treats any error as "code not found" (line below) — a
+  // genuinely valid referral link would silently stop giving its
+  // discount, not just lose the new attribution feature. Retry without
+  // the new column so the pre-existing discount behavior is unaffected
+  // while the migration is pending.
+  if (isMissingColumnError(error)) {
+    ({ data, error } = await supabase.from('viral_shares').select('id, redeemed_count').ilike('code', code).maybeSingle());
+  }
+
   if (error || !data) return null;
   return data;
 }
@@ -580,6 +698,9 @@ function buildAttributionNote(payload, attribution) {
   if (attribution.attributionSource === ATTRIBUTION_SOURCE.manual) {
     return 'Attribution: inherited from existing keepsake.';
   }
+  if (attribution.attributionSource === ATTRIBUTION_SOURCE.referral) {
+    return 'Attribution: inherited from referral link (Share the Love).';
+  }
   return null;
 }
 
@@ -738,7 +859,13 @@ async function reconcilePublicOrderPaymentFromSession({ stripe, supabase, sendEm
   // top of this function and never reaches here again.
   if (stripe && sendEmail && updatedOrder.customer_email) {
     try {
-      const discountCode = await issueSecondPurchaseDiscountCode({ supabase, stripe });
+      // Phase 7 — client request 21 Aug 2026 (Col, Scenario B): carries
+      // this order's own attribution forward onto its auto-issued
+      // follow-up code, so a second purchase using it still credits the
+      // same consultant. `updatedOrder.sales_consultant_id` is already
+      // available here (select('*') above) — no new lookup needed.
+      // Correctly stays null for an organic (unattributed) sale.
+      const discountCode = await issueSecondPurchaseDiscountCode({ supabase, stripe, consultantId: updatedOrder.sales_consultant_id });
       await sendEmail({
         to: updatedOrder.customer_email,
         subject: 'A thank-you discount for your next Tribute Times keepsake',
