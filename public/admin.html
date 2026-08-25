@@ -808,6 +808,52 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* ================= LARGE DESKTOP COMFORT SCALING ================= */
+    /* Client report, 25 Aug 2026 (Col): "my dashboard and table is
+       comfortable on laptop, but not for big screen... everything needs
+       to zoom to read." On a big monitor the browser window is wider but
+       the admin still sits at the same physical reading distance as a
+       laptop — so every card, table row, label, button, the sidebar, and
+       every modal read as small even though nothing is actually broken.
+       `zoom` (not `transform: scale`, which breaks fixed-position modal
+       overlays and hit-testing) uniformly scales the ENTIRE rendered
+       page — every element covered by this file's own CSS gets bigger
+       together, nothing picked or missed by hand. Scoped to `html` so it
+       also reaches the modal overlays, which are siblings of
+       .portal-container, not descendants of it (checked directly —
+       scoping this to .portal-container alone would have scaled the
+       dashboard/sidebar/tables but left every modal small, exactly the
+       kind of inconsistent half-fix Col explicitly didn't ask for).
+       Below the first breakpoint (1600px — comfortably above the
+       1366-1440px width of a typical laptop screen this already looks
+       right on, per Col's own report) nothing here applies at all, so
+       the laptop/tablet/mobile experience is completely unchanged — this
+       is purely additive. Graduated in five steps rather than one flat
+       jump so a 1600px window and a 3840px 4K/ultrawide monitor don't
+       get the same treatment; only `zoom` values change between them,
+       nothing else.
+       Extended 25 Aug 2026 (Col: "my client has extra large screen") —
+       the original three tiers topped out at 2560px (QHD) and plateaued
+       there, so anything bigger (3440px ultrawide, 3840px 4K) still
+       looked laptop-small relative to the actual monitor. Added two more
+       tiers rather than raising the top value, so a 2560px QHD screen
+       keeps getting exactly what it already had. */
+    @media (min-width: 1600px) {
+      html { zoom: 1.12; }
+    }
+    @media (min-width: 1920px) {
+      html { zoom: 1.22; }
+    }
+    @media (min-width: 2560px) {
+      html { zoom: 1.35; }
+    }
+    @media (min-width: 3200px) {
+      html { zoom: 1.45; }
+    }
+    @media (min-width: 3840px) {
+      html { zoom: 1.55; }
+    }
   </style>
 </head>
 <body>
@@ -830,7 +876,16 @@
         <button class="nav-item active" type="button" onclick="navigateTo('dashboard')">📊 Dashboard</button>
         <button class="nav-item" type="button" onclick="navigateTo('gcash-payments')">📲 GCash Payments</button>
         <button class="nav-item" type="button" onclick="navigateTo('orders')">📬 Order Queue</button>
-        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Consultants</button>
+        <!-- Label text only ("Resellers"), 24 Aug 2026 (client request,
+             Col): "The reseller is a business, individual, sales rep or
+             influencer who needs their own code... customer and reseller
+             will be the terms I use from here on." Internal type/id
+             ('consultant', 'view-consultants', /api/admin/consultants)
+             deliberately left unchanged — renaming those would touch
+             routing, the DB table name, and every other reference to
+             this module, none of which Col asked to change. Only what
+             the admin actually reads on screen is renamed. -->
+        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Resellers</button>
         <button class="nav-item" type="button" onclick="navigateTo('promo-codes')">🏷️ Promo Codes</button>
         <button class="nav-item" type="button" onclick="navigateTo('campaign-codes')">🎟️ Campaign Codes</button>
         <button class="nav-item" type="button" onclick="navigateTo('territories')">🗺️ Territories</button>
@@ -897,7 +952,7 @@
           </div>
           <div class="section-body">
             <p style="margin: 0 0 20px; font-size: 0.95rem; line-height: 1.6;">
-              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, consultants, radio networks, florist stores, and famous birthdays.
+              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, resellers, radio networks, florist stores, and famous birthdays.
             </p>
             <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Attribution Summary (This Month)</p>
             <div class="attr-metrics" id="attribution-summary-grid"></div>
@@ -905,7 +960,7 @@
             <hr class="section-divider" style="margin: 24px 0;" />
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Consultant Attribution Report</p>
+              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Reseller Attribution Report</p>
               <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh Report</button>
             </div>
             <div class="msg" id="attribution-message"></div>
@@ -913,7 +968,7 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Consultant</th>
+                    <th>Reseller</th>
                     <th>Free Demos This Month</th>
                     <th>Paid Sales</th>
                     <th>Paid Total</th>
@@ -1006,9 +1061,9 @@
       <div id="view-consultants" class="page-view">
         <div class="section">
           <div class="section-head">
-            <h3>👤 Sales Consultants Directory</h3>
+            <h3>👤 Resellers Directory</h3>
             <div class="section-head-right">
-              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Consultant</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Reseller</button>
             </div>
           </div>
           <div class="section-body">
@@ -1034,7 +1089,7 @@
                   </tr>
                 </thead>
                 <tbody id="consultants-table-body">
-                  <tr class="empty-row"><td colspan="9">No consultants loaded.</td></tr>
+                  <tr class="empty-row"><td colspan="9">No resellers loaded.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1059,7 +1114,7 @@
                 <thead>
                   <tr>
                     <th>Code</th>
-                    <th>Consultant</th>
+                    <th>Reseller</th>
                     <th>Monthly Limit</th>
                     <th>Used This Month</th>
                     <th>Status</th>
@@ -1131,7 +1186,7 @@
                 <thead>
                   <tr>
                     <th>Territory</th>
-                    <th>Consultant</th>
+                    <th>Reseller</th>
                     <th>Country</th>
                     <th>Match Type</th>
                     <th>Postcodes</th>
@@ -1643,7 +1698,7 @@
       // Build consultant options for modals
       const consultantOpts = consultants.length
         ? consultants.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
-        : '<option value="">No consultants yet</option>';
+        : '<option value="">No resellers yet</option>';
 
       const selectPromo = document.getElementById('modal-promo-consultant');
       const selectTerr = document.getElementById('modal-territory-consultant');
@@ -1659,7 +1714,7 @@
               <td>${escapeHtml(formatMoney(row.paidSalesTotalNzd))}</td>
             </tr>
           `).join('')
-        : '<tr class="empty-row"><td colspan="4">No consultants yet.</td></tr>';
+        : '<tr class="empty-row"><td colspan="4">No resellers yet.</td></tr>';
 
       // Only update promoCodeBody if the promo-codes view is NOT currently active
       // (avoid overwriting the CRUD view with attribution-summary rows)
@@ -1710,17 +1765,30 @@
         if (type === 'consultant') {
           document.getElementById('modal-consultant-name').value = data.name || '';
           document.getElementById('modal-consultant-email').value = data.email || '';
-          // Partner type is locked once created (same reasoning as the
-          // florist Business Type field) — shown read-only for reference.
+          // Bug fix, 24 Aug 2026 (client report, Col, reported twice):
+          // "the drop down menu for type of seller doesn't allow me to
+          // change it which I think we should have the ability to do" /
+          // "the Partner Type drop-down menu doesn't work when you click
+          // edit." Previously locked (disabled) on edit, matching the
+          // florist Business Type precedent — Col has now explicitly
+          // asked for it to be editable, so it no longer gets disabled
+          // here. Backend PUT /api/admin/consultants/:id now accepts and
+          // validates partnerType too (see admin-fulfilment.js).
           const typeSelect = document.getElementById('modal-consultant-type');
           if (typeSelect) {
             typeSelect.value = data.partner_type || 'individual';
-            typeSelect.disabled = true;
+            typeSelect.disabled = false;
           }
           const commissionInput = document.getElementById('modal-consultant-commission');
           if (commissionInput) commissionInput.value = data.commission_notes || '';
           const rateInput = document.getElementById('modal-consultant-rate');
           if (rateInput) rateInput.value = (data.commission_rate === null || data.commission_rate === undefined) ? '' : data.commission_rate;
+          // Code creation/edit box — client request 24 Aug 2026 (Col).
+          // Fetched separately (GET .../code) rather than folded into the
+          // main consultant GET response, since the code actually lives
+          // on a different row (promo_codes), matching how this codebase
+          // already treats promo codes as their own resource elsewhere.
+          await loadConsultantCodeIntoModal(id);
         } else if (type === 'promo') {
           document.getElementById('modal-promo-consultant').value = data.consultant_id || '';
           document.getElementById('modal-promo-code').value = data.code || '';
@@ -1825,10 +1893,10 @@
       if (idInput) idInput.value = id || '';
       
       if (id) {
-        if (titleEl) titleEl.textContent = `Edit ${capitalize(type)}`;
+        if (titleEl) titleEl.textContent = `Edit ${entityDisplayName(type)}`;
         loadEntityForEdit(type, id);
       } else {
-        if (titleEl) titleEl.textContent = `Add ${capitalize(type)}`;
+        if (titleEl) titleEl.textContent = `Add ${entityDisplayName(type)}`;
         const pwWrap = document.getElementById(`modal-${type}-password-wrap`);
         if (pwWrap) pwWrap.style.display = 'block';
         const actWrap = document.getElementById(`modal-${type}-active-wrap`);
@@ -1867,6 +1935,15 @@
           // since the type select already defaults to its first option
           // ("Individual / Sales Rep") — nothing to fill for that case.
           onConsultantTypeChange();
+          // Code box — fresh "Add": nothing to load, blank means
+          // auto-generate, no regenerate button (nothing to regenerate yet).
+          const codeInput = document.getElementById('modal-consultant-code');
+          if (codeInput) codeInput.value = '';
+          const codeHint = document.getElementById('modal-consultant-code-hint');
+          if (codeHint) codeHint.textContent = 'Leave blank to let the system generate a code automatically.';
+          const codeRegenBtn = document.getElementById('modal-consultant-code-regen-btn');
+          if (codeRegenBtn) codeRegenBtn.style.display = 'none';
+          window.__consultantOriginalCode = null;
         }
       }
       modal.style.display = 'flex';
@@ -1878,11 +1955,13 @@
     // fills 35% (matching FLORIST_WHOLESALE stuff elsewhere / the
     // existing wholesale discount rate) when a business partner type is
     // selected, ONLY if the rate field is still empty — never overwrites
-    // a rate the admin already typed in, and only ever runs while adding
-    // a NEW consultant (the type selector is disabled/locked on edit, so
-    // this listener has no effect there). Mirrors the server-side default
+    // a rate the admin already typed in. Mirrors the server-side default
     // in createConsultant() — see admin-fulfilment.js — so the admin sees
-    // the same number that would apply anyway if they left it blank.
+    // the same number that would apply anyway if they left it blank. Note
+    // (24 Aug 2026): the type selector is no longer locked on edit (Col
+    // asked for it to be editable), so this now also fires there — still
+    // safe, since it only ever fills a genuinely EMPTY rate field, never
+    // overwrites one an existing reseller already has.
     const BUSINESS_PARTNER_TYPES_CLIENT = ['radio_station', 'florist', 'cake_shop', 'gift_store'];
     function onConsultantTypeChange() {
       const typeSelect = document.getElementById('modal-consultant-type');
@@ -1890,6 +1969,52 @@
       if (!typeSelect || !rateInput || typeSelect.disabled) return;
       if (rateInput.value !== '') return; // don't clobber a value the admin already typed
       rateInput.value = BUSINESS_PARTNER_TYPES_CLIENT.includes(typeSelect.value) ? '35' : '';
+    }
+
+    // Code creation/edit box — client request 24 Aug 2026 (Col). Populates
+    // the code field on the edit modal with the reseller's current code
+    // (fetched separately since it lives on a different row/table —
+    // promo_codes, not sales_consultants).
+    window.__consultantOriginalCode = null;
+    async function loadConsultantCodeIntoModal(id) {
+      const codeInput = document.getElementById('modal-consultant-code');
+      const codeHint = document.getElementById('modal-consultant-code-hint');
+      const codeRegenBtn = document.getElementById('modal-consultant-code-regen-btn');
+      if (!codeInput) return;
+      try {
+        const r = await apiFetch(`/api/admin/consultants/${id}/code`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Failed to load code.');
+        codeInput.value = data.code || '';
+        window.__consultantOriginalCode = data.code || null;
+        if (data.code) {
+          if (codeHint) codeHint.textContent = 'Edit and Save to change this reseller’s code.';
+          if (codeRegenBtn) codeRegenBtn.style.display = 'inline-block';
+        } else {
+          if (codeHint) codeHint.textContent = 'This reseller has no code yet — type one or leave blank to auto-generate on Save.';
+          if (codeRegenBtn) codeRegenBtn.style.display = 'none';
+        }
+      } catch (err) {
+        // Non-fatal — the rest of the edit modal still works even if this
+        // one extra fetch fails; just leave the code box empty with a
+        // visible explanation rather than silently pretending there's no
+        // code (which could look like "regenerate" is safe when it isn't).
+        codeInput.value = '';
+        window.__consultantOriginalCode = undefined; // undefined = "unknown", distinct from null = "confirmed none"
+        if (codeHint) codeHint.textContent = `Could not load current code (${err.message}) — leave blank to avoid accidentally changing it.`;
+        if (codeRegenBtn) codeRegenBtn.style.display = 'none';
+      }
+    }
+
+    // "New Random Code" button — clears the field so Save regenerates a
+    // fresh auto code (same as leaving it blank for an existing reseller,
+    // per generate-code's behavior in admin-fulfilment.js), and updates
+    // the hint so it's clear what pressing Save will now do.
+    function regenerateConsultantCodeInModal() {
+      const codeInput = document.getElementById('modal-consultant-code');
+      const codeHint = document.getElementById('modal-consultant-code-hint');
+      if (codeInput) codeInput.value = '';
+      if (codeHint) codeHint.textContent = 'Will generate a brand-new random code when you Save.';
     }
 
     function updateFloristCreditTotalPreview() {
@@ -1909,6 +2034,16 @@
       return s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ');
     }
 
+    // Client request, 24 Aug 2026 (Col): "customer and reseller will be
+    // the terms I use from here on." The internal entity type stays
+    // 'consultant' everywhere (endpoints, DOM ids, mockDb, etc. — nothing
+    // structural renamed, only what's shown on screen), so this is the
+    // one place that maps it to the display word for modal titles.
+    function entityDisplayName(type) {
+      if (type === 'consultant') return 'Reseller';
+      return capitalize(type);
+    }
+
     // Modal submit saves
     async function saveConsultant(e) {
       e.preventDefault();
@@ -1924,17 +2059,25 @@
         email: document.getElementById('modal-consultant-email').value.trim(),
         commissionNotes: document.getElementById('modal-consultant-commission').value.trim()
       };
-      // Commission rate — sent on both create and edit, unlike partner
-      // type below, since Col confirmed the rate stays editable for the
-      // life of the partner. An empty field means "not set" (null), not 0
-      // — a genuine 0% and "no rate decided yet" are different things.
+      // Commission rate — sent on both create and edit, since Col
+      // confirmed the rate stays editable for the life of the partner. An
+      // empty field means "not set" (null), not 0 — a genuine 0% and "no
+      // rate decided yet" are different things.
       const rateRaw = document.getElementById('modal-consultant-rate').value.trim();
       payload.commissionRate = rateRaw === '' ? null : Number(rateRaw);
-      // Partner type — only sent on create, matching the florist Business
-      // Type pattern (locked after creation, so PUT never touches it).
-      if (!id) {
-        payload.partnerType = document.getElementById('modal-consultant-type').value;
-      }
+      // Partner type — bug fix, 24 Aug 2026 (client report, Col): now sent
+      // on both create AND edit. Previously only sent on create, matching
+      // the florist Business Type lock-after-creation pattern — Col has
+      // since explicitly asked for this to be editable, so it's no longer
+      // held back on PUT.
+      payload.partnerType = document.getElementById('modal-consultant-type').value;
+      // Code creation box — client request 24 Aug 2026 (Col). On CREATE,
+      // sent straight through (blank = auto-generate, matching before).
+      // On EDIT the code lives on a separate row (promo_codes) so it
+      // can't go through this same PUT — handled in a second request
+      // below, only if the admin actually changed it.
+      const codeInputValue = document.getElementById('modal-consultant-code').value.trim();
+      if (!id) payload.code = codeInputValue;
       const method = id ? 'PUT' : 'POST';
       const endpoint = id ? `/api/admin/consultants/${id}` : '/api/admin/consultants';
       try {
@@ -1945,6 +2088,30 @@
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
+
+        // Code box, edit path: only touch the code if the admin actually
+        // changed it (or explicitly cleared it via "New Random Code") —
+        // never fire this on every save just because the field round-
+        // tripped through the form unchanged. Skipped entirely if the
+        // original fetch failed (__consultantOriginalCode === undefined)
+        // — see loadConsultantCodeIntoModal's comment for why silently
+        // guessing here would be unsafe.
+        let codeMessage = '';
+        if (id && window.__consultantOriginalCode !== undefined && codeInputValue !== (window.__consultantOriginalCode || '')) {
+          try {
+            const codeR = await apiFetch(`/api/admin/consultants/${id}/generate-code`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: codeInputValue }),
+            });
+            const codeData = await codeR.json();
+            if (!codeR.ok) throw new Error(codeData.error || 'Failed to update code.');
+            codeMessage = `\nCode updated: ${codeData.code}`;
+          } catch (codeErr) {
+            codeMessage = `\nCode was NOT updated: ${codeErr.message}`;
+          }
+        }
+
         closeModal('consultant');
         loadConsultants(paginationState.consultants.page);
         loadAttribution().catch(() => {});
@@ -1959,6 +2126,8 @@
           } else {
             alert(`✓ ${payload.name} created, but the attribution code could not be generated (${data.codeError || 'unknown error'}). Use "Generate Code" in the list to retry.`);
           }
+        } else if (codeMessage) {
+          alert(`✓ ${payload.name} updated.${codeMessage}`);
         }
       } catch (err) { alert(`Error: ${err.message}`); }
       finally { if (submitBtn) submitBtn.disabled = false; }
@@ -2421,7 +2590,7 @@
               </div>
             </td>
           </tr>
-        `).join('') : '<tr class="empty-row"><td colspan="9">No consultants found.</td></tr>';
+        `).join('') : '<tr class="empty-row"><td colspan="9">No resellers found.</td></tr>';
         
         renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
         setMsg(msgEl, '', false);
@@ -2969,11 +3138,11 @@
   </script>
   <!-- ── POPUP MODALS ── -->
 
-  <!-- Consultant Modal -->
+  <!-- Consultant Modal (displayed to the admin as "Reseller" — see nav-item comment above) -->
   <div class="modal-overlay" id="consultant-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="consultant-modal-title">Add Sales Consultant</h3>
+        <h3 id="consultant-modal-title">Add Reseller</h3>
         <button class="close-modal-btn" type="button" onclick="closeModal('consultant')">&times;</button>
       </div>
       <form id="consultant-form" onsubmit="saveConsultant(event)">
@@ -3026,6 +3195,31 @@
               <input id="modal-consultant-commission" type="text" placeholder="e.g. paid monthly by bank transfer" />
             </div>
           </div>
+          <!-- Code creation/edit box — client request 24 Aug 2026 (Col):
+               "I want to see a code creation box for the reseller that
+               either I can manually create or allow the subsystem to
+               create and I need to be able to edit it." Leaving this
+               blank on create auto-generates a code exactly as before
+               (createConsultant/autoIssueAttributionCode in
+               admin-fulfilment.js); typing a value uses it as-is. On
+               edit, this is pre-filled with the reseller's current code
+               (loaded via GET .../code) and can be changed — saving calls
+               POST .../generate-code, which now updates the existing code
+               in place instead of only ever creating a fresh one. -->
+          <div class="fld" id="modal-consultant-code-wrap">
+            <label for="modal-consultant-code">Reseller Code</label>
+            <!-- Bug fix (second bug-hunt pass), 24 Aug 2026: .fld-row is a
+                 fixed 50/50 grid (built for two side-by-side .fld blocks,
+                 e.g. Commission Rate + Commission Notes above) — using it
+                 here squished this text input down to half width to make
+                 room for a button that only needs its own text width.
+                 Plain inline-flex with the input set to flex-grow instead. -->
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input id="modal-consultant-code" type="text" placeholder="Leave blank to auto-generate" style="text-transform:uppercase; flex:1 1 auto; min-width:0;" />
+              <button class="btn btn-soft btn-sm" type="button" id="modal-consultant-code-regen-btn" style="display:none; white-space:nowrap; flex:0 0 auto;" onclick="regenerateConsultantCodeInModal()">🎲 New Random Code</button>
+            </div>
+            <div id="modal-consultant-code-hint" style="font-size:0.72rem; color:#8A6A1F; margin-top:2px;"></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-ghost" type="button" onclick="closeModal('consultant')">Cancel</button>
@@ -3046,7 +3240,7 @@
         <input type="hidden" id="promo-id" />
         <div class="modal-body">
           <div class="fld">
-            <label for="modal-promo-consultant">Consultant</label>
+            <label for="modal-promo-consultant">Reseller</label>
             <select id="modal-promo-consultant" required><option value="">— select consultant —</option></select>
           </div>
           <div class="fld">
@@ -3136,7 +3330,7 @@
         <input type="hidden" id="territory-id" />
         <div class="modal-body">
           <div class="fld">
-            <label for="modal-territory-consultant">Consultant</label>
+            <label for="modal-territory-consultant">Reseller</label>
             <select id="modal-territory-consultant" required><option value="">— select —</option></select>
           </div>
           <div class="fld">
