@@ -587,8 +587,10 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       // request — the consultant row already exists at this point, so the
       // response always reflects that success; codeGenerated tells the
       // admin UI whether it also got a working code or needs to use the
-      // "Generate Code" recovery path instead.
-      const codeResult = await autoIssueAttributionCode(supabase, consultant);
+      // "Generate Code" recovery path instead. `code` is optional — the
+      // admin can type their own instead of letting the subsystem
+      // generate one (see autoIssueAttributionCode's comment).
+      const codeResult = await autoIssueAttributionCode(supabase, consultant, req.body?.code);
       return res.json({ consultant, ...codeResult });
     } catch (error) {
       console.error('Admin consultant create error:', error);
@@ -596,32 +598,75 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
     }
   });
 
-  // Phase 6/7 Step 4 recovery path — client request 21 Aug 2026 (Col):
-  // "What happens if consultant creation succeeds but the automatic
-  // promo-code creation fails right after?" This lets the admin retry
-  // issuing a code for an existing consultant that has none, instead of
-  // leaving them stuck with no way to get one. createPromoCode() itself
-  // already refuses to create a second active code for a consultant who
-  // already has one, so this is safe to expose even if called by mistake
-  // on a consultant that already has a working code.
+  // Looks up a consultant by id across both the real DB and mockDb — same
+  // small helper duplicated at each of these three routes previously;
+  // pulled out once here since a third caller (GET .../code below) needed
+  // the exact same lookup.
+  async function findConsultantById(supabase, id) {
+    let consultant = null;
+    if (!id.startsWith('c_')) {
+      const { data } = await supabase.from('sales_consultants').select('*').eq('id', id).maybeSingle();
+      consultant = data || null;
+    }
+    if (!consultant) {
+      consultant = mockDb.sales_consultants.find(c => c.id === id) || null;
+    }
+    return consultant;
+  }
+
+  // Phase 6/7 Step 4 recovery path, extended 24 Aug 2026 (client request,
+  // Col): "I want to see a code creation box for the reseller that either
+  // I can manually create or allow the subsystem to create and I need to
+  // be able to edit it." Originally this route only handled "consultant
+  // has no code yet" (createPromoCode() refuses a second active code for
+  // the same consultant). Now it also handles "consultant already has a
+  // code and the admin wants to change it" — same endpoint either way, so
+  // the admin UI doesn't need to know which case it's in:
+  //   - no existing code + no `code` in body  -> auto-generate, create
+  //   - no existing code + `code` in body     -> use as typed, create
+  //   - existing code    + no `code` in body  -> auto-generate a NEW one, update in place
+  //   - existing code    + `code` in body     -> use as typed, update in place
   app.post('/api/admin/consultants/:id/generate-code', authAdmin, async (req, res) => {
     try {
       const id = String(req.params.id || '').trim();
       if (!id) return res.status(400).json({ error: 'Consultant id is required.' });
 
-      let consultant = null;
-      if (!id.startsWith('c_')) {
-        const { data } = await supabase.from('sales_consultants').select('id, name').eq('id', id).maybeSingle();
-        consultant = data || null;
-      }
-      if (!consultant) {
-        consultant = mockDb.sales_consultants.find(c => c.id === id) || null;
-      }
+      const consultant = await findConsultantById(supabase, id);
       if (!consultant) {
         return res.status(404).json({ error: 'Consultant not found.' });
       }
 
-      const codeResult = await autoIssueAttributionCode(supabase, consultant);
+      const manualCodeRaw = String(req.body?.code || '').trim();
+      const { data: existingPromo } = await supabase
+        .from('promo_codes')
+        .select('id, code')
+        .eq('consultant_id', id)
+        .eq('active', true)
+        .maybeSingle();
+
+      if (existingPromo) {
+        try {
+          const newCode = manualCodeRaw ? normalizePromoCode(manualCodeRaw) : await createUniqueAttributionCode(supabase, consultant.name);
+          const { data: updated, error } = await supabase
+            .from('promo_codes')
+            .update({ code: newCode })
+            .eq('id', existingPromo.id)
+            .select('*')
+            .single();
+          if (error) {
+            // Same duplicate-code polish as createPromoCode() above.
+            if (error.code === '23505') {
+              throw new Error(`Code "${newCode}" is already in use by another reseller. Please choose a different one.`);
+            }
+            throw new Error(`Unable to update code: ${error.message}`);
+          }
+          return res.json({ code: updated.code, promoCodeId: updated.id, codeGenerated: true });
+        } catch (err) {
+          return res.status(400).json({ error: err.message || 'Unable to update code.' });
+        }
+      }
+
+      const codeResult = await autoIssueAttributionCode(supabase, consultant, manualCodeRaw);
       if (!codeResult.codeGenerated) {
         return res.status(400).json({ error: codeResult.codeError || 'Unable to generate code.' });
       }
@@ -632,9 +677,37 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
     }
   });
 
+  // GET the current code for a consultant, so the edit modal can show and
+  // pre-fill it (client request, 24 Aug 2026 — "a code creation box for
+  // the reseller ... I need to be able to edit it"). Returns
+  // { code: null } rather than 404 when the consultant has no active code
+  // yet — that's a normal, expected state (e.g. auto-issue failed at
+  // signup), not an error.
+  app.get('/api/admin/consultants/:id/code', authAdmin, async (req, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Consultant id is required.' });
+      const consultant = await findConsultantById(supabase, id);
+      if (!consultant) return res.status(404).json({ error: 'Consultant not found.' });
+
+      const { data: existingPromo } = await supabase
+        .from('promo_codes')
+        .select('id, code')
+        .eq('consultant_id', id)
+        .eq('active', true)
+        .maybeSingle();
+
+      return res.json({ code: existingPromo?.code || null, promoCodeId: existingPromo?.id || null });
+    } catch (error) {
+      console.error('Admin GET consultant code error:', error);
+      return res.status(400).json({ error: error.message || 'Unable to load code.' });
+    }
+  });
+
   app.put('/api/admin/consultants/:id', authAdmin, async (req, res) => {
     try {
       const { name, email, phone, active, commissionNotes, adminNotes, commissionRate, commission_rate: commissionRateSnake } = req.body;
+      const partnerTypeInput = req.body.partnerType !== undefined ? req.body.partnerType : req.body.partner_type;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
       if (email !== undefined) patch.email = String(email).trim() || null;
@@ -642,6 +715,23 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       if (active !== undefined) patch.active = Boolean(active);
       if (commissionNotes !== undefined) patch.commission_notes = String(commissionNotes).trim() || null;
       if (adminNotes !== undefined) patch.admin_notes = String(adminNotes).trim() || null;
+      // Bug fix, 24 Aug 2026 (client report, Col): "the drop down menu for
+      // type of seller doesn't allow me to change it which I think we
+      // should have the ability to do" / "on the edit consultant screen
+      // the Partner Type drop-down menu doesn't work when you click edit"
+      // — reported twice. Partner type was deliberately LOCKED after
+      // creation in Phase 6/7 (Step 1), matching the florist Business Type
+      // precedent — but Col has now explicitly asked for it to be
+      // editable, overriding that earlier design choice. Validated the
+      // same way as create (PARTNER_TYPES allow-list, clear 400 on a bad
+      // value) rather than trusting the DB constraint alone.
+      if (partnerTypeInput !== undefined) {
+        const partnerTypeRaw = String(partnerTypeInput).trim();
+        if (!PARTNER_TYPES.includes(partnerTypeRaw)) {
+          return res.status(400).json({ error: `Invalid partner type. Must be one of: ${PARTNER_TYPES.join(', ')}.` });
+        }
+        patch.partner_type = partnerTypeRaw;
+      }
       // Phase 8 — client request 23 Aug 2026 (Col): "yes rate should still
       // be editable." Unlike partner_type (locked after creation), the
       // commission rate is deliberately editable for the life of the
@@ -665,18 +755,20 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .select('*')
           .single();
 
-        // Phase 8 graceful-degrade, 23 Aug 2026: without this, editing a
-        // consultant while src/db.phase8.sql is still pending would fall
-        // all the way through to the mockDb branch below for ANY edit
-        // (even just a name/email change unrelated to commission) — the
-        // moment commission_rate was included in the patch. That's a
-        // worse outcome than just dropping the one field the DB can't
+        // Phase 8 graceful-degrade, 23 Aug 2026 (extended 24 Aug 2026 to
+        // also cover partner_type, now that it's editable too): without
+        // this, editing a consultant while either migration is pending
+        // would fall all the way through to the mockDb branch below for
+        // ANY edit (even just a name/email change unrelated to these two
+        // fields) — the moment either was included in the patch. That's a
+        // worse outcome than just dropping the field(s) the DB can't
         // accept yet: the admin's real edits (name, active, notes) should
         // still land in the real row. Same retry-without-the-missing-
         // column pattern as createConsultant() above.
-        if (isMissingColumnError(error) && Object.prototype.hasOwnProperty.call(patch, 'commission_rate')) {
-          const requestedRate = patch.commission_rate;
-          delete patch.commission_rate;
+        const missingColumnsInPatch = OPTIONAL_CONSULTANT_COLUMNS.filter(col => Object.prototype.hasOwnProperty.call(patch, col));
+        if (isMissingColumnError(error) && missingColumnsInPatch.length) {
+          const requestedValues = {};
+          missingColumnsInPatch.forEach(col => { requestedValues[col] = patch[col]; delete patch[col]; });
           // Bug fix, 23 Aug 2026 (found in Step 6 testing): if commission_rate
           // was the ONLY field being patched (e.g. the admin only touched
           // the rate field), stripping it leaves an EMPTY patch object.
@@ -700,7 +792,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
               .select('*')
               .single());
           }
-          if (data) data.commission_rate = requestedRate; // reflect requested value even though not persisted yet
+          if (data) Object.assign(data, requestedValues); // reflect requested values even though not persisted yet
         }
 
         if (error) throw error;
@@ -1995,9 +2087,18 @@ async function createConsultant(supabase, body) {
 // must never be reported as "consultant creation failed" when the
 // consultant row itself was created successfully; see the route below for
 // how the two outcomes are distinguished in the response.
-async function autoIssueAttributionCode(supabase, consultant) {
+// Bug fix / feature, 24 Aug 2026 (client request, Col): "I want to see a
+// code creation box for the reseller that either I can manually create or
+// allow the subsystem to create." `manualCode` is optional — when given
+// (non-empty after trimming), it's used as-is instead of auto-generating
+// one; createPromoCode()'s own uniqueness check (DB unique index on
+// lower(code)) still catches a real collision and surfaces a clear error
+// either way, so a manually-typed duplicate fails the same safe way an
+// auto-generated collision would.
+async function autoIssueAttributionCode(supabase, consultant, manualCode) {
   try {
-    const code = await createUniqueAttributionCode(supabase, consultant.name);
+    const trimmedManual = String(manualCode || '').trim();
+    const code = trimmedManual ? normalizePromoCode(trimmedManual) : await createUniqueAttributionCode(supabase, consultant.name);
     const promo = await createPromoCode(supabase, { consultantId: consultant.id, code });
     return { code: promo.code, promoCodeId: promo.id, codeGenerated: true };
   } catch (err) {
@@ -2045,6 +2146,15 @@ async function createPromoCode(supabase, body) {
     .single();
 
   if (error) {
+    // Bug fix / polish, 24 Aug 2026 (found while testing the new manual
+    // code-entry box, Col's request): a manually-typed code that's
+    // already taken by someone else previously surfaced as a raw
+    // Postgres error ("duplicate key value violates unique constraint
+    // \"idx_promo_codes_code_lower\"") — technically correct but not
+    // something an admin typing a code by hand should have to decode.
+    if (error.code === '23505') {
+      throw new Error(`Code "${code}" is already in use by another reseller. Please choose a different one.`);
+    }
     throw new Error(`Unable to create promo code: ${error.message}`);
   }
 

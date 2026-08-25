@@ -959,7 +959,17 @@ function renderNewspaper(data, content, fonts) {
 
   .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
   .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
-  .starmap-caption { font-size: 7.3pt; font-style: italic; color: #3d3730; }
+  /* Bumped 7.3pt -> 9pt, 23 Aug 2026 (client report, real printed PDF:
+     "the star map text can't be read"). 7.3pt was the smallest actual
+     reading-prose text size anywhere on the page — smaller than every
+     other body-copy rule (9pt+ throughout, including the same italic
+     style already proven legible at 9pt in .s-message .msg) and closer
+     in size to the small uppercase LABEL text (7-7.5pt), which reads fine
+     small only because it's all-caps+letter-spaced, not lowercase prose.
+     Matches .s-message .msg's proven-good 9pt italic size rather than
+     inventing a new one. Color also darkened slightly (#3d3730 -> #241f18)
+     for stronger contrast, same reasoning. */
+  .starmap-caption { font-size: 9pt; font-style: italic; color: #241f18; }
   .agecount { margin-top: 1.5mm; font-family:'Playfair Display', serif; font-weight: 700; font-size: 9.5pt; }
 
   /* ================= FOOTER ================= */
