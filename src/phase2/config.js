@@ -10,6 +10,11 @@ const {
 
 const PHASE2_CONFIG = Object.freeze({
   adminAlertEmail: process.env.ADMIN_ALERT_EMAIL || 'colindavidmccabe@gmail.com',
+  // SMS alert recipient — client request 28 Aug 2026 (Col): text him the
+  // instant a customer submits GCash payment proof, same moment as the
+  // existing admin email alert. Kept as its own env var (not hardcoded)
+  // so it can change without a redeploy, same reasoning as adminAlertEmail.
+  adminAlertPhone: process.env.ADMIN_ALERT_PHONE || '',
   resendFromEmail: process.env.RESEND_FROM_EMAIL || '',
   defaultCurrencyCode: DEFAULT_CURRENCY_CODE,
   anthropicDailyAlertThresholdUsd: Number(process.env.ANTHROPIC_DAILY_ALERT_THRESHOLD_USD || ANTHROPIC_DAILY_ALERT_THRESHOLD_USD),

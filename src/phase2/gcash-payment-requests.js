@@ -24,9 +24,22 @@ const {
   buildGcashManualPaymentApprovedEmail,
   buildFrameOrderAdminEmail,
   buildPublicOrderAdminEmail,
+  buildSecondPurchaseDiscountEmail,
 } = require('./email-service');
 const { normalizePromoCode } = require('./attribution');
 const { getNzdToPhpRate } = require('./exchange-rate');
+// Client request, 31 Aug 2026 (Col): "GCash should be operating as
+// stripe is, is that correct?" — it wasn't. Two real gaps found on audit:
+// a GCash-redeemed order never attributed back to the reseller/influencer
+// whose code was used (sales_consultant_id was hardcoded null, twice —
+// see createPaidPublicOrderFromGcashPromo and
+// ensureCleanPaidKeepsakeForRedeem below), and it never sent the
+// customer the same automatic Thank-You/second-purchase discount email
+// the Stripe path already sends. Both fixed below, reusing the exact
+// same functions the Stripe path already uses (second-purchase-discount.js,
+// marketing-contacts.js) rather than writing a second version of either.
+const { issueSecondPurchaseDiscountCode, SECOND_PURCHASE_DISCOUNT_PERCENT } = require('./second-purchase-discount');
+const { captureMarketingContact } = require('./marketing-contacts');
 
 function registerGcashPaymentRoutes(app, { supabase, sendEmail, authAdmin, stationBilling = {} }) {
   if (!app) throw new Error('Express app is required.');
@@ -325,7 +338,7 @@ function registerGcashPaymentRoutes(app, { supabase, sendEmail, authAdmin, stati
   });
 }
 
-async function tryRedeemGcashPaidPromoCode({ supabase, sendEmail, payload }) {
+async function tryRedeemGcashPaidPromoCode({ supabase, sendEmail, stripe, payload }) {
   const code = normalizePromoCode(payload?.promoCode);
   if (!code) return null;
   if (!isGeneratedGcashPromoCode(code)) return null;
@@ -354,6 +367,45 @@ async function tryRedeemGcashPaidPromoCode({ supabase, sendEmail, payload }) {
       sendGcashRedeemedAdminAlert({ sendEmail, order, payload }).catch(error => {
         console.error('GCash redeemed admin alert failed:', error);
       });
+    }
+
+    // Client request, 31 Aug 2026 (Col): "GCash should be operating as
+    // stripe is." Both of these already run for the Stripe path
+    // (reconcilePublicOrderPaymentFromSession, public-checkout.js) but
+    // were missing entirely here — fire-and-forget with their own
+    // try/catch each, same as the admin alert above, so a marketing-list
+    // or email failure never blocks the redemption response the customer
+    // is waiting on.
+    if (order.customer_email) {
+      captureMarketingContact(supabase, {
+        email: order.customer_email,
+        name: order.customer_name,
+        source: 'public_checkout',
+        consented: payload.marketingConsent !== false,
+      }).catch(error => {
+        console.error('GCash redeemed marketing capture failed:', error);
+      });
+    }
+
+    if (stripe && sendEmail && order.customer_email) {
+      (async () => {
+        try {
+          const discountCode = await issueSecondPurchaseDiscountCode({ supabase, stripe, consultantId: order.sales_consultant_id });
+          await sendEmail({
+            to: order.customer_email,
+            subject: 'A thank-you discount for your next Tribute Times keepsake',
+            html: buildSecondPurchaseDiscountEmail({
+              customerName: order.customer_name,
+              code: discountCode.code,
+              discountPercent: SECOND_PURCHASE_DISCOUNT_PERCENT,
+              validUntil: discountCode.valid_until,
+              appUrl: process.env.APP_URL || '',
+            }),
+          });
+        } catch (discountError) {
+          console.error('GCash redeemed second-purchase discount email failed:', discountError);
+        }
+      })();
     }
 
     return {
@@ -422,6 +474,15 @@ function normalizePublicGcashPayload(body, requestIp) {
     productTier,
     deliveryOption,
     promoCode: String(body.promoCode || '').trim(),
+    // Bug fix, 31 Aug 2026 (found during the GCash-attribution bug-hunt
+    // pass, same class as the promoCode fix above): the frontend already
+    // sends marketingConsent on this exact payload (buildCheckoutPayload()
+    // in form-template.html — the same object openGcashModal() is called
+    // with, spread straight into this endpoint's request body) but this
+    // normalizer silently dropped it, so a GCash customer who unchecked
+    // "send me updates" was still added to the marketing list, unlike the
+    // Stripe path which correctly reads and respects this same checkbox.
+    marketingConsent: body.marketingConsent !== false,
     customerName,
     customerEmail,
     recipientName,
@@ -536,6 +597,20 @@ async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, g
     gcash_sender_name: senderName,
     gcash_reference_id: referenceId,
     status: 'pending',
+    // Bug fix, 31 Aug 2026 (client audit, Col: "GCash should be operating
+    // as stripe is"): found the actual root cause of the missing
+    // reseller/influencer attribution on GCash sales — the customer's
+    // typed-in promo code (checkoutPromoCode on the main form, carried
+    // straight through into payload.promoCode here — confirmed already
+    // wired end-to-end on the frontend, see proceedToPayment() in
+    // form-template.html) was simply never being SAVED anywhere on this
+    // request row, so it no longer existed by the time an admin approved
+    // it and generated the one-time redeem code. No new column needed —
+    // reusing action_payload, the same general-purpose jsonb bucket
+    // already used for florist-credit/station-frame request details.
+    // See createGcashPaidPromoCode() below for where this is read back
+    // out and actually resolved to a consultant_id.
+    action_payload: { promoCode: payload.promoCode || null },
   };
 
   const { data, error } = await supabase
@@ -973,19 +1048,47 @@ async function createSampleKeepsakeForGcashRequest(supabase, payload) {
   return record.id;
 }
 
+// Bug fix, 31 Aug 2026 (client audit, Col: "GCash should be operating as
+// stripe is") — looks up which reseller/influencer the customer's
+// originally-typed promo code (now saved on the request's action_payload,
+// see createGcashPaymentRequest above) belongs to, so the new one-time
+// GCash-redeem code can be linked back to them. Returns null (not a
+// throw) for a missing/invalid/unknown code — an organic GCash sale with
+// no code typed in must still succeed exactly as before, same as the
+// Stripe path's own graceful "no attribution" fallback.
+async function resolveConsultantIdFromRequestPromoCode(supabase, request) {
+  const actionPayload = parseActionPayload(request.action_payload);
+  const typedCode = normalizePromoCode(actionPayload?.promoCode);
+  if (!typedCode) return null;
+
+  try {
+    const { data } = await supabase
+      .from('promo_codes')
+      .select('consultant_id, active')
+      .ilike('code', typedCode)
+      .maybeSingle();
+    if (!data || !data.active) return null;
+    return data.consultant_id || null;
+  } catch (err) {
+    console.warn('resolveConsultantIdFromRequestPromoCode failed, proceeding with no attribution:', err.message);
+    return null;
+  }
+}
+
 async function createGcashPaidPromoCode({ supabase, request, adminNote }) {
   const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const notes = [
     `Created from GCash request ${request.request_number}.`,
     String(adminNote || '').trim(),
   ].filter(Boolean).join(' ');
+  const consultantId = await resolveConsultantIdFromRequestPromoCode(supabase, request);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const code = generateGcashPromoCode();
     const { data, error } = await supabase
       .from('promo_codes')
       .insert({
-        consultant_id: null,
+        consultant_id: consultantId,
         code,
         active: true,
         monthly_free_demo_limit: 0,
@@ -1034,7 +1137,14 @@ async function createPaidPublicOrderFromGcashPromo({ supabase, payload, promo })
     payment_status: PAYMENT_STATUS.paid,
     attribution_source: ATTRIBUTION_SOURCE.promoCode,
     promo_code_id: promo.id,
-    sales_consultant_id: null,
+    // Bug fix, 31 Aug 2026 (client report, Col): was hardcoded null — a
+    // GCash-redeemed sale never credited the reseller/influencer whose
+    // code was used, even though promo.consultant_id was sitting right
+    // there on the already-loaded promo row (loadPromoCodeByCode selects
+    // '*'). Confirmed via live testing this was a genuine gap, not
+    // intentional — the equivalent Stripe path has always attributed
+    // correctly through resolvePaidOrderAttribution.
+    sales_consultant_id: promo.consultant_id || null,
     territory_id: null,
     needs_fulfilment: needsFulfilment,
     delivery_priority: needsFulfilment ? (delivery ? delivery.priority : DELIVERY_OPTIONS.standard.priority) : 99,
@@ -1088,7 +1198,9 @@ async function ensureCleanPaidKeepsakeForRedeem({ supabase, payload, promo }) {
       customerEmail: payload.customerEmail,
       customerName: payload.customerName,
       promoCodeId: promo.id,
-      salesConsultantId: null,
+      // Bug fix, 31 Aug 2026 — same as the order insert above; this is
+      // the keepsake-record side of the same missing attribution.
+      salesConsultantId: promo.consultant_id || null,
       isFreeDemo: false,
     };
     if (payload.renderedHtml) updates.renderedHtml = payload.renderedHtml;
@@ -1117,7 +1229,9 @@ async function ensureCleanPaidKeepsakeForRedeem({ supabase, payload, promo }) {
     renderedHtml: payload.renderedHtml,
     watermarkStatus: WATERMARK_STATUS.cleanPaid,
     promoCodeId: promo.id,
-    salesConsultantId: null,
+    // Bug fix, 31 Aug 2026 — same as above (this is the "no existing
+    // keepsake yet" branch of the same function).
+    salesConsultantId: promo.consultant_id || null,
     isFreeDemo: false,
     requestIp: payload.requestIp,
   });

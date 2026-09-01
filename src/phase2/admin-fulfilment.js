@@ -1600,24 +1600,57 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         // Wholesale buying code — client spec, 19 Aug 2026 (Col): "WS" +
         // lowercased business name, special characters stripped, numbered
         // suffix on collision. See src/phase2/wholesale-code.js.
-        const wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        //
+        // Bug fix, 1 Sep 2026 (found in live soft-launch verification):
+        // src/db.phase6.sql (which adds the wholesale_code column) was
+        // written back on 19 Aug but had never actually been run against
+        // the real database — confirmed directly, the column genuinely
+        // doesn't exist there. Every new florist/gift-shop/cake-shop
+        // signup since wholesale_code was added to this insert has been
+        // silently falling into the outer catch below and landing in
+        // mockDb instead of the real `stations` table — meaning the
+        // account looked fine in the admin response, but was invisible
+        // and unusable (couldn't log in) the moment the server restarted,
+        // since mockDb is in-memory only. Reproduced directly: created a
+        // florist, tried to log in immediately after with the exact
+        // credentials just set, got "Invalid email or password" because
+        // the row never actually reached the real DB. Same graceful-
+        // degrade pattern as everywhere else in this file: try the real
+        // thing, and only drop wholesale_code specifically (not the whole
+        // signup) if the column genuinely isn't there yet — the account
+        // still lands in the real table with a real login-capable row,
+        // it just won't have a wholesale code until the migration runs.
+        let wholesaleCode = null;
+        try {
+          wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        } catch (wcErr) {
+          if (!isMissingColumnError(wcErr)) throw wcErr;
+          console.warn('wholesale_code column missing (src/db.phase6.sql not yet run) — creating florist without one.');
+        }
 
-        const { data: dbFlorist, error } = await supabase
+        const insertRow = {
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          account_type: accountType,
+          florist_credit_balance: initialCredit,
+          florist_low_credit_threshold: 10,
+          florist_credit_updated_at: new Date().toISOString(),
+          active: true
+        };
+        if (wholesaleCode) insertRow.wholesale_code = wholesaleCode;
+
+        let { data: dbFlorist, error } = await supabase
           .from('stations')
-          .insert({
-            name,
-            email,
-            password_hash: passwordHash,
-            country,
-            account_type: accountType,
-            wholesale_code: wholesaleCode,
-            florist_credit_balance: initialCredit,
-            florist_low_credit_threshold: 10,
-            florist_credit_updated_at: new Date().toISOString(),
-            active: true
-          })
+          .insert(insertRow)
           .select()
           .single();
+
+        if (isMissingColumnError(error) && Object.prototype.hasOwnProperty.call(insertRow, 'wholesale_code')) {
+          delete insertRow.wholesale_code;
+          ({ data: dbFlorist, error } = await supabase.from('stations').insert(insertRow).select().single());
+        }
 
         if (error) {
           if (error.code === '23505') {

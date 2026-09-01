@@ -29,9 +29,15 @@ function registerPublicCheckoutRoutes(app, { stripe, supabase, sendEmail }) {
     try {
       const rawPayload = normalizePayload(req.body || {}, req.ip);
       const payload = await enrichPayloadFromExistingKeepsake(supabase, rawPayload);
+      // stripe threaded through, 31 Aug 2026 (client request, Col: "GCash
+      // should be operating as stripe is") — needed so a GCash-redeemed
+      // order can issue the same automatic Thank-You/second-purchase
+      // discount the Stripe path already sends (issueSecondPurchaseDiscountCode
+      // needs a real Stripe client to create/reuse its coupon).
       const gcashRedemption = await tryRedeemGcashPaidPromoCode({
         supabase,
         sendEmail,
+        stripe,
         payload,
       });
       if (gcashRedemption) {
