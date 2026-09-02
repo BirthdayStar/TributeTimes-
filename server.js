@@ -849,6 +849,12 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
+// Phase 9 — public reseller sign-up page. Client request, 21 Aug 2026
+// (Col): "Creation of a new signing up page bringing it all together."
+app.get('/join', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/join.html'));
+});
+
 app.use((req, res, next) => {
   if ((req.method === 'GET' || req.method === 'HEAD') && isStaticAssetRequest(req.path)) {
     return res.status(404).type('text/plain').send('Not found');

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="description" content="Become a Tribute Times reseller — sign up and get your own promo code."/>
+<meta name="theme-color" content="#8A6A1F"/>
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml"/>
+<title>Become a Reseller — The Tribute Times</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+/* Same cream/olive/gold palette as landing.html and admin.html — client
+   request, 3 Sept 2026 (Col): "Creation of a new signing up page bringing
+   it all together." Kept on-brand with the rest of the site rather than
+   inventing a new look for one page. */
+:root {
+  --bg: #FCF9E8;
+  --bg-gradient: radial-gradient(circle at 50% 0%, #F4F0DE 0%, #FCF9E8 70%);
+  --card-bg: #FFFFFF;
+  --line: #DED9BE;
+  --accent: #8A6A1F;
+  --accent-hover: #6F5418;
+  --ink: #3D4122;
+  --muted: #54592F;
+  --on-accent: #FCF9E8;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 24px rgba(61,65,34,.10), 0 1px 4px rgba(61,65,34,.06);
+  --transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  background-image: var(--bg-gradient);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding: 32px 16px 64px;
+}
+.container { max-width: 640px; margin: 0 auto; }
+.brand { text-align: center; margin-bottom: 28px; text-decoration: none; display: block; }
+.brand-title { font-family: var(--font-serif); font-size: 1.9rem; font-weight: 700; color: var(--ink); }
+.brand-sub { font-size: 0.58rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 4px; }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+h1 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.intro { color: var(--muted); font-size: 0.92rem; margin-bottom: 28px; line-height: 1.6; }
+
+.fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .fld-row { grid-template-columns: 1fr; } }
+.fld { margin-bottom: 16px; }
+.fld label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.fld .optional { text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 0.68rem; color: #8A6A1F; }
+.fld input, .fld select {
+  width: 100%;
+  font: inherit;
+  font-size: 0.92rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 13px;
+  color: var(--ink);
+  background: #F4F0DE;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.fld input:focus, .fld select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(138,106,31,.15);
+}
+.section-label {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 1.02rem;
+  margin: 26px 0 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+
+#business-fields { display: none; }
+#business-fields.visible { display: block; }
+
+.btn-submit {
+  width: 100%;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px 20px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-submit:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.msg { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 0.88rem; display: none; }
+.msg.success { display: block; background: #E8F0DE; color: #2f5424; border: 1px solid #c7dbb2; }
+.msg.error { display: block; background: #FBE9E5; color: #A1442A; border: 1px solid #f0c4ba; }
+
+.success-view { display: none; text-align: center; padding: 20px 0; }
+.success-view.visible { display: block; }
+.success-view .icon { font-size: 2.8rem; margin-bottom: 12px; }
+.success-view h2 { font-family: var(--font-serif); margin-bottom: 10px; }
+.success-view p { color: var(--muted); font-size: 0.94rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="brand">
+      <div class="brand-title">The Tribute Times</div>
+      <div class="brand-sub">Become a Reseller</div>
+    </a>
+
+    <div class="card">
+      <div id="form-view">
+        <h1>Sign up as a reseller</h1>
+        <p class="intro">
+          Fill in your details below and we'll be in touch with your own personal promo code —
+          share it with your network and earn commission on every sale.
+        </p>
+
+        <form id="signup-form">
+          <div class="section-label">Who are you?</div>
+          <div class="fld">
+            <label for="partnerType">I am a...</label>
+            <select id="partnerType" required>
+              <option value="individual">Individual Reseller</option>
+              <option value="business">Business</option>
+              <option value="influencer">Influencer</option>
+              <option value="radio_station">Radio Station</option>
+            </select>
+          </div>
+
+          <div class="section-label">Your details</div>
+          <div class="fld-row">
+            <div class="fld">
+              <label for="firstName">First Name</label>
+              <input id="firstName" type="text" required placeholder="Sarah" />
+            </div>
+            <div class="fld">
+              <label for="surname">Surname</label>
+              <input id="surname" type="text" required placeholder="Jones" />
+            </div>
+          </div>
+
+          <!-- Client spec, 2 Sept 2026 (Col): "Add business name after
+               surname and address under that only used when registering
+               a business." Hidden unless Business is selected. -->
+          <div id="business-fields">
+            <div class="fld">
+              <label for="businessName">Business Name</label>
+              <input id="businessName" type="text" placeholder="Blossom Florist" />
+            </div>
+            <div class="fld">
+              <label for="address">Address</label>
+              <input id="address" type="text" placeholder="123 Main St, Auckland" />
+            </div>
+          </div>
+
+          <div class="fld-row">
+            <div class="fld">
+              <label for="email">Email Address</label>
+              <input id="email" type="email" required placeholder="sarah@example.com" />
+            </div>
+            <div class="fld">
+              <label for="phone">Phone Number <span class="optional">(optional)</span></label>
+              <input id="phone" type="tel" placeholder="021-123-4567" />
+            </div>
+          </div>
+          <div class="fld">
+            <label for="gcashNumber">GCash Number <span class="optional">(optional — for payouts)</span></label>
+            <input id="gcashNumber" type="text" placeholder="09171234567" />
+          </div>
+
+          <div class="section-label">Socials <span class="optional">(optional — fill in what applies)</span></div>
+          <div class="fld-row">
+            <div class="fld">
+              <label for="facebook">Facebook</label>
+              <input id="facebook" type="text" placeholder="facebook.com/..." />
+            </div>
+            <div class="fld">
+              <label for="instagram">Instagram</label>
+              <input id="instagram" type="text" placeholder="@handle" />
+            </div>
+          </div>
+          <div class="fld-row">
+            <div class="fld">
+              <label for="tiktok">TikTok</label>
+              <input id="tiktok" type="text" placeholder="@handle" />
+            </div>
+            <div class="fld">
+              <label for="whatsapp">WhatsApp</label>
+              <input id="whatsapp" type="text" placeholder="Number or link" />
+            </div>
+          </div>
+          <div class="fld-row">
+            <div class="fld">
+              <label for="telegram">Telegram</label>
+              <input id="telegram" type="text" placeholder="@handle" />
+            </div>
+            <div class="fld">
+              <label for="otherSocial">Other</label>
+              <input id="otherSocial" type="text" placeholder="Any other link" />
+            </div>
+          </div>
+
+          <button class="btn-submit" type="submit" id="submit-btn">Submit Application</button>
+          <div class="msg" id="form-msg"></div>
+        </form>
+      </div>
+
+      <div class="success-view" id="success-view">
+        <div class="icon">✓</div>
+        <h2>Thanks — you're all set!</h2>
+        <p>Your application has been received. Our team will review it and be in touch with your personal promo code soon.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const typeSelect = document.getElementById('partnerType');
+    const businessFields = document.getElementById('business-fields');
+    function toggleBusinessFields() {
+      const isBusiness = typeSelect.value === 'business';
+      businessFields.classList.toggle('visible', isBusiness);
+      document.getElementById('businessName').required = isBusiness;
+      document.getElementById('address').required = isBusiness;
+    }
+    typeSelect.addEventListener('change', toggleBusinessFields);
+    toggleBusinessFields();
+
+    const form = document.getElementById('signup-form');
+    const msgEl = document.getElementById('form-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      msgEl.style.display = 'none';
+      msgEl.className = 'msg';
+
+      const payload = {
+        partnerType: typeSelect.value,
+        firstName: document.getElementById('firstName').value.trim(),
+        surname: document.getElementById('surname').value.trim(),
+        businessName: document.getElementById('businessName').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        gcashNumber: document.getElementById('gcashNumber').value.trim(),
+        facebook: document.getElementById('facebook').value.trim(),
+        instagram: document.getElementById('instagram').value.trim(),
+        tiktok: document.getElementById('tiktok').value.trim(),
+        whatsapp: document.getElementById('whatsapp').value.trim(),
+        telegram: document.getElementById('telegram').value.trim(),
+        otherSocial: document.getElementById('otherSocial').value.trim(),
+      };
+
+      try {
+        const r = await fetch('/api/public/reseller-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Something went wrong — please try again.');
+
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('success-view').classList.add('visible');
+      } catch (err) {
+        msgEl.textContent = err.message;
+        msgEl.classList.add('error');
+        msgEl.style.display = 'block';
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

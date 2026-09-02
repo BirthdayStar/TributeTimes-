@@ -2151,6 +2151,252 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       return res.status(error.statusCode || 400).json({ error: error.message || 'Unable to update status.' });
     }
   });
+
+  // ---------------------------------------------------------------------
+  // Phase 9 — public reseller sign-up requests. Client request, 21 Aug
+  // 2026 (Col, phase6.md) + reconfirmed 2/3 Sept 2026: "Creation of a new
+  // signing up page bringing it all together and using the information
+  // for marketing purposes later." See src/db.phase9.sql for the full
+  // table design rationale — deliberately a separate table from
+  // sales_consultants so a public submission can never become a live,
+  // working reseller account without a human reviewing it first
+  // ("Would come to Jhe-Ann or me for approval first." — Col).
+  // ---------------------------------------------------------------------
+
+  const SIGNUP_PARTNER_TYPES = ['individual', 'business', 'influencer', 'radio_station'];
+
+  // Bug found live-testing this feature, 2 Sept 2026: PostgREST reports a
+  // genuinely-missing table as PGRST205 ("Could not find the table ... in
+  // the schema cache"), NOT the raw Postgres 42P01 (undefined_table) —
+  // that code only ever surfaces from a direct SQL connection, never
+  // through PostgREST/Supabase's REST layer, which every query in this
+  // file goes through. Checking for 42P01 alone meant a not-yet-run
+  // src/db.phase9.sql always fell into the generic 400 catch instead of
+  // the intended graceful "sign-ups aren't open yet" message.
+  function isMissingTableError(error) {
+    return error?.code === 'PGRST205' || error?.code === '42P01';
+  }
+
+  // No authAdmin — this is the public submission endpoint, reachable from
+  // /join with no login. Every field is treated as untrusted input.
+  app.post('/api/public/reseller-signup', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const partnerType = String(body.partnerType || body.partner_type || '').trim();
+      if (!SIGNUP_PARTNER_TYPES.includes(partnerType)) {
+        return res.status(400).json({ error: `Invalid type. Must be one of: ${SIGNUP_PARTNER_TYPES.join(', ')}.` });
+      }
+      const firstName = String(body.firstName || body.first_name || '').trim();
+      const surname = String(body.surname || '').trim();
+      if (!firstName || !surname) {
+        return res.status(400).json({ error: 'First name and surname are required.' });
+      }
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: 'A valid email address is required.' });
+      }
+      // Client spec, 2 Sept 2026 (Col): business name + address only used
+      // when registering a business — required at the application layer
+      // here since the DB leaves both nullable (see db.phase9.sql).
+      const businessName = String(body.businessName || body.business_name || '').trim();
+      const address = String(body.address || '').trim();
+      if (partnerType === 'business' && (!businessName || !address)) {
+        return res.status(400).json({ error: 'Business name and address are required for a business sign-up.' });
+      }
+
+      const insertRow = {
+        status: 'pending',
+        partner_type: partnerType,
+        first_name: firstName,
+        surname,
+        business_name: partnerType === 'business' ? (businessName || null) : null,
+        address: partnerType === 'business' ? (address || null) : null,
+        gcash_number: String(body.gcashNumber || body.gcash_number || '').trim() || null,
+        phone: String(body.phone || '').trim() || null,
+        email,
+        facebook: String(body.facebook || '').trim() || null,
+        instagram: String(body.instagram || '').trim() || null,
+        tiktok: String(body.tiktok || '').trim() || null,
+        whatsapp: String(body.whatsapp || '').trim() || null,
+        telegram: String(body.telegram || '').trim() || null,
+        other_social: String(body.otherSocial || body.other_social || '').trim() || null,
+      };
+
+      const { data, error } = await supabase
+        .from('reseller_signup_requests')
+        .insert(insertRow)
+        .select('id')
+        .single();
+
+      // Graceful-degrade if src/db.phase9.sql hasn't been run yet — the
+      // table itself is missing (undefined_table, 42P01), not just a
+      // column, since this whole feature depends on it. Rather than
+      // silently faking success (the exact bug class already fixed
+      // elsewhere in this file), tell the submitter plainly so it's
+      // obvious the migration is still pending instead of quietly losing
+      // real applications.
+      if (error) {
+        if (isMissingTableError(error)) {
+          console.error('reseller_signup_requests table does not exist yet — run src/db.phase9.sql');
+          return res.status(503).json({ error: 'Sign-ups are not open yet — please check back soon.' });
+        }
+        throw error;
+      }
+
+      return res.json({ success: true, id: data.id });
+    } catch (error) {
+      console.error('Public reseller signup error:', error);
+      return res.status(400).json({ error: 'Unable to submit your application. Please try again.' });
+    }
+  });
+
+  // Admin review list — pending by default, or ?status=approved/rejected/all.
+  app.get('/api/admin/reseller-requests', authAdmin, async (req, res) => {
+    try {
+      const status = String(req.query.status || 'pending').trim();
+      let query = supabase
+        .from('reseller_signup_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (status !== 'all') {
+        if (!['pending', 'approved', 'rejected'].includes(status)) {
+          return res.status(400).json({ error: 'Invalid status filter.' });
+        }
+        query = query.eq('status', status);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (isMissingTableError(error)) return res.json({ items: [] }); // migration not run yet
+        throw error;
+      }
+      return res.json({ items: data || [] });
+    } catch (error) {
+      console.error('Admin GET reseller-requests error:', error);
+      return res.status(400).json({ error: error.message || 'Unable to load reseller requests.' });
+    }
+  });
+
+  // Maps the public form's broad 4-way partner_type to the admin's
+  // 6-way PARTNER_TYPES for the real consultant row created on approval.
+  // "business" has no single real equivalent (could be a florist, cake
+  // shop, or gift store), so the admin is required to pick one explicitly
+  // at approval time via `resolvedPartnerType` — never guessed.
+  function resolveApprovalPartnerType(requestPartnerType, resolvedPartnerType) {
+    if (requestPartnerType !== 'business') return requestPartnerType;
+    const allowed = ['florist', 'cake_shop', 'gift_store'];
+    const chosen = String(resolvedPartnerType || '').trim();
+    if (!allowed.includes(chosen)) {
+      throw new Error(`This is a business sign-up — choose which type it is: ${allowed.join(', ')}.`);
+    }
+    return chosen;
+  }
+
+  // Approve: creates the real reseller (reusing the exact same,
+  // already-tested createConsultant/autoIssueAttributionCode logic used
+  // by the admin's own "+ Add Reseller" flow, so it inherits every bug
+  // fix already in place there) and links the request row to it.
+  app.post('/api/admin/reseller-requests/:id/approve', authAdmin, async (req, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      const { data: request, error: fetchError } = await supabase
+        .from('reseller_signup_requests')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (fetchError) throw fetchError;
+      if (!request) return res.status(404).json({ error: 'Reseller request not found.' });
+      if (request.status !== 'pending') {
+        return res.status(409).json({ error: `This request was already ${request.status}.` });
+      }
+
+      let partnerType;
+      try {
+        partnerType = resolveApprovalPartnerType(request.partner_type, req.body?.resolvedPartnerType);
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      const displayName = [request.first_name, request.surname].filter(Boolean).join(' ')
+        + (request.business_name ? ` (${request.business_name})` : '');
+
+      const noteParts = [
+        request.address ? `Address: ${request.address}` : null,
+        request.gcash_number ? `GCash: ${request.gcash_number}` : null,
+        request.facebook ? `Facebook: ${request.facebook}` : null,
+        request.instagram ? `Instagram: ${request.instagram}` : null,
+        request.tiktok ? `TikTok: ${request.tiktok}` : null,
+        request.whatsapp ? `WhatsApp: ${request.whatsapp}` : null,
+        request.telegram ? `Telegram: ${request.telegram}` : null,
+        request.other_social ? `Other: ${request.other_social}` : null,
+        'Created from public sign-up request.',
+      ].filter(Boolean);
+
+      let consultant;
+      try {
+        consultant = await createConsultant(supabase, {
+          name: displayName,
+          email: request.email,
+          phone: request.phone,
+          partnerType,
+          adminNotes: noteParts.join(' | '),
+        });
+      } catch (err) {
+        if (err.isKnownValidationError) return res.status(409).json({ error: err.message });
+        throw err;
+      }
+
+      const codeResult = await autoIssueAttributionCode(supabase, consultant, req.body?.code);
+
+      const { error: updateError } = await supabase
+        .from('reseller_signup_requests')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by_admin_id: req.admin.id,
+          review_notes: String(req.body?.reviewNotes || req.body?.review_notes || '').trim() || null,
+          created_consultant_id: consultant.id.startsWith?.('c_') ? null : consultant.id, // only a real UUID is a valid FK target
+        })
+        .eq('id', id);
+      if (updateError) throw updateError;
+
+      return res.json({ consultant, ...codeResult });
+    } catch (error) {
+      console.error('Admin approve reseller-request error:', error);
+      return res.status(400).json({ error: error.message || 'Unable to approve reseller request.' });
+    }
+  });
+
+  app.post('/api/admin/reseller-requests/:id/reject', authAdmin, async (req, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      const { data: request, error: fetchError } = await supabase
+        .from('reseller_signup_requests')
+        .select('id, status')
+        .eq('id', id)
+        .maybeSingle();
+      if (fetchError) throw fetchError;
+      if (!request) return res.status(404).json({ error: 'Reseller request not found.' });
+      if (request.status !== 'pending') {
+        return res.status(409).json({ error: `This request was already ${request.status}.` });
+      }
+
+      const { error } = await supabase
+        .from('reseller_signup_requests')
+        .update({
+          status: 'rejected',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by_admin_id: req.admin.id,
+          review_notes: String(req.body?.reviewNotes || req.body?.review_notes || '').trim() || null,
+        })
+        .eq('id', id);
+      if (error) throw error;
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error('Admin reject reseller-request error:', error);
+      return res.status(400).json({ error: error.message || 'Unable to reject reseller request.' });
+    }
+  });
 }
 
 function authAdmin(req, res, next) {
