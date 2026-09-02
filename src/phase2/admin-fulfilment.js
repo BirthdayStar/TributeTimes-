@@ -659,7 +659,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
 
       if (existingPromo) {
         try {
-          const newCode = manualCodeRaw ? normalizePromoCode(manualCodeRaw) : await createUniqueAttributionCode(supabase, consultant.name);
+          const newCode = manualCodeRaw ? normalizePromoCode(manualCodeRaw) : await createUniqueAttributionCode(supabase, consultant.name, consultant.commission_rate);
           const { data: updated, error } = await supabase
             .from('promo_codes')
             .update({ code: newCode })
@@ -2329,7 +2329,7 @@ async function createConsultant(supabase, body) {
 async function autoIssueAttributionCode(supabase, consultant, manualCode) {
   try {
     const trimmedManual = String(manualCode || '').trim();
-    const code = trimmedManual ? normalizePromoCode(trimmedManual) : await createUniqueAttributionCode(supabase, consultant.name);
+    const code = trimmedManual ? normalizePromoCode(trimmedManual) : await createUniqueAttributionCode(supabase, consultant.name, consultant.commission_rate);
     const promo = await createPromoCode(supabase, { consultantId: consultant.id, code });
     return { code: promo.code, promoCodeId: promo.id, codeGenerated: true };
   } catch (err) {

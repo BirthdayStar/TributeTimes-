@@ -98,8 +98,53 @@ async function createUniqueWholesaleCode(supabase, businessName) {
  * convention (see normalizePromoCode in attribution.js) instead of
  * wholesale codes' lowercase one.
  */
-async function createUniqueAttributionCode(supabase, partnerName) {
-  const baseCode = buildBaseWholesaleCode(partnerName).replace(/^WS/i, '') || 'PARTNER';
+/**
+ * Bug fix, 2 Sept 2026 (client report, Col — screenshot showing a
+ * reseller's auto-generated code saved as "MUHAMMADISMAEEL" instead of
+ * his required format). Col's own spec, verbatim: "Every reseller starts
+ * with (first name lower case) surname first letter in Caps and then the
+ * offer 20 being 20% discount... colinM20 colinMlove20 colinMmum30...
+ * jhe-annB20." This builds exactly that: lowercase first name + capital
+ * surname initial + the commission rate as a whole number — instead of
+ * the old buildBaseWholesaleCode()-based logic, which just lowercased
+ * and concatenated the ENTIRE name with no surname split and no rate
+ * suffix at all, and which this function used to also force uppercase
+ * afterward, destroying the mixed case even where the base logic did
+ * happen to produce it. Deliberately a separate function from
+ * buildBaseWholesaleCode()/createUniqueWholesaleCode() above — that pair
+ * is proven, tested logic for a DIFFERENT format (WS+businessname,
+ * lowercase, no rate) used for the wholesale-credit system; conflating
+ * the two would risk regressing that working feature to chase this
+ * different one.
+ */
+function buildResellerCodeBase(partnerName, commissionRate) {
+  const words = String(partnerName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  // Each name word cleaned the same way (lowercase, alphanumeric + hyphen
+  // only) so "Jhe-Ann" survives as "jhe-ann" — Col's own example keeps
+  // the hyphen — while still stripping anything that isn't safe in a URL
+  // query parameter or a typed-in checkout field.
+  const clean = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  const firstName = clean(words[0]) || 'partner';
+  // Surname initial only when there IS a second word — a single-word
+  // name (just "Cher", or a business name with no clear "surname") has
+  // nothing to take an initial from, so the code is just the first name
+  // + rate rather than guessing at a fake initial.
+  const surnameInitial = words.length > 1 ? clean(words[words.length - 1]).charAt(0).toUpperCase() : '';
+
+  const rateSuffix = Number.isFinite(commissionRate) && commissionRate !== null
+    ? String(Math.round(commissionRate))
+    : '';
+
+  return `${firstName}${surnameInitial}${rateSuffix}`;
+}
+
+async function createUniqueAttributionCode(supabase, partnerName, commissionRate) {
+  const baseCode = buildResellerCodeBase(partnerName, commissionRate);
   const { data, error } = await supabase
     .from('promo_codes')
     .select('code')
@@ -107,8 +152,23 @@ async function createUniqueAttributionCode(supabase, partnerName) {
 
   if (error) throw error;
 
+  // Collision comparison stays case-insensitive (matches the DB's own
+  // lower(code) unique index), but resolveAvailableCode is handed the
+  // correctly-cased baseCode and only ever appends a plain number on
+  // collision — it never changes the case of what's already there.
   const existingCodesSet = new Set((data || []).map(row => String(row.code || '').toLowerCase()));
-  return resolveAvailableCode(baseCode, existingCodesSet).toUpperCase();
+  const existingCodesSetLower = new Set([...existingCodesSet]);
+  if (existingCodesSetLower.has(baseCode.toLowerCase())) {
+    // resolveAvailableCode expects the exact string it's checking for in
+    // the set — feed it the lowercase form for the membership test, but
+    // reconstruct the real (mixed-case) candidate at each step.
+    for (let n = 2; n <= 50; n++) {
+      const candidate = `${baseCode}${n}`;
+      if (!existingCodesSetLower.has(candidate.toLowerCase())) return candidate;
+    }
+    return `${baseCode}${Date.now()}`;
+  }
+  return baseCode;
 }
 
-module.exports = { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode, createUniqueAttributionCode };
+module.exports = { buildBaseWholesaleCode, resolveAvailableCode, createUniqueWholesaleCode, createUniqueAttributionCode, buildResellerCodeBase };
