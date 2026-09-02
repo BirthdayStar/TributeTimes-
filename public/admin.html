@@ -3203,7 +3203,7 @@
         updateResellerRequestsBadge(status, data.items);
 
         if (body) body.innerHTML = data.items.length ? data.items.map(req => {
-          const name = [req.first_name, req.surname].filter(Boolean).join(' ') + (req.business_name ? ` (${escapeHtml(req.business_name)})` : '');
+          const name = escapeHtml([req.first_name, req.surname].filter(Boolean).join(' ')) + (req.business_name ? ` (${escapeHtml(req.business_name)})` : '');
           const socials = ['facebook', 'instagram', 'tiktok', 'whatsapp', 'telegram', 'other_social']
             .filter(k => req[k])
             .map(k => `${k === 'other_social' ? 'Other' : k[0].toUpperCase() + k.slice(1)}: ${escapeHtml(req[k])}`)
@@ -3213,7 +3213,7 @@
                  <button class="btn-icon" onclick="approveResellerRequest('${req.id}', '${req.partner_type}')" title="Approve" aria-label="Approve request">✅</button>
                  <button class="btn-icon btn-icon-danger" onclick="rejectResellerRequest('${req.id}')" title="Reject" aria-label="Reject request">❌</button>
                </div>`
-            : (req.status === 'approved' ? '<span style="color:#8A6A1F;">Reviewed</span>' : '<span style="color:#8A6A1F;">Reviewed</span>');
+            : `<span style="color:#8A6A1F;">${req.status === 'approved' ? 'Approved' : 'Rejected'}</span>`;
           return `
           <tr>
             <td>${escapeHtml(new Date(req.created_at).toLocaleString())}</td>

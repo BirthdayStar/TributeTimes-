@@ -2354,7 +2354,11 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           reviewed_at: new Date().toISOString(),
           reviewed_by_admin_id: req.admin.id,
           review_notes: String(req.body?.reviewNotes || req.body?.review_notes || '').trim() || null,
-          created_consultant_id: consultant.id.startsWith?.('c_') ? null : consultant.id, // only a real UUID is a valid FK target
+          // createConsultant() (called directly above, not the mockDb-
+          // fallback route handler) always throws on a real DB failure and
+          // never returns a mockDb-style non-UUID id — so consultant.id is
+          // always a real UUID here, safe to use as the FK target directly.
+          created_consultant_id: consultant.id,
         })
         .eq('id', id);
       if (updateError) throw updateError;
