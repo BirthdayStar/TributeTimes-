@@ -564,6 +564,19 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       try {
         consultant = await createConsultant(supabase, req.body || {});
       } catch (err) {
+        // Bug fix, 2 Sept 2026 (client report, Col — see createConsultant()'s
+        // full comment above for the reproduction): a known, real validation
+        // error (currently just "duplicate email") must never fall through
+        // to the mockDb "assume it's a connectivity failure" branch below —
+        // that branch always reports success, which is exactly how this bug
+        // silently ate 4 of Col's real signup attempts. Same "validate
+        // before the ambiguous catch" principle as partnerType/commissionRate
+        // above, just applied to an error that can only be detected after
+        // attempting the real insert (a duplicate check needs a DB round
+        // trip, so it can't be validated synchronously up front like those).
+        if (err.isKnownValidationError) {
+          return res.status(409).json({ error: err.message });
+        }
         console.warn('POST consultant online failed, falling back to local mockDb.');
         const name = String(req.body.name || '').trim();
         if (!name) throw new Error('Consultant name is required.');
@@ -710,7 +723,38 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const partnerTypeInput = req.body.partnerType !== undefined ? req.body.partnerType : req.body.partner_type;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
-      if (email !== undefined) patch.email = String(email).trim() || null;
+      // Bug fix, 2 Sept 2026 (found in a no-gap test pass right after
+      // fixing the identical issue on POST /consultants — same class of
+      // bug, this route was never covered): editing an existing reseller
+      // to an email another reseller already has hit the real unique
+      // constraint on sales_consultants.email, but this route's outer
+      // catch (below) treats ANY update failure as "must be a mockDb-only
+      // record" and looks it up there — for a REAL reseller with a REAL
+      // UUID, that lookup always misses, producing a flatly wrong 404
+      // "Consultant not found" for a record that very much exists. Same
+      // proactive-check-before-the-ambiguous-catch fix as createConsultant().
+      if (email !== undefined) {
+        // Bug fix (found in this same review pass): unlike createConsultant()
+        // and the other PUT routes in this file (stations, florists — see
+        // lines ~1512/1775), this one wasn't lowercasing the email, so an
+        // edit could leave it stored in mixed/upper case. Not a functional
+        // bug (the duplicate check below and login lookups elsewhere are
+        // already case-insensitive via .ilike()), but a real data-
+        // consistency gap against the convention every other email field
+        // in this file follows — fixed to match.
+        patch.email = String(email).trim().toLowerCase() || null;
+        if (patch.email) {
+          const { data: existingByEmail } = await supabase
+            .from('sales_consultants')
+            .select('id, name')
+            .ilike('email', patch.email)
+            .neq('id', req.params.id)
+            .maybeSingle();
+          if (existingByEmail) {
+            return res.status(409).json({ error: `This email is already used by another reseller: ${existingByEmail.name}. Use a different email, or edit that existing reseller instead.` });
+          }
+        }
+      }
       if (phone !== undefined) patch.phone = String(phone).trim() || null;
       if (active !== undefined) patch.active = Boolean(active);
       if (commissionNotes !== undefined) patch.commission_notes = String(commissionNotes).trim() || null;
@@ -793,6 +837,15 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
               .single());
           }
           if (data) Object.assign(data, requestedValues); // reflect requested values even though not persisted yet
+        }
+
+        // Belt-and-suspenders alongside the proactive email check above: a
+        // race between two simultaneous edits could still hit the real
+        // unique constraint even after that check passed. Same marker
+        // pattern as createConsultant() — a genuine duplicate must never
+        // be silently reclassified as "not found" via the mockDb fallback.
+        if (error && error.code === '23505') {
+          return res.status(409).json({ error: 'This email is already used by another reseller.' });
         }
 
         if (error) throw error;
@@ -911,6 +964,13 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       try {
         promoCode = await createPromoCode(supabase, req.body || {});
       } catch (err) {
+        // Bug fix, 2 Sept 2026 — same class as the reseller fix: a known
+        // business-rule rejection (duplicate code, or consultant already
+        // has one) must never fall through to the mockDb branch, which
+        // always reports success. See createPromoCode()'s comments above.
+        if (err.isKnownValidationError) {
+          return res.status(409).json({ error: err.message });
+        }
         console.warn('POST promo-code online failed, falling back to local mockDb.');
         const consultantId = String(req.body.consultantId || req.body.consultant_id || '').trim();
         const code = normalizePromoCode(req.body.code);
@@ -942,7 +1002,24 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const { consultantId, code, monthlyFreeDemoLimit, active, notes } = req.body;
       const patch = {};
       if (consultantId !== undefined) patch.consultant_id = consultantId;
-      if (code !== undefined) patch.code = normalizePromoCode(code);
+      // Bug fix, 2 Sept 2026 (same sweep as the reseller/promo-create
+      // fixes): editing a code's text to one already used elsewhere hit
+      // the real unique constraint, but this route's outer catch (below)
+      // treated ANY update failure as "must be mockDb-only" and returned
+      // a flatly wrong 404 "Promo code not found" for a code that very
+      // much exists. Proactive check, same pattern as the reseller PUT fix.
+      if (code !== undefined) {
+        patch.code = normalizePromoCode(code);
+        const { data: existingByCode } = await supabase
+          .from('promo_codes')
+          .select('id, code')
+          .ilike('code', patch.code)
+          .neq('id', req.params.id)
+          .maybeSingle();
+        if (existingByCode) {
+          return res.status(409).json({ error: `Code "${patch.code}" is already in use by another reseller. Please choose a different one.` });
+        }
+      }
       if (monthlyFreeDemoLimit !== undefined) {
         const limit = Number(monthlyFreeDemoLimit);
         if (!Number.isInteger(limit) || limit < 0) {
@@ -961,6 +1038,12 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .eq('id', req.params.id)
           .select('*')
           .single();
+
+        // Belt-and-suspenders alongside the proactive check above (race
+        // between two simultaneous edits).
+        if (error && error.code === '23505') {
+          return res.status(409).json({ error: 'This code is already in use by another reseller.' });
+        }
 
         if (error) throw error;
         promoCode = data;
@@ -1402,22 +1485,47 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         // WS+name format as florist/gift-shop/cake-shop accounts, "should
         // also follow through for... radio stations." See
         // src/phase2/wholesale-code.js.
-        const wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        //
+        // Bug fix, 2 Sept 2026 (found sweeping the whole dashboard for the
+        // wholesale_code bug already fixed on the florist route — this is
+        // a SEPARATE insert block for radio stations that had the exact
+        // same vulnerability and was never covered by that fix):
+        // src/db.phase6.sql (adds wholesale_code) still hasn't been run
+        // against the real DB, so createUniqueWholesaleCode() throws
+        // here, gets caught by the outer catch below, and the station
+        // silently lands in mockDb — invisible, unusable, gone on
+        // restart — while the admin sees a normal "success" response.
+        // Same graceful-degrade fix: drop wholesale_code specifically if
+        // the column isn't there yet, land in the real table either way.
+        let wholesaleCode = null;
+        try {
+          wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        } catch (wcErr) {
+          if (!isMissingColumnError(wcErr)) throw wcErr;
+          console.warn('wholesale_code column missing (src/db.phase6.sql not yet run) — creating station without one.');
+        }
 
-        const { data: dbStation, error } = await supabase
+        const insertRow = {
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          tier,
+          account_type: 'radio',
+          active: true
+        };
+        if (wholesaleCode) insertRow.wholesale_code = wholesaleCode;
+
+        let { data: dbStation, error } = await supabase
           .from('stations')
-          .insert({
-            name,
-            email,
-            password_hash: passwordHash,
-            country,
-            tier,
-            account_type: 'radio',
-            wholesale_code: wholesaleCode,
-            active: true
-          })
+          .insert(insertRow)
           .select()
           .single();
+
+        if (isMissingColumnError(error) && Object.prototype.hasOwnProperty.call(insertRow, 'wholesale_code')) {
+          delete insertRow.wholesale_code;
+          ({ data: dbStation, error } = await supabase.from('stations').insert(insertRow).select().single());
+        }
 
         if (error) {
           if (error.code === '23505') {
@@ -1464,7 +1572,26 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const { name, email, password, country, tier, active } = req.body;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
-      if (email !== undefined) patch.email = String(email).trim().toLowerCase();
+      // Bug fix, 2 Sept 2026 (same dashboard-wide sweep as the reseller
+      // and promo-code fixes): editing a station's email to one already
+      // used by another account hit the real unique constraint, but this
+      // route's outer catch (below) misreported it as 404 "Station
+      // manager not found" for a station that very much exists — same
+      // proactive-check pattern as those fixes.
+      if (email !== undefined) {
+        patch.email = String(email).trim().toLowerCase();
+        if (patch.email) {
+          const { data: existingByEmail } = await supabase
+            .from('stations')
+            .select('id, name')
+            .ilike('email', patch.email)
+            .neq('id', req.params.id)
+            .maybeSingle();
+          if (existingByEmail) {
+            return res.status(409).json({ error: `This email is already used by another station: ${existingByEmail.name}. Use a different email, or edit that existing station instead.` });
+          }
+        }
+      }
       if (password) {
         patch.password_hash = await bcrypt.hash(password, 12);
       }
@@ -1482,6 +1609,9 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .select('*')
           .single();
 
+        if (error && error.code === '23505') {
+          return res.status(409).json({ error: 'This email is already used by another station.' });
+        }
         if (error) throw error;
         station = data;
       } catch (err) {
@@ -1600,24 +1730,57 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         // Wholesale buying code — client spec, 19 Aug 2026 (Col): "WS" +
         // lowercased business name, special characters stripped, numbered
         // suffix on collision. See src/phase2/wholesale-code.js.
-        const wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        //
+        // Bug fix, 1 Sep 2026 (found in live soft-launch verification):
+        // src/db.phase6.sql (which adds the wholesale_code column) was
+        // written back on 19 Aug but had never actually been run against
+        // the real database — confirmed directly, the column genuinely
+        // doesn't exist there. Every new florist/gift-shop/cake-shop
+        // signup since wholesale_code was added to this insert has been
+        // silently falling into the outer catch below and landing in
+        // mockDb instead of the real `stations` table — meaning the
+        // account looked fine in the admin response, but was invisible
+        // and unusable (couldn't log in) the moment the server restarted,
+        // since mockDb is in-memory only. Reproduced directly: created a
+        // florist, tried to log in immediately after with the exact
+        // credentials just set, got "Invalid email or password" because
+        // the row never actually reached the real DB. Same graceful-
+        // degrade pattern as everywhere else in this file: try the real
+        // thing, and only drop wholesale_code specifically (not the whole
+        // signup) if the column genuinely isn't there yet — the account
+        // still lands in the real table with a real login-capable row,
+        // it just won't have a wholesale code until the migration runs.
+        let wholesaleCode = null;
+        try {
+          wholesaleCode = await createUniqueWholesaleCode(supabase, name);
+        } catch (wcErr) {
+          if (!isMissingColumnError(wcErr)) throw wcErr;
+          console.warn('wholesale_code column missing (src/db.phase6.sql not yet run) — creating florist without one.');
+        }
 
-        const { data: dbFlorist, error } = await supabase
+        const insertRow = {
+          name,
+          email,
+          password_hash: passwordHash,
+          country,
+          account_type: accountType,
+          florist_credit_balance: initialCredit,
+          florist_low_credit_threshold: 10,
+          florist_credit_updated_at: new Date().toISOString(),
+          active: true
+        };
+        if (wholesaleCode) insertRow.wholesale_code = wholesaleCode;
+
+        let { data: dbFlorist, error } = await supabase
           .from('stations')
-          .insert({
-            name,
-            email,
-            password_hash: passwordHash,
-            country,
-            account_type: accountType,
-            wholesale_code: wholesaleCode,
-            florist_credit_balance: initialCredit,
-            florist_low_credit_threshold: 10,
-            florist_credit_updated_at: new Date().toISOString(),
-            active: true
-          })
+          .insert(insertRow)
           .select()
           .single();
+
+        if (isMissingColumnError(error) && Object.prototype.hasOwnProperty.call(insertRow, 'wholesale_code')) {
+          delete insertRow.wholesale_code;
+          ({ data: dbFlorist, error } = await supabase.from('stations').insert(insertRow).select().single());
+        }
 
         if (error) {
           if (error.code === '23505') {
@@ -1694,7 +1857,26 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
               low_credit_threshold } = req.body;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
-      if (email !== undefined) patch.email = String(email).trim().toLowerCase();
+      // Bug fix, 2 Sept 2026 (same dashboard-wide sweep): editing a
+      // florist/gift-shop/cake-shop's email to one already used by
+      // another account hit the real unique constraint, but this route's
+      // outer catch (below) misreported it as 404 "Florist partner not
+      // found" for a partner that very much exists — same proactive-check
+      // pattern as the reseller/promo-code/station fixes.
+      if (email !== undefined) {
+        patch.email = String(email).trim().toLowerCase();
+        if (patch.email) {
+          const { data: existingByEmail } = await supabase
+            .from('stations')
+            .select('id, name')
+            .ilike('email', patch.email)
+            .neq('id', req.params.id)
+            .maybeSingle();
+          if (existingByEmail) {
+            return res.status(409).json({ error: `This email is already used by another partner: ${existingByEmail.name}. Use a different email, or edit that existing partner instead.` });
+          }
+        }
+      }
       if (password) {
         patch.password_hash = await bcrypt.hash(password, 12);
       }
@@ -1741,6 +1923,9 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           .select('*')
           .single();
 
+        if (error && error.code === '23505') {
+          return res.status(409).json({ error: 'This email is already used by another partner.' });
+        }
         if (error) throw error;
         florist = data;
       } catch (err) {
@@ -2030,9 +2215,48 @@ async function createConsultant(supabase, body) {
     commissionRate = DEFAULT_BUSINESS_COMMISSION_RATE;
   }
 
+  const emailNormalized = String(body.email || '').trim().toLowerCase() || null;
+
+  // Bug fix, 2 Sept 2026 (client report, Col): "I created one earlier and
+  // it worked now tried 4 times and it won't work... only the original 4
+  // resellers are on the reseller list so it hasn't added the
+  // information!!" Reproduced directly: Angeline Acejo already existed
+  // (created 30 Aug, real row, real code RANGIEA20) — every later retry
+  // reused the same email and hit the real unique constraint on
+  // sales_consultants.email (idx_sales_consultants_email_lower), which
+  // this function correctly threw an error for... but the route's outer
+  // catch (POST /api/admin/consultants, below) treats ANY error from this
+  // function as a DB-connectivity failure and silently falls back to
+  // mockDb — the exact same "ambiguous catch swallows a real business
+  // error" bug class already fixed once for a bad partnerType (22 Aug).
+  // A duplicate email was never actually blocked from the admin's point
+  // of view: it just silently "succeeded" into memory-only storage that
+  // vanishes on restart and never appears in the real Resellers list —
+  // which is precisely the confusing behavior Col described. Checking
+  // proactively here, before the insert, gives a clear, specific message
+  // naming the conflict (same style as createPromoCode's existing-active-
+  // code check below) instead of relying on the route to correctly
+  // classify a raw Postgres error code.
+  if (emailNormalized) {
+    const { data: existingByEmail } = await supabase
+      .from('sales_consultants')
+      .select('id, name')
+      .ilike('email', emailNormalized)
+      .maybeSingle();
+    if (existingByEmail) {
+      const err = new Error(`This email is already used by another reseller: ${existingByEmail.name}. Use a different email, or edit that existing reseller instead.`);
+      // Marked (not just a plain Error) so the route below can tell this
+      // apart from a genuine DB-connectivity failure and return a clear
+      // 409 instead of silently falling back to mockDb — see the bug fix
+      // comment above and the matching check in the route handler.
+      err.isKnownValidationError = true;
+      throw err;
+    }
+  }
+
   const insertRow = {
     name,
-    email: String(body.email || '').trim() || null,
+    email: emailNormalized,
     phone: String(body.phone || '').trim() || null,
     active: body.active !== false,
     commission_notes: String(body.commissionNotes || body.commission_notes || '').trim() || null,
@@ -2071,7 +2295,14 @@ async function createConsultant(supabase, body) {
   }
 
   if (error) {
-    throw new Error(`Unable to create consultant: ${error.message}`);
+    const err = new Error(`Unable to create consultant: ${error.message}`);
+    // Belt-and-suspenders alongside the proactive check above: if two
+    // requests race and both pass that check before either inserts, the
+    // database's own unique constraint is still the real guarantee — mark
+    // this the same way so a genuine duplicate-key race still gets a
+    // clear 409 instead of silently succeeding via mockDb.
+    if (error.code === '23505') err.isKnownValidationError = true;
+    throw err;
   }
 
   return data;
@@ -2130,7 +2361,17 @@ async function createPromoCode(supabase, body) {
     .maybeSingle();
 
   if (existingActiveCode) {
-    throw new Error(`This consultant already has active promo code ${existingActiveCode.code}.`);
+    // Bug fix, 2 Sept 2026 (found sweeping the whole dashboard for the
+    // same bug class already fixed on the reseller routes): marked so
+    // POST /api/admin/promo-codes' outer catch can tell this apart from a
+    // genuine DB-connectivity failure — without this, the exact same
+    // "ambiguous catch -> silent fake success via mockDb" bug applies
+    // here too. Reproduced directly: created a promo code with a code
+    // text that already belonged to someone else, got a 200 "success"
+    // with a fake p_... id, and nothing was actually created for real.
+    const err = new Error(`This consultant already has active promo code ${existingActiveCode.code}.`);
+    err.isKnownValidationError = true;
+    throw err;
   }
 
   const { data, error } = await supabase
@@ -2153,7 +2394,9 @@ async function createPromoCode(supabase, body) {
     // \"idx_promo_codes_code_lower\"") — technically correct but not
     // something an admin typing a code by hand should have to decode.
     if (error.code === '23505') {
-      throw new Error(`Code "${code}" is already in use by another reseller. Please choose a different one.`);
+      const err = new Error(`Code "${code}" is already in use by another reseller. Please choose a different one.`);
+      err.isKnownValidationError = true; // see comment on the existingActiveCode check above
+      throw err;
     }
     throw new Error(`Unable to create promo code: ${error.message}`);
   }

@@ -854,9 +854,208 @@
     @media (min-width: 3840px) {
       html { zoom: 1.55; }
     }
+
+    /* ================= TOAST NOTIFICATIONS ================= */
+    /* Client request, 2 Sept 2026: "one most imp user informed using toast
+       like user updated, and not use simple alert use well polish theme
+       consistent alert which is responsive for large screen and normal
+       laptop screen." Replaces every alert()/confirm() with this —
+       matches the page's own palette/radius/shadow tokens instead of the
+       browser's native dialog chrome, and since `zoom` (the large-screen
+       scaling above) scales the ENTIRE page uniformly, this needs no
+       separate large-screen sizing of its own — it already grows with
+       everything else at 1600px/1920px/2560px/3200px/3840px+ for free. */
+    #toast-stack {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 20000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(420px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      color: var(--ink);
+      animation: toast-in 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .toast.leaving {
+      animation: toast-out 0.2s ease-in forwards;
+    }
+    .toast-icon { flex-shrink: 0; font-size: 1.05rem; line-height: 1.4; }
+    .toast-body { flex: 1 1 auto; min-width: 0; word-wrap: break-word; white-space: pre-line; }
+    .toast-title { font-weight: 700; margin-bottom: 2px; }
+    .toast-close {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px;
+      opacity: 0.6;
+    }
+    .toast-close:hover { opacity: 1; }
+    .toast.success { border-left-color: var(--green); }
+    .toast.success .toast-icon { color: var(--green); }
+    .toast.error { border-left-color: #A1442A; }
+    .toast.error .toast-icon { color: #A1442A; }
+    .toast.info { border-left-color: var(--blue); }
+    .toast.info .toast-icon { color: var(--blue); }
+    .toast.warning { border-left-color: var(--amber); }
+    .toast.warning .toast-icon { color: var(--amber); }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toast-out {
+      from { opacity: 1; transform: translateX(0); max-height: 200px; margin-bottom: 0; }
+      to   { opacity: 0; transform: translateX(24px); max-height: 0; margin-bottom: -10px; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+    }
+    /* Mobile: full-width, anchored to top, matches the existing mobile-header breakpoint below */
+    @media (max-width: 576px) {
+      #toast-stack {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        max-width: none;
+      }
+    }
+
+    /* ================= CONFIRM MODAL ================= */
+    /* Replaces window.confirm() (used for destructive actions like Delete)
+       with the same themed styling as everything else — native confirm()
+       dialogs look and feel completely out of place next to the rest of
+       this polished UI, same reasoning as the toast replacement above. */
+    #confirm-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(29, 31, 16, 0.42);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20001;
+      padding: 16px;
+    }
+    #confirm-modal-overlay.open { display: flex; }
+    .confirm-modal-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      max-width: 420px;
+      width: 100%;
+      padding: 20px 22px;
+    }
+    .confirm-modal-title { font-weight: 700; font-size: 1.05rem; margin: 0 0 8px; color: var(--ink); }
+    .confirm-modal-message { font-size: 0.9rem; color: var(--ink-2); line-height: 1.5; margin: 0 0 18px; }
+    .confirm-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* ================= VISUAL POLISH PASS ================= */
+    /* Client request, 2 Sept 2026: "more enhance version of admin side in
+       both laptop screen desktop and big screens." Scoped to polish only
+       (confirmed) — no layout/structure changes, and no change to the
+       existing zoom-based large-screen scaling (confirmed) — everything
+       here inherits that scaling automatically the same way the toast
+       system already does, so it needs no separate large-screen sizing. */
+
+    /* Custom scrollbar — the browser default looked out of place against
+       everything else here already being intentionally themed. Webkit-only
+       (Chrome/Edge, which is what this admin panel is actually used in);
+       degrades harmlessly to the default scrollbar elsewhere. */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--line);
+      border-radius: 10px;
+      border: 2px solid var(--bg);
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-2); background-clip: padding-box; }
+    * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+    /* Theme-matched text selection, instead of the browser's default blue. */
+    ::selection { background: var(--accent); color: #FCF9E8; }
+
+    /* Card hover lift — same lift language already used on .btn:hover
+       (translateY + deepened shadow), extended to the cards themselves so
+       the whole page feels consistently "alive," not just its buttons. */
+    .section {
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .metric-card, .attr-card {
+      transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+    }
+    .metric-card:hover, .attr-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+      border-color: var(--accent-2);
+    }
+
+    /* Subtle zebra striping on data tables — was previously the exact
+       same row background throughout except on :hover, making a dense
+       table (e.g. the Resellers directory with 9 columns) harder to scan
+       row-to-row at a glance. Kept deliberately faint so it reads as
+       structure, not decoration, and doesn't fight the existing :hover
+       highlight below it. */
+    .data-table tbody tr:nth-child(even) { background: rgba(61,65,34,0.018); }
+    .data-table tbody tr:hover { background: rgba(61,65,34,0.045); }
+
+    /* Sidebar nav — subtle icon-scale micro-interaction on hover, matching
+       the lift language used everywhere else, without moving the item
+       itself (which would jitter the fixed-width sidebar layout). */
+    .nav-item { transition: background var(--transition), color var(--transition), padding-left var(--transition); }
+    .nav-item:hover { padding-left: 16px; }
+
+    /* Section headers — a soft accent-colored underline glow instead of
+       the plain single-tone bottom border, echoing the gold accent color
+       used throughout (buttons, links, active nav) without introducing a
+       new color to the palette. */
+    .section-head {
+      position: relative;
+    }
+    .section-head::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent-2) 0%, transparent 40%);
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Toast notifications (client request, 2 Sept 2026) — replaces every
+       alert() in this page. See toast()/#toast-stack CSS above. -->
+  <div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- Themed confirm dialog — replaces every confirm() in this page. -->
+  <div id="confirm-modal-overlay">
+    <div class="confirm-modal-card">
+      <p class="confirm-modal-title" id="confirm-modal-title">Are you sure?</p>
+      <p class="confirm-modal-message" id="confirm-modal-message"></p>
+      <div class="confirm-modal-actions">
+        <button class="btn btn-ghost" type="button" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn btn-danger" type="button" id="confirm-modal-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Mobile Header (Visible on viewport < 992px) -->
   <header class="mobile-header" id="mobile-header">
@@ -1083,7 +1282,12 @@
                          subtitle-under-name trick used for partner_type in
                          Step 1) — Col explicitly asked for a column. -->
                     <th>Commission Owed</th>
-                    <th>Commission Notes</th>
+                    <!-- Renamed from "Commission Notes" -> "GCash", 2 Sept
+                         2026 (client request, Col): this field is where
+                         resellers' GCash payout details get stored — the
+                         underlying data/column (commission_notes) is
+                         unchanged, only the label shown to the admin. -->
+                    <th>GCash</th>
                     <th>Admin Notes</th>
                     <th>Actions</th>
                   </tr>
@@ -1341,6 +1545,99 @@
   </div><!-- /shell -->
 
   <script>
+    // ================= TOAST / CONFIRM SYSTEM =================
+    // Client request, 2 Sept 2026: "one most imp user informed using
+    // toast like user updated, and not use simple alert use well polish
+    // theme consistent alert which is responsive for large screen and
+    // normal laptop screen." Defined first, before anything else in this
+    // file, since every other function below calls toast()/confirmDialog()
+    // instead of the browser's native alert()/confirm().
+    const TOAST_ICONS = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };
+    const TOAST_DEFAULT_DURATION_MS = 4500;
+
+    // type: 'success' | 'error' | 'info' | 'warning'. `message` can include
+    // a leading "Error: " prefix (the exact pattern every catch block in
+    // this file already used with alert) — stripped automatically so the
+    // toast reads cleanly without a redundant word next to the (already
+    // red) error icon/border.
+    function toast(message, type = 'info', durationMs = TOAST_DEFAULT_DURATION_MS) {
+      const stack = document.getElementById('toast-stack');
+      if (!stack) { console.warn('toast(): #toast-stack not found, message was:', message); return; }
+      const cleanMessage = String(message || '').replace(/^Error:\s*/i, '');
+
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+      const icon = document.createElement('div');
+      icon.className = 'toast-icon';
+      icon.textContent = TOAST_ICONS[type] || TOAST_ICONS.info;
+      const body = document.createElement('div');
+      body.className = 'toast-body';
+      body.textContent = cleanMessage;
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'toast-close';
+      closeBtn.type = 'button';
+      closeBtn.setAttribute('aria-label', 'Dismiss');
+      closeBtn.textContent = '×';
+      el.append(icon, body, closeBtn);
+      stack.appendChild(el);
+
+      let dismissed = false;
+      const dismiss = () => {
+        if (dismissed) return;
+        dismissed = true;
+        el.classList.add('leaving');
+        setTimeout(() => el.remove(), 220);
+      };
+      closeBtn.addEventListener('click', dismiss);
+      if (durationMs > 0) setTimeout(dismiss, durationMs);
+      return dismiss;
+    }
+    // Thin convenience wrappers matching how alert() was called throughout
+    // this file (`alert('✓ ...')` for success, `alert('Error: ...')` for
+    // failure) — kept as toast.success/toast.error so the many call-site
+    // edits below stay a mechanical find-and-replace, not a rewrite.
+    toast.success = (msg, ms) => toast(msg, 'success', ms);
+    toast.error = (msg, ms) => toast(msg, 'error', ms);
+    toast.info = (msg, ms) => toast(msg, 'info', ms);
+    toast.warning = (msg, ms) => toast(msg, 'warning', ms);
+
+    // Promise-based replacement for window.confirm() — every call site
+    // was already inside an async function (confirmed before adding
+    // this), so `await confirmDialog(...)` is a direct drop-in for
+    // `if (!confirm(...)) return;`.
+    function confirmDialog(message, { title = 'Are you sure?', confirmLabel = 'Confirm' } = {}) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('confirm-modal-overlay');
+        const titleEl = document.getElementById('confirm-modal-title');
+        const messageEl = document.getElementById('confirm-modal-message');
+        const okBtn = document.getElementById('confirm-modal-ok');
+        const cancelBtn = document.getElementById('confirm-modal-cancel');
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        okBtn.textContent = confirmLabel;
+
+        const cleanup = (result) => {
+          overlay.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlayClick);
+          document.removeEventListener('keydown', onKeydown);
+          resolve(result);
+        };
+        const onOk = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onOverlayClick = (e) => { if (e.target === overlay) cleanup(false); };
+        const onKeydown = (e) => { if (e.key === 'Escape') cleanup(false); };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeydown);
+        overlay.classList.add('open');
+      });
+    }
+
     // Security fix (Col McCabe, 7 Aug 2026 QA report — "admin session
     // token exposed on public site"): the admin session used to live in
     // localStorage under these two keys. localStorage is scoped to the
@@ -1859,7 +2156,7 @@
           }
         }
       } catch (err) {
-        alert(`Error loading data: ${err.message}`);
+        toast.error(`Error loading data: ${err.message}`);
         closeModal(type);
       }
     }
@@ -2122,14 +2419,14 @@
         // the "Generate Code" button in the list (see loadConsultants()).
         if (!id) {
           if (data.codeGenerated) {
-            alert(`✓ ${payload.name} created — code: ${data.code}`);
+            toast.success(`${payload.name} created — code: ${data.code}`);
           } else {
-            alert(`✓ ${payload.name} created, but the attribution code could not be generated (${data.codeError || 'unknown error'}). Use "Generate Code" in the list to retry.`);
+            toast.warning(`${payload.name} created, but the attribution code could not be generated (${data.codeError || 'unknown error'}). Use "Generate Code" in the list to retry.`, 8000);
           }
         } else if (codeMessage) {
-          alert(`✓ ${payload.name} updated.${codeMessage}`);
+          toast.success(`${payload.name} updated.${codeMessage}`);
         }
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
@@ -2166,10 +2463,10 @@
         const r = await apiFetch(`/api/admin/consultants/${id}/generate-code`, { method: 'POST' });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to generate code.');
-        alert(`✓ Code generated for ${name}: ${data.code}`);
+        toast.success(`Code generated for ${name}: ${data.code}`);
         loadConsultants(paginationState.consultants.page);
       } catch (err) {
-        alert(`Error: ${err.message}`);
+        toast.error(err.message);
         if (btnEl) btnEl.disabled = false;
       }
     }
@@ -2195,8 +2492,14 @@
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to pull commission.');
         const rangeLabel = (data.from || data.to) ? `${data.from || 'the beginning'} to ${data.to || 'now'}` : 'all time';
-        alert(`${name} — commission for ${rangeLabel}:\n\n${data.orderCount} paid order(s)\nSales total: $${data.salesTotal.toFixed(2)}\nRate: ${data.commissionRate === null ? 'not set' : data.commissionRate + '%'}\nCommission owed: $${data.commissionOwed.toFixed(2)}`);
-      } catch (err) { alert(`Error: ${err.message}`); }
+        // Longer duration + multi-line (.toast-body has white-space:
+        // pre-line, see CSS above) since this is a small report the admin
+        // actually wants to read, not a fleeting status update.
+        toast.info(
+          `${name} — commission for ${rangeLabel}:\n${data.orderCount} paid order(s)\nSales total: $${data.salesTotal.toFixed(2)}\nRate: ${data.commissionRate === null ? 'not set' : data.commissionRate + '%'}\nCommission owed: $${data.commissionOwed.toFixed(2)}`,
+          9000
+        );
+      } catch (err) { toast.error(err.message); }
     }
 
     async function savePromoCode(e) {
@@ -2222,7 +2525,7 @@
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
         closeModal('promo');
         loadPromos(paginationState.promos.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
@@ -2253,7 +2556,7 @@
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
         closeModal('territory');
         loadTerritories(paginationState.territories.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
@@ -2286,7 +2589,7 @@
         if (!r.ok) throw new Error(data.error || 'Failed to save.');
         closeModal('station');
         loadStations(paginationState.stations.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
@@ -2357,25 +2660,25 @@
             msgEl.classList.add('ok');
           }
         }
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
     // Generic Delete
     async function deleteEntity(type, id) {
-      if (!confirm(`Are you sure you want to delete this record?`)) return;
+      if (!(await confirmDialog('Are you sure you want to delete this record?', { title: 'Delete record', confirmLabel: 'Delete' }))) return;
       try {
         const r = await apiFetch(`/api/admin/${type}/${id}`, { method: 'DELETE' });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to delete.');
-        alert('Deleted successfully.');
+        toast.success('Deleted successfully.');
         if (type === 'consultants') loadConsultants(paginationState.consultants.page);
         else if (type === 'promo-codes') loadPromos(paginationState.promos.page);
         else if (type === 'postcode-territories') loadTerritories(paginationState.territories.page);
         else if (type === 'stations') loadStations(paginationState.stations.page);
         else if (type === 'florists') loadFlorists(paginationState.florists.page);
         else if (type === 'famous-birthdays') loadBirthdays(paginationState.birthdays.page);
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
     }
 
     // State Loaders
@@ -2471,7 +2774,7 @@
     }
 
     async function approveGcashPayment(id, btnEl) {
-      if (!confirm('Approve this GCash payment and apply the paid item?')) return;
+      if (!(await confirmDialog('Approve this GCash payment and apply the paid item?', { title: 'Approve GCash payment', confirmLabel: 'Approve' }))) return;
       // Found during a site-wide UI audit (17 Aug 2026): approving/rejecting
       // a real payment has real consequences (a promo code or credits get
       // issued) if fired twice — the confirm() dialog above helps, but a
@@ -2672,7 +2975,7 @@
           msgEl.classList.remove('error');
           msgEl.classList.add('ok');
         }
-      } catch (err) { alert(`Error: ${err.message}`); }
+      } catch (err) { toast.error(err.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
     }
 
@@ -2700,13 +3003,13 @@
         await loadCampaignCodes(paginationState.campaignCodes.page);
         setMsg(msgEl, nextActive ? '✓ Code activated.' : '✓ Code deactivated.', false);
       } catch (err) {
-        alert(`Error: ${err.message}`);
+        toast.error(err.message);
         if (btnEl) btnEl.disabled = false;
       }
     }
 
     async function deleteCampaignCode(id, btnEl) {
-      if (!confirm('Delete this campaign code? This only works for codes that have never been used.')) return;
+      if (!(await confirmDialog('Delete this campaign code? This only works for codes that have never been used.', { title: 'Delete campaign code', confirmLabel: 'Delete' }))) return;
       const msgEl = document.getElementById('campaign-codes-message');
       if (btnEl) btnEl.disabled = true;
       try {
@@ -2716,7 +3019,7 @@
         await loadCampaignCodes(paginationState.campaignCodes.page);
         setMsg(msgEl, '✓ Code deleted.', false);
       } catch (err) {
-        alert(`Error: ${err.message}`);
+        toast.error(err.message);
         if (btnEl) btnEl.disabled = false;
       }
     }
@@ -3191,8 +3494,13 @@
               <input id="modal-consultant-rate" type="number" min="0" max="100" step="0.01" placeholder="e.g. 15" />
             </div>
             <div class="fld">
-              <label for="modal-consultant-commission">Commission Notes</label>
-              <input id="modal-consultant-commission" type="text" placeholder="e.g. paid monthly by bank transfer" />
+              <!-- Renamed from "Commission Notes" -> "GCash", 2 Sept 2026
+                   (client request, Col) — this is where a reseller's GCash
+                   payout number/details get stored for monthly payment.
+                   Underlying field (commissionNotes / commission_notes)
+                   deliberately unchanged, label only. -->
+              <label for="modal-consultant-commission">GCash</label>
+              <input id="modal-consultant-commission" type="text" placeholder="e.g. GCash number / account name" />
             </div>
           </div>
           <!-- Code creation/edit box — client request 24 Aug 2026 (Col):
