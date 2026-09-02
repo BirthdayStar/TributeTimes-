@@ -396,10 +396,14 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         // already covers the whole chain with no extra logic needed here,
         // matching Col's confirmation that the full chain counts).
         items = await attachCommissionOwed(supabase, items);
+        // Client request, 3 Sept 2026 (Col): "I also want show code in
+        // table." Batched the same way as attachCommissionOwed above —
+        // one query for every consultant on this page, not one per row.
+        items = await attachActiveCode(supabase, items);
       } catch (err) {
         console.warn('GET consultants online failed, falling back to local mockDb.');
         const result = paginateArray(mockDb.sales_consultants, page, limit);
-        items = result.items.map(c => ({ ...c, commission_owed: null })); // mockDb consultants have no real orders table linkage to sum against
+        items = result.items.map(c => ({ ...c, commission_owed: null, code: null })); // mockDb consultants have no real orders/promo_codes table linkage to sum/join against
         total = result.total;
       }
       return res.json({ items, total: total || 0, page, limit });
@@ -504,6 +508,26 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const sales = salesByConsultant.get(c.id) || 0;
       return { ...c, commission_owed: Math.round(sales * (rate / 100) * 100) / 100 };
     });
+  }
+
+  // Client request, 3 Sept 2026 (Col): "I also want show code in table."
+  // Same batched-single-query pattern as attachCommissionOwed above — the
+  // code lives on a different row (promo_codes), same reasoning as the
+  // separate GET .../code endpoint used by the edit modal.
+  async function attachActiveCode(supabase, consultants) {
+    const ids = (consultants || []).map(c => c.id).filter(Boolean);
+    if (!ids.length) return consultants;
+    const { data: codes, error } = await supabase
+      .from('promo_codes')
+      .select('consultant_id, code')
+      .eq('active', true)
+      .in('consultant_id', ids);
+    if (error) {
+      console.warn('attachActiveCode: promo_codes lookup failed, showing null code for this page:', error.message);
+      return consultants.map(c => ({ ...c, code: null }));
+    }
+    const codeByConsultant = new Map((codes || []).map(row => [row.consultant_id, row.code]));
+    return consultants.map(c => ({ ...c, code: codeByConsultant.get(c.id) || null }));
   }
 
   // Single GET for edit modal

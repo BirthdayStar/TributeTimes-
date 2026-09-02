@@ -469,19 +469,62 @@
     #view-consultants .data-table td:nth-child(8) { width: 11%; }
     #view-consultants .data-table th:nth-child(9),
     #view-consultants .data-table td:nth-child(9) { width: 17%; }
+    /* Bug fix / client request, 3 Sept 2026 (Col): "remove action btn and
+       use icon." Was a vertical stack of full-width text+icon buttons
+       (needed real estate for the text); icon-only buttons are square and
+       sit in a row instead, freeing up real width in this already-dense
+       9(now 10)-column table. */
     #view-consultants .consultant-actions {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      align-items: stretch;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-start;
     }
-    #view-consultants .consultant-actions .btn {
-      width: 100%;
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      white-space: nowrap;
-      padding: 5px 8px;
-      font-size: 0.72rem;
+      width: 30px;
+      height: 30px;
+      font-size: 0.95rem;
+      line-height: 1;
+      background: var(--line-2);
+      color: var(--ink-2);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      flex-shrink: 0;
+      padding: 0;
     }
+    .btn-icon:hover { background: var(--line); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .btn-icon:active { transform: translateY(0); }
+    .btn-icon-danger { background: rgba(161,68,42,0.12); color: #A1442A; }
+    .btn-icon-danger:hover { background: rgba(161,68,42,0.22); }
+    /* Refresh icon next to a section's action buttons, e.g. "+ Add
+       Reseller" — client request, 3 Sept 2026: "make sure table has
+       refresh icon to refresh table." Spins briefly on click via the
+       existing @keyframes spin (already defined for loading spinners
+       elsewhere on this page) so the click always gives visible feedback,
+       even on a fast reload the admin might otherwise not notice. */
+    .btn-refresh-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      font-size: 1.05rem;
+      background: var(--line-2);
+      color: var(--ink-2);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .btn-refresh-icon:hover { background: var(--line); }
+    .btn-refresh-icon.spinning { animation: spin 0.6s ease-in-out; }
     #view-consultants .commission-cell {
       display: flex;
       flex-direction: column;
@@ -954,6 +997,52 @@
       padding: 16px;
     }
     #confirm-modal-overlay.open { display: flex; }
+    /* Themed prompt dialog — exact same overlay treatment as the confirm
+       dialog above, just a separate id so the two can be open/managed
+       independently (a prompt could theoretically be triggered from
+       within logic that also uses confirm, though not currently). */
+    #prompt-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(29, 31, 16, 0.42);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20001;
+      padding: 16px;
+    }
+    #prompt-modal-overlay.open { display: flex; }
+    .prompt-modal-field { margin-bottom: 14px; }
+    .prompt-modal-field:last-child { margin-bottom: 18px; }
+    .prompt-modal-field label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .prompt-modal-field input,
+    .prompt-modal-field textarea {
+      width: 100%;
+      font: inherit;
+      font-size: 0.88rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 11px;
+      color: var(--ink);
+      background: #F4F0DE;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .prompt-modal-field input:focus,
+    .prompt-modal-field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(138,106,31,.15);
+    }
     .confirm-modal-card {
       background: var(--surface);
       border-radius: var(--radius);
@@ -1053,6 +1142,23 @@
       <div class="confirm-modal-actions">
         <button class="btn btn-ghost" type="button" id="confirm-modal-cancel">Cancel</button>
         <button class="btn btn-danger" type="button" id="confirm-modal-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Themed prompt dialog — replaces every window.prompt() in this page
+       (found during a UI sweep, 3 Sept 2026: the commission date-range
+       pull and the GCash rejection-reason box were still using the
+       native browser prompt, inconsistent with the toast/confirm system
+       already replacing alert()/confirm() everywhere else). Supports one
+       or more fields per prompt (the date-range pull needs two: from/to). -->
+  <div id="prompt-modal-overlay">
+    <div class="confirm-modal-card">
+      <p class="confirm-modal-title" id="prompt-modal-title">Enter details</p>
+      <div id="prompt-modal-fields"></div>
+      <div class="confirm-modal-actions">
+        <button class="btn btn-ghost" type="button" id="prompt-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" type="button" id="prompt-modal-ok">OK</button>
       </div>
     </div>
   </div>
@@ -1261,7 +1367,8 @@
         <div class="section">
           <div class="section-head">
             <h3>👤 Resellers Directory</h3>
-            <div class="section-head-right">
+            <div class="section-head-right" style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-refresh-icon" type="button" onclick="refreshConsultants(this)" title="Refresh table" aria-label="Refresh resellers table">🔄</button>
               <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Reseller</button>
             </div>
           </div>
@@ -1274,6 +1381,11 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Phone</th>
+                    <!-- Client request, 3 Sept 2026 (Col): "I also want
+                         show code in table." Real column, same reasoning
+                         as Commission Owed above — Col explicitly asked
+                         to see it, not a subtitle trick. -->
+                    <th>Code</th>
                     <th>Status</th>
                     <th>Rate</th>
                     <!-- Phase 8 — client request 23 Aug 2026 (Col): "Commission
@@ -1293,7 +1405,7 @@
                   </tr>
                 </thead>
                 <tbody id="consultants-table-body">
-                  <tr class="empty-row"><td colspan="9">No resellers loaded.</td></tr>
+                  <tr class="empty-row"><td colspan="10">No resellers loaded.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1635,6 +1747,63 @@
         overlay.addEventListener('click', onOverlayClick);
         document.addEventListener('keydown', onKeydown);
         overlay.classList.add('open');
+      });
+    }
+
+    // Themed replacement for window.prompt() — found during a UI sweep,
+    // 3 Sept 2026, that two features (commission date-range pull, GCash
+    // rejection reason) still used the native browser prompt, the same
+    // out-of-place inconsistency alert()/confirm() had before 2 Sept.
+    // `fields`: [{ id, label, type ('text'|'date'|'textarea'), placeholder }]
+    // Resolves with an object keyed by each field's id, or null if
+    // cancelled — mirrors confirmDialog()'s true/false-on-cancel shape,
+    // just returning the entered values instead of a boolean.
+    function promptDialog(title, fields) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('prompt-modal-overlay');
+        const titleEl = document.getElementById('prompt-modal-title');
+        const fieldsEl = document.getElementById('prompt-modal-fields');
+        const okBtn = document.getElementById('prompt-modal-ok');
+        const cancelBtn = document.getElementById('prompt-modal-cancel');
+        titleEl.textContent = title;
+        fieldsEl.innerHTML = fields.map(f => `
+          <div class="prompt-modal-field">
+            <label for="prompt-field-${f.id}">${escapeHtml(f.label)}</label>
+            ${f.type === 'textarea'
+              ? `<textarea id="prompt-field-${f.id}" rows="3" placeholder="${escapeHtml(f.placeholder || '')}"></textarea>`
+              : `<input id="prompt-field-${f.id}" type="${f.type || 'text'}" placeholder="${escapeHtml(f.placeholder || '')}" />`}
+          </div>
+        `).join('');
+
+        const cleanup = (result) => {
+          overlay.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlayClick);
+          document.removeEventListener('keydown', onKeydown);
+          resolve(result);
+        };
+        const collectValues = () => {
+          const values = {};
+          for (const f of fields) values[f.id] = document.getElementById(`prompt-field-${f.id}`).value.trim();
+          return values;
+        };
+        const onOk = () => cleanup(collectValues());
+        const onCancel = () => cleanup(null);
+        const onOverlayClick = (e) => { if (e.target === overlay) cleanup(null); };
+        const onKeydown = (e) => {
+          if (e.key === 'Escape') cleanup(null);
+          else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') cleanup(collectValues());
+        };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeydown);
+        overlay.classList.add('open');
+        // Focus the first field so typing can start immediately, matching
+        // how a native prompt() already puts the cursor in its input.
+        setTimeout(() => document.getElementById(`prompt-field-${fields[0].id}`)?.focus(), 50);
       });
     }
 
@@ -2062,6 +2231,7 @@
         if (type === 'consultant') {
           document.getElementById('modal-consultant-name').value = data.name || '';
           document.getElementById('modal-consultant-email').value = data.email || '';
+          document.getElementById('modal-consultant-phone').value = data.phone || '';
           // Bug fix, 24 Aug 2026 (client report, Col, reported twice):
           // "the drop down menu for type of seller doesn't allow me to
           // change it which I think we should have the ability to do" /
@@ -2354,6 +2524,7 @@
       const payload = {
         name: document.getElementById('modal-consultant-name').value.trim(),
         email: document.getElementById('modal-consultant-email').value.trim(),
+        phone: document.getElementById('modal-consultant-phone').value.trim(),
         commissionNotes: document.getElementById('modal-consultant-commission').value.trim()
       };
       // Commission rate — sent on both create and edit, since Col
@@ -2472,18 +2643,24 @@
     }
 
     // Phase 8 — client request 23 Aug 2026 (Col): "can be pulled by a date
-    // range." Lightweight prompt()-based date entry rather than a new
-    // modal/date-picker UI — matches the scope of this step (Col asked
-    // for the capability, not a specific UI for it). Same name-from-DOM
-    // pattern as generateConsultantCode() above (never interpolate a name
-    // into an onclick attribute).
+    // range." Same name-from-DOM pattern as generateConsultantCode() above
+    // (never interpolate a name into an onclick attribute).
+    //
+    // UI fix, 3 Sept 2026 (found during a UI sweep, part of the same pass
+    // that added the phone field/code column/icon actions/refresh icon):
+    // this used two chained native prompt() calls — the exact same
+    // out-of-place inconsistency alert()/confirm() had before 2 Sept, just
+    // missed in that earlier sweep. Now one themed dialog with both fields
+    // at once, via the new promptDialog().
     async function pullConsultantCommission(id, btnEl) {
       const row = btnEl ? btnEl.closest('tr') : null;
       const name = row ? (row.querySelector('strong')?.textContent || 'this partner') : 'this partner';
-      const from = prompt(`Commission for ${name} — from date (YYYY-MM-DD, blank = since the beginning):`, '');
-      if (from === null) return; // cancelled
-      const to = prompt(`Commission for ${name} — to date (YYYY-MM-DD, blank = up to now):`, '');
-      if (to === null) return; // cancelled
+      const result = await promptDialog(`Commission for ${name}`, [
+        { id: 'from', label: 'From date (blank = since the beginning)', type: 'date' },
+        { id: 'to', label: 'To date (blank = up to now)', type: 'date' },
+      ]);
+      if (!result) return; // cancelled
+      const { from, to } = result;
       try {
         const params = new URLSearchParams();
         if (from.trim()) params.set('from', from.trim());
@@ -2813,8 +2990,14 @@
     }
 
     async function rejectGcashPayment(id, btnEl) {
-      const adminNote = prompt('Reason for rejection / note for customer:');
-      if (adminNote === null) return;
+      // UI fix, 3 Sept 2026 (same UI sweep as the commission date-range
+      // dialog above) — was a native prompt(), replaced with the themed
+      // equivalent.
+      const result = await promptDialog('Reject GCash payment', [
+        { id: 'note', label: 'Reason for rejection / note for customer', type: 'textarea' },
+      ]);
+      if (!result) return;
+      const adminNote = result.note;
       // Same fix as approveGcashPayment() above — see that comment.
       const row = btnEl ? btnEl.closest('tr') : null;
       const rowButtons = row ? Array.from(row.querySelectorAll('button')) : [];
@@ -2836,11 +3019,46 @@
       }
     }
 
+    // Client request, 3 Sept 2026 (Col): "make sure table has refresh
+    // icon to refresh table." Reuses loadConsultants() itself (already
+    // the correct full-reload path) rather than a separate code path —
+    // this button is just a discoverable, explicit way to trigger it
+    // on demand, with a brief spin animation so a fast reload still
+    // gives visible confirmation the click registered.
+    async function refreshConsultants(btnEl) {
+      if (btnEl) {
+        btnEl.classList.add('spinning');
+        btnEl.disabled = true;
+      }
+      try {
+        await loadConsultants(paginationState.consultants.page);
+        // Bug fix (found immediately while wiring this up): loadConsultants()
+        // catches its own errors internally via setMsg() and never re-throws
+        // — a naive try/catch around it here would always land in the try
+        // branch and always report "refreshed," even when the load actually
+        // failed. Check the message element's error state instead of relying
+        // on a throw that will never come.
+        const msgEl = document.getElementById('consultants-message');
+        const failed = msgEl && msgEl.classList.contains('error');
+        if (failed) {
+          toast.error(msgEl.textContent || 'Failed to refresh resellers.');
+        } else {
+          toast.info('Resellers table refreshed.', 2000);
+        }
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        if (btnEl) {
+          setTimeout(() => { btnEl.classList.remove('spinning'); btnEl.disabled = false; }, 600);
+        }
+      }
+    }
+
     async function loadConsultants(page = 1) {
       paginationState.consultants.page = page;
       const msgEl = document.getElementById('consultants-message');
       const body = document.getElementById('consultants-table-body');
-      if (body) body.innerHTML = loadingRow(9);
+      if (body) body.innerHTML = loadingRow(10);
       setMsg(msgEl, '', false);
       try {
         const r = await apiFetch(`/api/admin/consultants?page=${page}&limit=${paginationState.consultants.limit}`);
@@ -2860,6 +3078,10 @@
             </td>
             <td>${escapeHtml(c.email || '')}</td>
             <td>${escapeHtml(c.phone || '—')}</td>
+            <!-- Client request, 3 Sept 2026 (Col): "show code in table."
+                 Populated server-side via attachActiveCode() (batched, one
+                 query for the whole page) in admin-fulfilment.js. -->
+            <td>${c.code ? `<code style="font-size:0.78rem; background:var(--line-2); padding:2px 6px; border-radius:6px;">${escapeHtml(c.code)}</code>` : '<span style="color:#8A6A1F;">—</span>'}</td>
             <td><span class="status-pill ${c.active ? 'approved' : 'rejected'}">${c.active ? 'Active' : 'Inactive'}</span></td>
             <td>${c.commission_rate === null || c.commission_rate === undefined ? '<span style="color:#b23;">Not set</span>' : escapeHtml(String(c.commission_rate)) + '%'}</td>
             <!-- Phase 8: commission_owed is a lifetime (all-time) running
@@ -2871,29 +3093,29 @@
             <td>
               <div class="commission-cell">
                 ${c.commission_owed === null || c.commission_owed === undefined ? '<span style="color:#8A6A1F;">—</span>' : '$' + Number(c.commission_owed).toFixed(2)}
-                <button class="btn btn-ghost btn-sm" style="padding:2px 6px; font-size:0.7rem;" onclick="pullConsultantCommission('${c.id}', this)" title="Pull commission for a specific date range">📅 By date</button>
+                <button class="btn-icon" onclick="pullConsultantCommission('${c.id}', this)" title="Pull commission for a specific date range" aria-label="Pull commission for a date range">📅</button>
               </div>
             </td>
             <td>${escapeHtml(c.commission_notes || '—')}</td>
             <td>${escapeHtml(c.admin_notes || '—')}</td>
+            <!-- Bug fix / client request, 3 Sept 2026 (Col): "remove action
+                 btn and use icon." Same three actions as before, same
+                 handlers, same recovery-path reasoning for Generate Code
+                 (always offered — the list doesn't tell us client-side
+                 whether a code already exists, and the backend safely
+                 refuses/updates as appropriate either way) — just icon-only
+                 buttons instead of full text+icon buttons, with a title
+                 tooltip and aria-label so the action is still discoverable
+                 and accessible without reading a label. -->
             <td>
               <div class="consultant-actions">
-                <button class="btn btn-soft btn-sm" onclick="openModal('consultant', '${c.id}')">✏️ Edit</button>
-                <!-- Phase 6/7 Step 4 recovery path — always offered rather
-                     than conditionally hidden: the list endpoint doesn't
-                     join promo_codes, so we don't know client-side whether
-                     a code already exists. generateConsultantCode() calls
-                     the same createPromoCode() the backend already uses,
-                     which itself refuses (with a clear message naming the
-                     existing code) if one is already active — so clicking
-                     this on a consultant that already has a code is a safe
-                     no-op, not a silent duplicate. -->
-                <button class="btn btn-soft btn-sm" onclick="generateConsultantCode('${c.id}', this)">🔑 Generate Code</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteEntity('consultants', '${c.id}')">🗑️ Delete</button>
+                <button class="btn-icon" onclick="openModal('consultant', '${c.id}')" title="Edit" aria-label="Edit reseller">✏️</button>
+                <button class="btn-icon" onclick="generateConsultantCode('${c.id}', this)" title="Generate/update code" aria-label="Generate or update code">🔑</button>
+                <button class="btn-icon btn-icon-danger" onclick="deleteEntity('consultants', '${c.id}')" title="Delete" aria-label="Delete reseller">🗑️</button>
               </div>
             </td>
           </tr>
-        `).join('') : '<tr class="empty-row"><td colspan="9">No resellers found.</td></tr>';
+        `).join('') : '<tr class="empty-row"><td colspan="10">No resellers found.</td></tr>';
         
         renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
         setMsg(msgEl, '', false);
@@ -3461,6 +3683,17 @@
               <input id="modal-consultant-email" type="email" placeholder="sarah@example.com" required />
             </div>
           </div>
+          <!-- Phone number — client request, 3 Sept 2026 (Col): "add field
+               to enter phone no." The backend (createConsultant, the PUT
+               route, and the mockDb fallback in admin-fulfilment.js) has
+               always accepted and stored a phone field — the "Phone"
+               column in the list table below was already there too, just
+               permanently showing "—" because nothing on this form ever
+               collected it. Form-only addition, no backend change needed. -->
+          <div class="fld">
+            <label for="modal-consultant-phone">Phone Number</label>
+            <input id="modal-consultant-phone" type="tel" placeholder="021-123-4567" />
+          </div>
           <!-- Partner Type — Phase 6/7, client request 21 Aug 2026: "a
                sales rep, an influencer, a florist, a cake shop - doesn't
                matter who". Same locked-after-creation pattern already
@@ -3523,7 +3756,17 @@
                  room for a button that only needs its own text width.
                  Plain inline-flex with the input set to flex-grow instead. -->
             <div style="display:flex; align-items:center; gap:8px;">
-              <input id="modal-consultant-code" type="text" placeholder="Leave blank to auto-generate" style="text-transform:uppercase; flex:1 1 auto; min-width:0;" />
+              <!-- Bug fix, 3 Sept 2026 (found during UI sweep): this field
+                   had text-transform:uppercase, which visually rendered
+                   any typed/loaded code in all-caps regardless of its
+                   real stored value — directly misleading now that codes
+                   preserve exact mixed case (2 Sept fix, e.g. "colinM20"
+                   is supposed to look exactly like that, not "COLINM20").
+                   The underlying .value was never actually altered by
+                   this — it's purely a display bug — but a mixed-case
+                   code rendering as all-caps in its own edit field would
+                   have looked like the fix hadn't worked at all. -->
+              <input id="modal-consultant-code" type="text" placeholder="Leave blank to auto-generate" style="flex:1 1 auto; min-width:0;" />
               <button class="btn btn-soft btn-sm" type="button" id="modal-consultant-code-regen-btn" style="display:none; white-space:nowrap; flex:0 0 auto;" onclick="regenerateConsultantCodeInModal()">🎲 New Random Code</button>
             </div>
             <div id="modal-consultant-code-hint" style="font-size:0.72rem; color:#8A6A1F; margin-top:2px;"></div>
