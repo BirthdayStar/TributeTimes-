@@ -2,8 +2,20 @@
 
 const { ATTRIBUTION_SOURCE } = require('./constants');
 
+// Bug fix, 2 Sept 2026 (client report, Col — screenshot showing a reseller
+// code saved as "MUHAMMADISMAEEL" instead of his required format): this
+// used to force every code to uppercase, unconditionally. That's harmless
+// for lookups (every real lookup already matches case-insensitively via
+// .ilike() — confirmed by checking every call site — and the DB's own
+// unique index is `lower(code)`, also case-insensitive), but it silently
+// destroyed the exact mixed-case format Col specified for reseller codes:
+// "firstname lower case, surname first letter in Caps" (e.g. "colinM20",
+// "jhe-annB20") — typing or generating that exact case now survives all
+// the way to storage and display, since nothing downstream actually
+// depends on codes being uppercase, only on matching them case-
+// insensitively. Trim only; case is preserved as given.
 function normalizePromoCode(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '').trim();
 }
 
 function normalizePostcode(value) {
