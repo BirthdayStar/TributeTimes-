@@ -564,6 +564,19 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       try {
         consultant = await createConsultant(supabase, req.body || {});
       } catch (err) {
+        // Bug fix, 2 Sept 2026 (client report, Col — see createConsultant()'s
+        // full comment above for the reproduction): a known, real validation
+        // error (currently just "duplicate email") must never fall through
+        // to the mockDb "assume it's a connectivity failure" branch below —
+        // that branch always reports success, which is exactly how this bug
+        // silently ate 4 of Col's real signup attempts. Same "validate
+        // before the ambiguous catch" principle as partnerType/commissionRate
+        // above, just applied to an error that can only be detected after
+        // attempting the real insert (a duplicate check needs a DB round
+        // trip, so it can't be validated synchronously up front like those).
+        if (err.isKnownValidationError) {
+          return res.status(409).json({ error: err.message });
+        }
         console.warn('POST consultant online failed, falling back to local mockDb.');
         const name = String(req.body.name || '').trim();
         if (!name) throw new Error('Consultant name is required.');
@@ -710,7 +723,30 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const partnerTypeInput = req.body.partnerType !== undefined ? req.body.partnerType : req.body.partner_type;
       const patch = {};
       if (name !== undefined) patch.name = String(name).trim();
-      if (email !== undefined) patch.email = String(email).trim() || null;
+      // Bug fix, 2 Sept 2026 (found in a no-gap test pass right after
+      // fixing the identical issue on POST /consultants — same class of
+      // bug, this route was never covered): editing an existing reseller
+      // to an email another reseller already has hit the real unique
+      // constraint on sales_consultants.email, but this route's outer
+      // catch (below) treats ANY update failure as "must be a mockDb-only
+      // record" and looks it up there — for a REAL reseller with a REAL
+      // UUID, that lookup always misses, producing a flatly wrong 404
+      // "Consultant not found" for a record that very much exists. Same
+      // proactive-check-before-the-ambiguous-catch fix as createConsultant().
+      if (email !== undefined) {
+        patch.email = String(email).trim() || null;
+        if (patch.email) {
+          const { data: existingByEmail } = await supabase
+            .from('sales_consultants')
+            .select('id, name')
+            .ilike('email', patch.email)
+            .neq('id', req.params.id)
+            .maybeSingle();
+          if (existingByEmail) {
+            return res.status(409).json({ error: `This email is already used by another reseller: ${existingByEmail.name}. Use a different email, or edit that existing reseller instead.` });
+          }
+        }
+      }
       if (phone !== undefined) patch.phone = String(phone).trim() || null;
       if (active !== undefined) patch.active = Boolean(active);
       if (commissionNotes !== undefined) patch.commission_notes = String(commissionNotes).trim() || null;
@@ -793,6 +829,15 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
               .single());
           }
           if (data) Object.assign(data, requestedValues); // reflect requested values even though not persisted yet
+        }
+
+        // Belt-and-suspenders alongside the proactive email check above: a
+        // race between two simultaneous edits could still hit the real
+        // unique constraint even after that check passed. Same marker
+        // pattern as createConsultant() — a genuine duplicate must never
+        // be silently reclassified as "not found" via the mockDb fallback.
+        if (error && error.code === '23505') {
+          return res.status(409).json({ error: 'This email is already used by another reseller.' });
         }
 
         if (error) throw error;
@@ -2063,9 +2108,48 @@ async function createConsultant(supabase, body) {
     commissionRate = DEFAULT_BUSINESS_COMMISSION_RATE;
   }
 
+  const emailNormalized = String(body.email || '').trim().toLowerCase() || null;
+
+  // Bug fix, 2 Sept 2026 (client report, Col): "I created one earlier and
+  // it worked now tried 4 times and it won't work... only the original 4
+  // resellers are on the reseller list so it hasn't added the
+  // information!!" Reproduced directly: Angeline Acejo already existed
+  // (created 30 Aug, real row, real code RANGIEA20) — every later retry
+  // reused the same email and hit the real unique constraint on
+  // sales_consultants.email (idx_sales_consultants_email_lower), which
+  // this function correctly threw an error for... but the route's outer
+  // catch (POST /api/admin/consultants, below) treats ANY error from this
+  // function as a DB-connectivity failure and silently falls back to
+  // mockDb — the exact same "ambiguous catch swallows a real business
+  // error" bug class already fixed once for a bad partnerType (22 Aug).
+  // A duplicate email was never actually blocked from the admin's point
+  // of view: it just silently "succeeded" into memory-only storage that
+  // vanishes on restart and never appears in the real Resellers list —
+  // which is precisely the confusing behavior Col described. Checking
+  // proactively here, before the insert, gives a clear, specific message
+  // naming the conflict (same style as createPromoCode's existing-active-
+  // code check below) instead of relying on the route to correctly
+  // classify a raw Postgres error code.
+  if (emailNormalized) {
+    const { data: existingByEmail } = await supabase
+      .from('sales_consultants')
+      .select('id, name')
+      .ilike('email', emailNormalized)
+      .maybeSingle();
+    if (existingByEmail) {
+      const err = new Error(`This email is already used by another reseller: ${existingByEmail.name}. Use a different email, or edit that existing reseller instead.`);
+      // Marked (not just a plain Error) so the route below can tell this
+      // apart from a genuine DB-connectivity failure and return a clear
+      // 409 instead of silently falling back to mockDb — see the bug fix
+      // comment above and the matching check in the route handler.
+      err.isKnownValidationError = true;
+      throw err;
+    }
+  }
+
   const insertRow = {
     name,
-    email: String(body.email || '').trim() || null,
+    email: emailNormalized,
     phone: String(body.phone || '').trim() || null,
     active: body.active !== false,
     commission_notes: String(body.commissionNotes || body.commission_notes || '').trim() || null,
@@ -2104,7 +2188,14 @@ async function createConsultant(supabase, body) {
   }
 
   if (error) {
-    throw new Error(`Unable to create consultant: ${error.message}`);
+    const err = new Error(`Unable to create consultant: ${error.message}`);
+    // Belt-and-suspenders alongside the proactive check above: if two
+    // requests race and both pass that check before either inserts, the
+    // database's own unique constraint is still the real guarantee — mark
+    // this the same way so a genuine duplicate-key race still gets a
+    // clear 409 instead of silently succeeding via mockDb.
+    if (error.code === '23505') err.isKnownValidationError = true;
+    throw err;
   }
 
   return data;

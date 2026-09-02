@@ -1083,7 +1083,12 @@
                          subtitle-under-name trick used for partner_type in
                          Step 1) — Col explicitly asked for a column. -->
                     <th>Commission Owed</th>
-                    <th>Commission Notes</th>
+                    <!-- Renamed from "Commission Notes" -> "GCash", 2 Sept
+                         2026 (client request, Col): this field is where
+                         resellers' GCash payout details get stored — the
+                         underlying data/column (commission_notes) is
+                         unchanged, only the label shown to the admin. -->
+                    <th>GCash</th>
                     <th>Admin Notes</th>
                     <th>Actions</th>
                   </tr>
@@ -3191,8 +3196,13 @@
               <input id="modal-consultant-rate" type="number" min="0" max="100" step="0.01" placeholder="e.g. 15" />
             </div>
             <div class="fld">
-              <label for="modal-consultant-commission">Commission Notes</label>
-              <input id="modal-consultant-commission" type="text" placeholder="e.g. paid monthly by bank transfer" />
+              <!-- Renamed from "Commission Notes" -> "GCash", 2 Sept 2026
+                   (client request, Col) — this is where a reseller's GCash
+                   payout number/details get stored for monthly payment.
+                   Underlying field (commissionNotes / commission_notes)
+                   deliberately unchanged, label only. -->
+              <label for="modal-consultant-commission">GCash</label>
+              <input id="modal-consultant-commission" type="text" placeholder="e.g. GCash number / account name" />
             </div>
           </div>
           <!-- Code creation/edit box — client request 24 Aug 2026 (Col):
