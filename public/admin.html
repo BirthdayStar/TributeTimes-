@@ -456,14 +456,28 @@
       padding: 10px 8px;
       word-break: break-word;
       overflow-wrap: anywhere;
-      vertical-align: top;
+      vertical-align: middle;
     }
+    /* Bug fix, 3 Sept 2026 (client report, Col — screenshot showing a
+       misaligned table with Actions missing entirely): these nth-child
+       widths were written for a 9-column table and never updated when the
+       Code column was added, shifting every column after Phone over by
+       one. Status (was column 5, 6% width) ended up holding what is now
+       Rate's position and vice versa, and — the actually broken part —
+       there was NO rule at all for the new 10th column (Actions), so it
+       had no defined width and rendered squeezed/missing. Column order
+       here now matches the real <th> order exactly: Name, Email, Phone,
+       Code, Status, Rate, Commission Owed, GCash, Admin Notes, Actions.
+       Also switched td vertical-align from top to middle above, since a
+       tall row (e.g. one with the commission "pull by date" icon wrapping)
+       was leaving single-line cells looking top-anchored/misaligned
+       against the header row instead of vertically centered. */
     #view-consultants .data-table th:nth-child(1),
-    #view-consultants .data-table td:nth-child(1) { width: 13%; }
+    #view-consultants .data-table td:nth-child(1) { width: 12%; }
     #view-consultants .data-table th:nth-child(2),
-    #view-consultants .data-table td:nth-child(2) { width: 14%; }
+    #view-consultants .data-table td:nth-child(2) { width: 13%; }
     #view-consultants .data-table th:nth-child(3),
-    #view-consultants .data-table td:nth-child(3) { width: 8%; }
+    #view-consultants .data-table td:nth-child(3) { width: 7%; }
     #view-consultants .data-table th:nth-child(4),
     #view-consultants .data-table td:nth-child(4) {
       width: 9%;
@@ -472,15 +486,22 @@
       overflow-wrap: normal;
     }
     #view-consultants .data-table th:nth-child(5),
-    #view-consultants .data-table td:nth-child(5) { width: 6%; }
+    #view-consultants .data-table td:nth-child(5) { width: 7%; }
     #view-consultants .data-table th:nth-child(6),
-    #view-consultants .data-table td:nth-child(6) { width: 11%; }
+    #view-consultants .data-table td:nth-child(6) { width: 6%; }
     #view-consultants .data-table th:nth-child(7),
-    #view-consultants .data-table td:nth-child(7) { width: 11%; }
+    #view-consultants .data-table td:nth-child(7) { width: 10%; }
     #view-consultants .data-table th:nth-child(8),
-    #view-consultants .data-table td:nth-child(8) { width: 11%; }
+    #view-consultants .data-table td:nth-child(8) { width: 9%; }
     #view-consultants .data-table th:nth-child(9),
-    #view-consultants .data-table td:nth-child(9) { width: 17%; }
+    #view-consultants .data-table td:nth-child(9) { width: 14%; }
+    #view-consultants .data-table th:nth-child(10),
+    #view-consultants .data-table td:nth-child(10) {
+      width: 13%;
+      min-width: 6.5rem;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
     /* Bug fix / client request, 3 Sept 2026 (Col): "remove action btn and
        use icon." Was a vertical stack of full-width text+icon buttons
        (needed real estate for the text); icon-only buttons are square and
@@ -3138,7 +3159,7 @@
             <!-- Client request, 3 Sept 2026 (Col): "show code in table."
                  Populated server-side via attachActiveCode() (batched, one
                  query for the whole page) in admin-fulfilment.js. -->
-            <td>${c.code ? `<code style="font-size:0.78rem; background:var(--line-2); padding:2px 6px; border-radius:6px;">${escapeHtml(c.code)}</code>` : '<span style="color:#8A6A1F;">—</span>'}</td>
+            <td>${c.code ? `<code style="font-size:0.72rem; background:var(--line-2); padding:2px 6px; border-radius:6px; word-break:break-all; display:inline-block;">${escapeHtml(c.code)}</code>` : '<span style="color:#8A6A1F;">—</span>'}</td>
             <td><span class="status-pill ${c.active ? 'approved' : 'rejected'}">${c.active ? 'Active' : 'Inactive'}</span></td>
             <td>${c.commission_rate === null || c.commission_rate === undefined ? '<span style="color:#b23;">Not set</span>' : escapeHtml(String(c.commission_rate)) + '%'}</td>
             <!-- Phase 8: commission_owed is a lifetime (all-time) running
