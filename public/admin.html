@@ -965,6 +965,78 @@
     .confirm-modal-title { font-weight: 700; font-size: 1.05rem; margin: 0 0 8px; color: var(--ink); }
     .confirm-modal-message { font-size: 0.9rem; color: var(--ink-2); line-height: 1.5; margin: 0 0 18px; }
     .confirm-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* ================= VISUAL POLISH PASS ================= */
+    /* Client request, 2 Sept 2026: "more enhance version of admin side in
+       both laptop screen desktop and big screens." Scoped to polish only
+       (confirmed) — no layout/structure changes, and no change to the
+       existing zoom-based large-screen scaling (confirmed) — everything
+       here inherits that scaling automatically the same way the toast
+       system already does, so it needs no separate large-screen sizing. */
+
+    /* Custom scrollbar — the browser default looked out of place against
+       everything else here already being intentionally themed. Webkit-only
+       (Chrome/Edge, which is what this admin panel is actually used in);
+       degrades harmlessly to the default scrollbar elsewhere. */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: var(--line);
+      border-radius: 10px;
+      border: 2px solid var(--bg);
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-2); background-clip: padding-box; }
+    * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+    /* Theme-matched text selection, instead of the browser's default blue. */
+    ::selection { background: var(--accent); color: #FCF9E8; }
+
+    /* Card hover lift — same lift language already used on .btn:hover
+       (translateY + deepened shadow), extended to the cards themselves so
+       the whole page feels consistently "alive," not just its buttons. */
+    .section {
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .metric-card, .attr-card {
+      transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+    }
+    .metric-card:hover, .attr-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+      border-color: var(--accent-2);
+    }
+
+    /* Subtle zebra striping on data tables — was previously the exact
+       same row background throughout except on :hover, making a dense
+       table (e.g. the Resellers directory with 9 columns) harder to scan
+       row-to-row at a glance. Kept deliberately faint so it reads as
+       structure, not decoration, and doesn't fight the existing :hover
+       highlight below it. */
+    .data-table tbody tr:nth-child(even) { background: rgba(61,65,34,0.018); }
+    .data-table tbody tr:hover { background: rgba(61,65,34,0.045); }
+
+    /* Sidebar nav — subtle icon-scale micro-interaction on hover, matching
+       the lift language used everywhere else, without moving the item
+       itself (which would jitter the fixed-width sidebar layout). */
+    .nav-item { transition: background var(--transition), color var(--transition), padding-left var(--transition); }
+    .nav-item:hover { padding-left: 16px; }
+
+    /* Section headers — a soft accent-colored underline glow instead of
+       the plain single-tone bottom border, echoing the gold accent color
+       used throughout (buttons, links, active nav) without introducing a
+       new color to the palette. */
+    .section-head {
+      position: relative;
+    }
+    .section-head::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: -1px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent-2) 0%, transparent 40%);
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
