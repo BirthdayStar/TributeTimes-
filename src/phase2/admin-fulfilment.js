@@ -734,7 +734,15 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       // "Consultant not found" for a record that very much exists. Same
       // proactive-check-before-the-ambiguous-catch fix as createConsultant().
       if (email !== undefined) {
-        patch.email = String(email).trim() || null;
+        // Bug fix (found in this same review pass): unlike createConsultant()
+        // and the other PUT routes in this file (stations, florists — see
+        // lines ~1512/1775), this one wasn't lowercasing the email, so an
+        // edit could leave it stored in mixed/upper case. Not a functional
+        // bug (the duplicate check below and login lookups elsewhere are
+        // already case-insensitive via .ilike()), but a real data-
+        // consistency gap against the convention every other email field
+        // in this file follows — fixed to match.
+        patch.email = String(email).trim().toLowerCase() || null;
         if (patch.email) {
           const { data: existingByEmail } = await supabase
             .from('sales_consultants')
