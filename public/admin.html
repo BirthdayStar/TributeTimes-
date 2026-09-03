@@ -3120,11 +3120,25 @@
       if (!gcashPaymentsBody) return;
       gcashPaymentsBody.innerHTML = state.gcashPayments.length
         ? state.gcashPayments.map(item => {
-            const amount = [
-              formatMoney(item.expectedAmountNzd || 0),
-              item.expectedAmountPhp ? `PHP ${Number(item.expectedAmountPhp).toFixed(2)}` : '',
-            ].filter(Boolean).join(' / ');
-            const rateMeta = item.exchangeRatePhpPerNzd
+            // Client report, 4 Sept 2026 (Col): "promo code gcash email
+            // show 9.9NZ$ with 199p client want only 199p." A digital
+            // GCash order is always the flat PHP 199 (client decision, 11
+            // Aug 2026) — the NZ$ figure next to it is only an internal
+            // conversion of that same amount, not a second real price, so
+            // showing both here read as two different prices for one
+            // order. Scoped to digital only, matching the same fix in the
+            // admin alert email (gcash-payment-requests.js) — florist
+            // credit packs and station frame orders keep showing both,
+            // since those DO have a real, separate NZD price.
+            const phpText = item.expectedAmountPhp ? `PHP ${Number(item.expectedAmountPhp).toFixed(2)}` : '';
+            const amount = item.productTier === 'digital' && phpText
+              ? phpText
+              : [formatMoney(item.expectedAmountNzd || 0), phpText].filter(Boolean).join(' / ');
+            // Suppressed for digital orders too — a flat PHP 199 wasn't
+            // produced by converting at this rate, so showing it here
+            // would incorrectly imply the price varies with the exchange
+            // rate when it never does for digital.
+            const rateMeta = item.exchangeRatePhpPerNzd && item.productTier !== 'digital'
               ? `<br/><span style="font-size:.72rem;color:var(--muted);">${escapeHtml(item.exchangeRateIsLive ? 'Live' : 'Fallback')} rate: ${escapeHtml(Number(item.exchangeRatePhpPerNzd).toFixed(4))}</span>`
               : '';
             const proof = [

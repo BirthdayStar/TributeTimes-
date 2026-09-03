@@ -1659,6 +1659,24 @@ function formatDeliveryLabel(value) {
   return 'Standard';
 }
 
+// Client report, 4 Sept 2026 (Col): "promo code gcash email show 9.9NZ$
+// with 199p client want only 199p." A digital-product GCash order is
+// always a flat PHP 199 (client decision, 11 Aug 2026 — see the
+// productTier === 'digital' branch above) — the NZ$ figure alongside it
+// is only an internal accounting conversion of that same flat price, not
+// a second real amount, so showing both reads as two different prices
+// and is confusing noise for a payment that only ever has one real
+// number. Confirmed with the client: scoped to digital orders only —
+// florist credit packs and station frame orders paid via GCash keep
+// showing both currencies, since those DO have a real NZD price that
+// matters for reconciling actual accounts.
+function formatGcashExpectedAmount(request) {
+  const nzd = `NZ$${Number(request.expected_amount_nzd || 0).toFixed(2)}`;
+  const php = request.expected_amount_php ? `PHP ${Number(request.expected_amount_php).toFixed(2)}` : '';
+  if (request.product_tier === 'digital') return php || nzd;
+  return php ? `${nzd} / ${php}` : nzd;
+}
+
 async function sendGcashAdminAlert({ sendEmail, request }) {
   await sendEmail({
     to: PHASE2_CONFIG.adminAlertEmail,
@@ -1670,7 +1688,7 @@ async function sendGcashAdminAlert({ sendEmail, request }) {
       <p><strong>Customer:</strong> ${escapeHtml(request.customer_name)} (${escapeHtml(request.customer_email)})</p>
       <p><strong>Recipient:</strong> ${escapeHtml(request.recipient_name || '')}</p>
       <p><strong>Item:</strong> ${escapeHtml(request.item_label || buildRequestItemLabel(request))}</p>
-      <p><strong>Expected:</strong> NZ$${Number(request.expected_amount_nzd || 0).toFixed(2)}${request.expected_amount_php ? ` / PHP ${Number(request.expected_amount_php).toFixed(2)}` : ''}</p>
+      <p><strong>Expected:</strong> ${escapeHtml(formatGcashExpectedAmount(request))}</p>
       <p><strong>GCash sender:</strong> ${escapeHtml(request.gcash_sender_name)}</p>
       <p><strong>Reference ID:</strong> ${escapeHtml(request.gcash_reference_id)}</p>
     `,
