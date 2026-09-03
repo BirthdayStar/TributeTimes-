@@ -2505,7 +2505,14 @@
       const form = document.getElementById(`${type}-form`);
       if (form) form.reset();
       
-      const titleEl = document.getElementById(type === 'florist' ? 'modal-florist-title' : `${type}-modal-title`);
+      // Bug fix, 3 Sept 2026: prefer a "-title-text" inner span when the
+      // modal has one (currently only the consultant/Agent modal, which
+      // needs to keep a separate "- Approved" badge span alive alongside
+      // the title text — see that markup's comment). Every other modal
+      // type has no such span, so this falls back to the plain title
+      // element exactly as before — no behavior change for them.
+      const baseTitleId = type === 'florist' ? 'modal-florist-title' : `${type}-modal-title`;
+      const titleEl = document.getElementById(`${baseTitleId}-text`) || document.getElementById(baseTitleId);
       const idInput = document.getElementById(`${type}-id`);
       if (idInput) idInput.value = id || '';
       
@@ -4020,7 +4027,19 @@
   <div class="modal-overlay" id="consultant-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="consultant-modal-title">Add Agent<span id="consultant-modal-status-badge" class="modal-status-badge approved" style="display:none;"> - Approved</span></h3>
+        <!-- Bug fix, 3 Sept 2026 (found in a no-gap test pass right after
+             implementing this): openModal() is shared across every modal
+             type and sets titleEl.textContent = "Add X"/"Edit X" directly
+             — a plain textContent assignment on the <h3> wipes out ALL
+             child nodes, which was silently destroying the "- Approved"
+             badge <span> below every single time this modal opened for
+             edit (it briefly worked on first paint, then vanished the
+             instant openModal() ran). Split into two separate elements —
+             #consultant-modal-title-text (what openModal() writes to) and
+             #consultant-modal-status-badge (a sibling, never touched by
+             that generic code) — so the shared logic stays untouched
+             elsewhere and this modal's badge survives every open. -->
+        <h3 id="consultant-modal-title"><span id="consultant-modal-title-text">Add Agent</span><span id="consultant-modal-status-badge" class="modal-status-badge approved" style="display:none;"> - Approved</span></h3>
         <button class="close-modal-btn" type="button" onclick="closeModal('consultant')">&times;</button>
       </div>
       <form id="consultant-form" onsubmit="saveConsultant(event)">
