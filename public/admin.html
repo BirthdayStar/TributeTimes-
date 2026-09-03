@@ -2131,6 +2131,15 @@
         await loadQueue();
         await loadAttribution();
         await loadBirthdays();
+        // Bug fix, 3 Sept 2026 (found in a real-user-style walkthrough
+        // test): boot() (the "already has a session cookie, just landed
+        // on the page" path) called this, but login() — a fresh sign-in —
+        // never did, so the sidebar's pending-requests count badge stayed
+        // blank until the admin reloaded the page or navigated away and
+        // back. A real admin signing in fresh would have no idea there
+        // were pending requests waiting without checking that screen
+        // manually first.
+        refreshResellerRequestsBadge().catch(() => {});
       } catch (err) {
         setLoginMessage(err.message, true);
       } finally {
