@@ -813,6 +813,20 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           return res.status(400).json({ error: err.message });
         }
       }
+      // Phase 10 — client request, 3 Sept 2026 (Col, reference screenshot):
+      // full postal address + per-platform follower counts, editable the
+      // same way every other agent field already is. Each is only set
+      // when actually present in the request body, matching the existing
+      // partial-patch convention for every field above.
+      const addressLine1Input = req.body.addressLine1 !== undefined ? req.body.addressLine1 : req.body.address_line1;
+      if (addressLine1Input !== undefined) patch.address_line1 = String(addressLine1Input).trim() || null;
+      const addressLine2Input = req.body.addressLine2 !== undefined ? req.body.addressLine2 : req.body.address_line2;
+      if (addressLine2Input !== undefined) patch.address_line2 = String(addressLine2Input).trim() || null;
+      if (req.body.city !== undefined) patch.city = String(req.body.city).trim() || null;
+      if (req.body.country !== undefined) patch.country = String(req.body.country).trim() || null;
+      if (req.body.socialsProvided) {
+        Object.assign(patch, buildSocialFollowerColumns(req.body));
+      }
 
       let consultant;
       try {
@@ -2195,14 +2209,18 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       if (!email || !email.includes('@')) {
         return res.status(400).json({ error: 'A valid email address is required.' });
       }
-      // Client spec, 2 Sept 2026 (Col): business name + address only used
-      // when registering a business — required at the application layer
-      // here since the DB leaves both nullable (see db.phase9.sql).
+      // Client spec, 2 Sept 2026 (Col): business name required only when
+      // registering a business — required at the application layer here
+      // since the DB leaves it nullable (see db.phase9.sql).
       const businessName = String(body.businessName || body.business_name || '').trim();
-      const address = String(body.address || '').trim();
-      if (partnerType === 'business' && (!businessName || !address)) {
-        return res.status(400).json({ error: 'Business name and address are required for a business sign-up.' });
+      if (partnerType === 'business' && !businessName) {
+        return res.status(400).json({ error: 'Business name is required for a business sign-up.' });
       }
+      // Phase 10 — client request, 3 Sept 2026 (Col, reference screenshot):
+      // Address 1/2, City, Country collected for every agent type now (not
+      // business-only as Phase 9 originally had it) — "information that
+      // allows us to complete our backend work, payments etc."
+      const addressLine1 = String(body.addressLine1 || body.address_line1 || body.address || '').trim();
 
       const insertRow = {
         status: 'pending',
@@ -2210,7 +2228,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         first_name: firstName,
         surname,
         business_name: partnerType === 'business' ? (businessName || null) : null,
-        address: partnerType === 'business' ? (address || null) : null,
+        address: addressLine1 || null,
         gcash_number: String(body.gcashNumber || body.gcash_number || '').trim() || null,
         phone: String(body.phone || '').trim() || null,
         email,
@@ -2220,13 +2238,38 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         whatsapp: String(body.whatsapp || '').trim() || null,
         telegram: String(body.telegram || '').trim() || null,
         other_social: String(body.otherSocial || body.other_social || '').trim() || null,
+        // Phase 10 fields — see src/db.phase10.sql. Graceful-degrade below
+        // handles the case where this migration hasn't been run yet.
+        address_line2: String(body.addressLine2 || body.address_line2 || '').trim() || null,
+        city: String(body.city || '').trim() || null,
+        country: String(body.country || '').trim() || null,
+        facebook_followers: body.facebookChecked ? (String(body.facebookFollowers || '').trim() || null) : null,
+        instagram_followers: body.instagramChecked ? (String(body.instagramFollowers || '').trim() || null) : null,
+        twitter_followers: body.twitterChecked ? (String(body.twitterFollowers || '').trim() || null) : null,
+        linkedin_followers: body.linkedinChecked ? (String(body.linkedinFollowers || '').trim() || null) : null,
+        tiktok_followers: body.tiktokChecked ? (String(body.tiktokFollowers || '').trim() || null) : null,
+        youtube_followers: body.youtubeChecked ? (String(body.youtubeFollowers || '').trim() || null) : null,
+        whatsapp_followers: body.whatsappChecked ? (String(body.whatsappFollowers || '').trim() || null) : null,
       };
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('reseller_signup_requests')
         .insert(insertRow)
         .select('id')
         .single();
+
+      // Graceful-degrade if src/db.phase10.sql hasn't been run yet — the
+      // new columns are optional (unlike Phase 9's whole-table check
+      // below), so a pending Phase 10 migration shouldn't block a
+      // submission entirely, just drop the fields it can't accept yet.
+      if (isMissingColumnError(error)) {
+        Object.keys(insertRow).forEach(col => {
+          if (['address_line2', 'city', 'country', 'facebook_followers', 'instagram_followers', 'twitter_followers', 'linkedin_followers', 'tiktok_followers', 'youtube_followers', 'whatsapp_followers'].includes(col)) {
+            delete insertRow[col];
+          }
+        });
+        ({ data, error } = await supabase.from('reseller_signup_requests').insert(insertRow).select('id').single());
+      }
 
       // Graceful-degrade if src/db.phase9.sql hasn't been run yet — the
       // table itself is missing (undefined_table, 42P01), not just a
@@ -2319,13 +2362,13 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const displayName = [request.first_name, request.surname].filter(Boolean).join(' ')
         + (request.business_name ? ` (${request.business_name})` : '');
 
+      // Phase 10 — client request, 3 Sept 2026 (Col): the address and
+      // follower-count fields now have real, structured columns on the
+      // agent record (added in Phase 10) rather than only living as free
+      // text in Admin Notes — carried straight through here so approving
+      // a request populates the real profile fields directly.
       const noteParts = [
-        request.address ? `Address: ${request.address}` : null,
         request.gcash_number ? `GCash: ${request.gcash_number}` : null,
-        request.facebook ? `Facebook: ${request.facebook}` : null,
-        request.instagram ? `Instagram: ${request.instagram}` : null,
-        request.tiktok ? `TikTok: ${request.tiktok}` : null,
-        request.whatsapp ? `WhatsApp: ${request.whatsapp}` : null,
         request.telegram ? `Telegram: ${request.telegram}` : null,
         request.other_social ? `Other: ${request.other_social}` : null,
         'Created from public sign-up request.',
@@ -2339,6 +2382,23 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
           phone: request.phone,
           partnerType,
           adminNotes: noteParts.join(' | '),
+          addressLine1: request.address,
+          addressLine2: request.address_line2,
+          city: request.city,
+          country: request.country,
+          // Phase 10 replaced the public form's per-platform handle/link
+          // fields (facebook, instagram, tiktok, whatsapp — still present
+          // on this table from Phase 9, now unused going forward) with a
+          // checkbox + follower-count per platform, matching the same
+          // pattern used in the admin's own Add Agent form — so "checked"
+          // here is simply "a follower count was given."
+          facebookChecked: !!request.facebook_followers, facebookFollowers: request.facebook_followers,
+          instagramChecked: !!request.instagram_followers, instagramFollowers: request.instagram_followers,
+          twitterChecked: !!request.twitter_followers, twitterFollowers: request.twitter_followers,
+          linkedinChecked: !!request.linkedin_followers, linkedinFollowers: request.linkedin_followers,
+          tiktokChecked: !!request.tiktok_followers, tiktokFollowers: request.tiktok_followers,
+          youtubeChecked: !!request.youtube_followers, youtubeFollowers: request.youtube_followers,
+          whatsappChecked: !!request.whatsapp_followers, whatsappFollowers: request.whatsapp_followers,
         });
       } catch (err) {
         if (err.isKnownValidationError) return res.status(409).json({ error: err.message });
@@ -2461,15 +2521,47 @@ function isMissingColumnError(error) {
   return error?.code === '42703' || error?.code === 'PGRST204';
 }
 
-// Optional columns added across Phase 7 (partner_type) and Phase 8
-// (commission_rate) that may not exist yet on the real DB until their
-// migrations (src/db.phase7.sql, src/db.phase8.sql) are run manually.
-// Kept as a list (not a single flag) because BOTH can be pending at once
-// — a single-column retry (Phase 7's original fix) would still fail a
-// second time on whichever of the two came second, so the retry below
-// strips all of them together and only needs one retry attempt no matter
-// how many of these are still missing.
-const OPTIONAL_CONSULTANT_COLUMNS = ['partner_type', 'commission_rate'];
+// Optional columns added across Phase 7 (partner_type), Phase 8
+// (commission_rate) and Phase 10 (address/city/country + per-platform
+// follower counts) that may not exist yet on the real DB until their
+// migrations (src/db.phase7.sql, src/db.phase8.sql, src/db.phase10.sql)
+// are run manually. Kept as a list (not a single flag) because ANY
+// combination can be pending at once — a single-column retry would still
+// fail a second time on whichever came second, so the retry below strips
+// all of them together and only needs one retry attempt no matter how
+// many of these are still missing.
+const OPTIONAL_CONSULTANT_COLUMNS = [
+  'partner_type', 'commission_rate',
+  'address_line1', 'address_line2', 'city', 'country',
+  'facebook_followers', 'instagram_followers', 'twitter_followers',
+  'linkedin_followers', 'tiktok_followers', 'youtube_followers', 'whatsapp_followers',
+];
+
+// Phase 10 — client request, 3 Sept 2026 (Col, reference screenshot):
+// "Socials and followers" — a checkbox + follower-count field per
+// platform. Only the platforms actually ticked keep their follower-count
+// value (an unticked platform's count is discarded, same as leaving a
+// field blank) — shared between createConsultant() and the PUT edit
+// route so both build this the same way.
+const SOCIAL_FOLLOWER_FIELDS = {
+  facebook_followers: ['facebookChecked', 'facebook_checked', 'facebookFollowers', 'facebook_followers'],
+  instagram_followers: ['instagramChecked', 'instagram_checked', 'instagramFollowers', 'instagram_followers'],
+  twitter_followers: ['twitterChecked', 'twitter_checked', 'twitterFollowers', 'twitter_followers'],
+  linkedin_followers: ['linkedinChecked', 'linkedin_checked', 'linkedinFollowers', 'linkedin_followers'],
+  tiktok_followers: ['tiktokChecked', 'tiktok_checked', 'tiktokFollowers', 'tiktok_followers'],
+  youtube_followers: ['youtubeChecked', 'youtube_checked', 'youtubeFollowers', 'youtube_followers'],
+  whatsapp_followers: ['whatsappChecked', 'whatsapp_checked', 'whatsappFollowers', 'whatsapp_followers'],
+};
+
+function buildSocialFollowerColumns(body) {
+  const out = {};
+  for (const [column, [checkedCamel, checkedSnake, valueCamel, valueSnake]] of Object.entries(SOCIAL_FOLLOWER_FIELDS)) {
+    const checked = body[checkedCamel] ?? body[checkedSnake];
+    const value = String(body[valueCamel] ?? body[valueSnake] ?? '').trim();
+    out[column] = checked ? (value || null) : null;
+  }
+  return out;
+}
 
 async function createConsultant(supabase, body) {
   const name = String(body.name || '').trim();
@@ -2537,6 +2629,14 @@ async function createConsultant(supabase, body) {
     admin_notes: String(body.adminNotes || body.admin_notes || '').trim() || null,
     partner_type: partnerTypeRaw,
     commission_rate: commissionRate,
+    // Phase 10 — client request, 3 Sept 2026 (Col, reference screenshot):
+    // full postal address + per-platform follower counts, so the backend
+    // has what it needs "to complete our backend work, payments etc."
+    address_line1: String(body.addressLine1 || body.address_line1 || body.address || '').trim() || null,
+    address_line2: String(body.addressLine2 || body.address_line2 || '').trim() || null,
+    city: String(body.city || '').trim() || null,
+    country: String(body.country || '').trim() || null,
+    ...buildSocialFollowerColumns(body),
   };
 
   let { data, error } = await supabase.from('sales_consultants').insert(insertRow).select('*').single();

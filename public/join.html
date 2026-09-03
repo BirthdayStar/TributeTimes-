@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<meta name="description" content="Become a Tribute Times reseller — sign up and get your own promo code."/>
+<meta name="description" content="Become a Tribute Times agent — sign up and get your own promo code."/>
 <meta name="theme-color" content="#8A6A1F"/>
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml"/>
-<title>Become a Reseller — The Tribute Times</title>
+<title>Become an Agent — The Tribute Times</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet" />
@@ -131,18 +131,52 @@ h1 {
 .success-view .icon { font-size: 2.8rem; margin-bottom: 12px; }
 .success-view h2 { font-family: var(--font-serif); margin-bottom: 10px; }
 .success-view p { color: var(--muted); font-size: 0.94rem; line-height: 1.6; }
+
+/* Socials and Followers — client reference screenshot, 3 Sept 2026 (Col):
+   a checkbox + follower-count field per platform. */
+.social-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.social-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.social-check input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.social-row input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #F4F0DE;
+  color: var(--ink);
+  outline: none;
+}
+.social-row input[type="text"]:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
 </style>
 </head>
 <body>
   <div class="container">
     <a href="/" class="brand">
       <div class="brand-title">The Tribute Times</div>
-      <div class="brand-sub">Become a Reseller</div>
+      <div class="brand-sub">Become an Agent</div>
     </a>
 
     <div class="card">
       <div id="form-view">
-        <h1>Sign up as a reseller</h1>
+        <h1>Sign up as an agent</h1>
         <p class="intro">
           Fill in your details below and we'll be in touch with your own personal promo code —
           share it with your network and earn commission on every sale.
@@ -153,7 +187,7 @@ h1 {
           <div class="fld">
             <label for="partnerType">I am a...</label>
             <select id="partnerType" required>
-              <option value="individual">Individual Reseller</option>
+              <option value="individual">Individual Agent</option>
               <option value="business">Business</option>
               <option value="influencer">Influencer</option>
               <option value="radio_station">Radio Station</option>
@@ -174,15 +208,33 @@ h1 {
 
           <!-- Client spec, 2 Sept 2026 (Col): "Add business name after
                surname and address under that only used when registering
-               a business." Hidden unless Business is selected. -->
+               a business." Business Name is hidden unless Business is
+               selected; Address applies to every agent type (Phase 10
+               client request, 3 Sept 2026: full postal address collected
+               up front for everyone, not just businesses). -->
           <div id="business-fields">
             <div class="fld">
               <label for="businessName">Business Name</label>
               <input id="businessName" type="text" placeholder="Blossom Florist" />
             </div>
+          </div>
+
+          <div class="fld">
+            <label for="addressLine1">Address 1</label>
+            <input id="addressLine1" type="text" placeholder="123 Main St" />
+          </div>
+          <div class="fld">
+            <label for="addressLine2">Address 2 <span class="optional">(optional)</span></label>
+            <input id="addressLine2" type="text" placeholder="Apt, suite, etc." />
+          </div>
+          <div class="fld-row">
             <div class="fld">
-              <label for="address">Address</label>
-              <input id="address" type="text" placeholder="123 Main St, Auckland" />
+              <label for="city">City</label>
+              <input id="city" type="text" placeholder="Auckland" />
+            </div>
+            <div class="fld">
+              <label for="country">Country</label>
+              <input id="country" type="text" placeholder="New Zealand" />
             </div>
           </div>
 
@@ -201,36 +253,43 @@ h1 {
             <input id="gcashNumber" type="text" placeholder="09171234567" />
           </div>
 
-          <div class="section-label">Socials <span class="optional">(optional — fill in what applies)</span></div>
-          <div class="fld-row">
-            <div class="fld">
-              <label for="facebook">Facebook</label>
-              <input id="facebook" type="text" placeholder="facebook.com/..." />
-            </div>
-            <div class="fld">
-              <label for="instagram">Instagram</label>
-              <input id="instagram" type="text" placeholder="@handle" />
-            </div>
+          <div class="section-label">Socials and Followers <span class="optional">(optional — tick what applies)</span></div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="facebookChecked" onchange="toggleSocial('facebook')" /> 📘 Facebook</label>
+            <input id="facebookFollowers" type="text" placeholder="e.g. 12k" disabled />
           </div>
-          <div class="fld-row">
-            <div class="fld">
-              <label for="tiktok">TikTok</label>
-              <input id="tiktok" type="text" placeholder="@handle" />
-            </div>
-            <div class="fld">
-              <label for="whatsapp">WhatsApp</label>
-              <input id="whatsapp" type="text" placeholder="Number or link" />
-            </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="instagramChecked" onchange="toggleSocial('instagram')" /> 📷 Instagram</label>
+            <input id="instagramFollowers" type="text" placeholder="e.g. 12k" disabled />
           </div>
-          <div class="fld-row">
-            <div class="fld">
-              <label for="telegram">Telegram</label>
-              <input id="telegram" type="text" placeholder="@handle" />
-            </div>
-            <div class="fld">
-              <label for="otherSocial">Other</label>
-              <input id="otherSocial" type="text" placeholder="Any other link" />
-            </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="twitterChecked" onchange="toggleSocial('twitter')" /> ✖️ X / Twitter</label>
+            <input id="twitterFollowers" type="text" placeholder="e.g. 12k" disabled />
+          </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="linkedinChecked" onchange="toggleSocial('linkedin')" /> 💼 LinkedIn</label>
+            <input id="linkedinFollowers" type="text" placeholder="e.g. 12k" disabled />
+          </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="tiktokChecked" onchange="toggleSocial('tiktok')" /> 🎵 TikTok</label>
+            <input id="tiktokFollowers" type="text" placeholder="e.g. 12k" disabled />
+          </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="youtubeChecked" onchange="toggleSocial('youtube')" /> ▶️ YouTube</label>
+            <input id="youtubeFollowers" type="text" placeholder="e.g. 12k" disabled />
+          </div>
+          <div class="social-row">
+            <label class="social-check"><input type="checkbox" id="whatsappChecked" onchange="toggleSocial('whatsapp')" /> 💬 WhatsApp</label>
+            <input id="whatsappFollowers" type="text" placeholder="e.g. 12k" disabled />
+          </div>
+
+          <div class="fld" style="margin-top:16px;">
+            <label for="telegram">Telegram <span class="optional">(optional)</span></label>
+            <input id="telegram" type="text" placeholder="@handle" />
+          </div>
+          <div class="fld">
+            <label for="otherSocial">Other <span class="optional">(optional)</span></label>
+            <input id="otherSocial" type="text" placeholder="Any other link" />
           </div>
 
           <button class="btn-submit" type="submit" id="submit-btn">Submit Application</button>
@@ -253,10 +312,19 @@ h1 {
       const isBusiness = typeSelect.value === 'business';
       businessFields.classList.toggle('visible', isBusiness);
       document.getElementById('businessName').required = isBusiness;
-      document.getElementById('address').required = isBusiness;
     }
     typeSelect.addEventListener('change', toggleBusinessFields);
     toggleBusinessFields();
+
+    // Socials and Followers — client reference screenshot, 3 Sept 2026
+    // (Col): a checkbox + follower-count field per platform, matching the
+    // same pattern used in the admin's Add Agent form.
+    function toggleSocial(platform) {
+      const checkbox = document.getElementById(`${platform}Checked`);
+      const input = document.getElementById(`${platform}Followers`);
+      input.disabled = !checkbox.checked;
+      if (!checkbox.checked) input.value = '';
+    }
 
     const form = document.getElementById('signup-form');
     const msgEl = document.getElementById('form-msg');
@@ -268,22 +336,26 @@ h1 {
       msgEl.style.display = 'none';
       msgEl.className = 'msg';
 
+      const platforms = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'whatsapp'];
       const payload = {
         partnerType: typeSelect.value,
         firstName: document.getElementById('firstName').value.trim(),
         surname: document.getElementById('surname').value.trim(),
         businessName: document.getElementById('businessName').value.trim(),
-        address: document.getElementById('address').value.trim(),
+        addressLine1: document.getElementById('addressLine1').value.trim(),
+        addressLine2: document.getElementById('addressLine2').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        country: document.getElementById('country').value.trim(),
         email: document.getElementById('email').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         gcashNumber: document.getElementById('gcashNumber').value.trim(),
-        facebook: document.getElementById('facebook').value.trim(),
-        instagram: document.getElementById('instagram').value.trim(),
-        tiktok: document.getElementById('tiktok').value.trim(),
-        whatsapp: document.getElementById('whatsapp').value.trim(),
         telegram: document.getElementById('telegram').value.trim(),
         otherSocial: document.getElementById('otherSocial').value.trim(),
       };
+      platforms.forEach(p => {
+        payload[`${p}Checked`] = document.getElementById(`${p}Checked`).checked;
+        payload[`${p}Followers`] = document.getElementById(`${p}Followers`).value.trim();
+      });
 
       try {
         const r = await fetch('/api/public/reseller-signup', {
