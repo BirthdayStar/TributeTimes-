@@ -726,6 +726,10 @@
     .status-pill.delivered::before { background: #8b5cf6; }
     .status-pill.approved  { background: rgba(76, 122, 61, 0.14); color: #2F5A28; }
     .status-pill.approved::before { background: #4C7A3D; }
+    /* Modal title status badge — matches Col's reference screenshot
+       ("Add Agent - Approved" in green). Reuses the same green as
+       .status-pill.approved for visual consistency. */
+    .modal-status-badge.approved { color: #2F5A28; font-weight: 700; }
     .status-pill.rejected  { background: rgba(161, 68, 42, 0.12); color: #8B3820; }
     .status-pill.rejected::before { background: #A1442A; }
 
@@ -825,6 +829,51 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+    }
+    /* Socials and Followers — client reference screenshot, 3 Sept 2026
+       (Col): a checkbox + follower-count input per platform, laid out as
+       a compact grid (2 columns on desktop, 1 on mobile) rather than the
+       screenshot's exact 4/3 split, since this form's modal is narrower
+       than a full page. */
+    .social-followers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+    @media (max-width: 576px) {
+      .social-followers-grid { grid-template-columns: 1fr; }
+    }
+    .social-follower-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .social-follower-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+    .social-follower-check input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+    .social-follower-item input[type="text"] {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 0.82rem;
+      padding: 6px 8px;
+    }
+    .social-follower-item input[type="text"]:disabled {
+      background: var(--line-2);
+      color: var(--muted);
+      cursor: not-allowed;
     }
     .close-modal-btn {
       background: transparent;
@@ -1223,7 +1272,7 @@
              routing, the DB table name, and every other reference to
              this module, none of which Col asked to change. Only what
              the admin actually reads on screen is renamed. -->
-        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Resellers</button>
+        <button class="nav-item" type="button" onclick="navigateTo('consultants')">👤 Agents</button>
         <button class="nav-item" type="button" onclick="navigateTo('reseller-requests')">📝 Reseller Requests<span id="reseller-requests-badge" class="nav-badge" style="display:none;"></span></button>
         <button class="nav-item" type="button" onclick="navigateTo('promo-codes')">🏷️ Promo Codes</button>
         <button class="nav-item" type="button" onclick="navigateTo('campaign-codes')">🎟️ Campaign Codes</button>
@@ -1291,7 +1340,7 @@
           </div>
           <div class="section-body">
             <p style="margin: 0 0 20px; font-size: 0.95rem; line-height: 1.6;">
-              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, resellers, radio networks, florist stores, and famous birthdays.
+              Welcome to the Tribute Times administration portal. Select a module from the sidebar navigation to manage printed keepsakes, agents, radio networks, florist stores, and famous birthdays.
             </p>
             <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;">Attribution Summary (This Month)</p>
             <div class="attr-metrics" id="attribution-summary-grid"></div>
@@ -1299,7 +1348,7 @@
             <hr class="section-divider" style="margin: 24px 0;" />
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Reseller Attribution Report</p>
+              <p style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;">Agent Attribution Report</p>
               <button class="btn btn-soft btn-sm" id="refresh-attribution-btn" type="button">↻ Refresh Report</button>
             </div>
             <div class="msg" id="attribution-message"></div>
@@ -1307,7 +1356,7 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Reseller</th>
+                    <th>Agent</th>
                     <th>Free Demos This Month</th>
                     <th>Paid Sales</th>
                     <th>Paid Total</th>
@@ -1439,10 +1488,10 @@
       <div id="view-consultants" class="page-view">
         <div class="section">
           <div class="section-head">
-            <h3>👤 Resellers Directory</h3>
+            <h3>👤 Agents Directory</h3>
             <div class="section-head-right" style="display:flex; align-items:center; gap:8px;">
-              <button class="btn-refresh-icon" type="button" onclick="refreshConsultants(this)" title="Refresh table" aria-label="Refresh resellers table">🔄</button>
-              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Reseller</button>
+              <button class="btn-refresh-icon" type="button" onclick="refreshConsultants(this)" title="Refresh table" aria-label="Refresh agents table">🔄</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="openModal('consultant')">+ Add Agent</button>
             </div>
           </div>
           <div class="section-body">
@@ -1478,7 +1527,7 @@
                   </tr>
                 </thead>
                 <tbody id="consultants-table-body">
-                  <tr class="empty-row"><td colspan="10">No resellers loaded.</td></tr>
+                  <tr class="empty-row"><td colspan="10">No agents loaded.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1503,7 +1552,7 @@
                 <thead>
                   <tr>
                     <th>Code</th>
-                    <th>Reseller</th>
+                    <th>Agent</th>
                     <th>Monthly Limit</th>
                     <th>Used This Month</th>
                     <th>Status</th>
@@ -1575,7 +1624,7 @@
                 <thead>
                   <tr>
                     <th>Territory</th>
-                    <th>Reseller</th>
+                    <th>Agent</th>
                     <th>Country</th>
                     <th>Match Type</th>
                     <th>Postcodes</th>
@@ -2242,7 +2291,7 @@
       // Build consultant options for modals
       const consultantOpts = consultants.length
         ? consultants.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
-        : '<option value="">No resellers yet</option>';
+        : '<option value="">No agents yet</option>';
 
       const selectPromo = document.getElementById('modal-promo-consultant');
       const selectTerr = document.getElementById('modal-territory-consultant');
@@ -2258,7 +2307,7 @@
               <td>${escapeHtml(formatMoney(row.paidSalesTotalNzd))}</td>
             </tr>
           `).join('')
-        : '<tr class="empty-row"><td colspan="4">No resellers yet.</td></tr>';
+        : '<tr class="empty-row"><td colspan="4">No agents yet.</td></tr>';
 
       // Only update promoCodeBody if the promo-codes view is NOT currently active
       // (avoid overwriting the CRUD view with attribution-summary rows)
@@ -2328,6 +2377,29 @@
           if (commissionInput) commissionInput.value = data.commission_notes || '';
           const rateInput = document.getElementById('modal-consultant-rate');
           if (rateInput) rateInput.value = (data.commission_rate === null || data.commission_rate === undefined) ? '' : data.commission_rate;
+          // Address + Socials/Followers — client reference screenshot, 3
+          // Sept 2026 (Col). Each social platform's checkbox reflects
+          // whether a follower count is actually stored for it — ticking
+          // it enables the field the same way a fresh, never-saved form
+          // does (see toggleSocialFollowerField()).
+          document.getElementById('modal-consultant-address1').value = data.address_line1 || '';
+          document.getElementById('modal-consultant-address2').value = data.address_line2 || '';
+          document.getElementById('modal-consultant-city').value = data.city || '';
+          document.getElementById('modal-consultant-country').value = data.country || '';
+          ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'whatsapp'].forEach(platform => {
+            const value = data[`${platform}_followers`];
+            const checkbox = document.getElementById(`modal-consultant-${platform}-checked`);
+            const input = document.getElementById(`modal-consultant-${platform}-followers`);
+            if (checkbox) checkbox.checked = !!value;
+            if (input) { input.value = value || ''; input.disabled = !value; }
+          });
+          // "Add Agent - Approved" status badge — client reference
+          // screenshot, 3 Sept 2026 (Col). Shown for an existing agent
+          // that's active (the normal case once approved through the
+          // Reseller Requests flow, or created directly) — matches the
+          // screenshot's green "Approved" next to the modal title.
+          const statusBadge = document.getElementById('consultant-modal-status-badge');
+          if (statusBadge) statusBadge.style.display = data.active ? 'inline' : 'none';
           // Code creation/edit box — client request 24 Aug 2026 (Col).
           // Fetched separately (GET .../code) rather than folded into the
           // main consultant GET response, since the code actually lives
@@ -2489,6 +2561,17 @@
           const codeRegenBtn = document.getElementById('modal-consultant-code-regen-btn');
           if (codeRegenBtn) codeRegenBtn.style.display = 'none';
           window.__consultantOriginalCode = null;
+          // Socials/Followers — form.reset() unchecks the boxes but
+          // doesn't undo a JS-set `disabled` attribute on the follower
+          // inputs (same reasoning as the Partner Type re-enable above),
+          // so each is explicitly re-disabled for a fresh "Add" open.
+          ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'whatsapp'].forEach(platform => {
+            const input = document.getElementById(`modal-consultant-${platform}-followers`);
+            if (input) input.disabled = true;
+          });
+          // Fresh "Add": no agent exists yet, so no Approved badge.
+          const statusBadge = document.getElementById('consultant-modal-status-badge');
+          if (statusBadge) statusBadge.style.display = 'none';
         }
       }
       modal.style.display = 'flex';
@@ -2516,6 +2599,19 @@
       rateInput.value = BUSINESS_PARTNER_TYPES_CLIENT.includes(typeSelect.value) ? '35' : '';
     }
 
+    // Socials/Followers — client reference screenshot, 3 Sept 2026 (Col).
+    // Enables/disables (and clears, when unchecking) the follower-count
+    // input alongside its checkbox — a platform's count is only
+    // meaningful once the admin has actually indicated the agent uses
+    // that platform.
+    function toggleSocialFollowerField(platform) {
+      const checkbox = document.getElementById(`modal-consultant-${platform}-checked`);
+      const input = document.getElementById(`modal-consultant-${platform}-followers`);
+      if (!checkbox || !input) return;
+      input.disabled = !checkbox.checked;
+      if (!checkbox.checked) input.value = '';
+    }
+
     // Code creation/edit box — client request 24 Aug 2026 (Col). Populates
     // the code field on the edit modal with the reseller's current code
     // (fetched separately since it lives on a different row/table —
@@ -2533,10 +2629,10 @@
         codeInput.value = data.code || '';
         window.__consultantOriginalCode = data.code || null;
         if (data.code) {
-          if (codeHint) codeHint.textContent = 'Edit and Save to change this reseller’s code.';
+          if (codeHint) codeHint.textContent = 'Edit and Save to change this agent’s code.';
           if (codeRegenBtn) codeRegenBtn.style.display = 'inline-block';
         } else {
-          if (codeHint) codeHint.textContent = 'This reseller has no code yet — type one or leave blank to auto-generate on Save.';
+          if (codeHint) codeHint.textContent = 'This agent has no code yet — type one or leave blank to auto-generate on Save.';
           if (codeRegenBtn) codeRegenBtn.style.display = 'none';
         }
       } catch (err) {
@@ -2585,7 +2681,7 @@
     // structural renamed, only what's shown on screen), so this is the
     // one place that maps it to the display word for modal titles.
     function entityDisplayName(type) {
-      if (type === 'consultant') return 'Reseller';
+      if (type === 'consultant') return 'Agent';
       return capitalize(type);
     }
 
@@ -2603,7 +2699,31 @@
         name: document.getElementById('modal-consultant-name').value.trim(),
         email: document.getElementById('modal-consultant-email').value.trim(),
         phone: document.getElementById('modal-consultant-phone').value.trim(),
-        commissionNotes: document.getElementById('modal-consultant-commission').value.trim()
+        commissionNotes: document.getElementById('modal-consultant-commission').value.trim(),
+        // Address + Socials/Followers — client reference screenshot, 3 Sept
+        // 2026 (Col). socialsProvided tells the PUT route these fields were
+        // actually sent (vs. omitted entirely) so "all unchecked" isn't
+        // ambiguous with "not sent" — see buildSocialFollowerColumns()
+        // server-side.
+        addressLine1: document.getElementById('modal-consultant-address1').value.trim(),
+        addressLine2: document.getElementById('modal-consultant-address2').value.trim(),
+        city: document.getElementById('modal-consultant-city').value.trim(),
+        country: document.getElementById('modal-consultant-country').value.trim(),
+        socialsProvided: true,
+        facebookChecked: document.getElementById('modal-consultant-facebook-checked').checked,
+        facebookFollowers: document.getElementById('modal-consultant-facebook-followers').value.trim(),
+        instagramChecked: document.getElementById('modal-consultant-instagram-checked').checked,
+        instagramFollowers: document.getElementById('modal-consultant-instagram-followers').value.trim(),
+        twitterChecked: document.getElementById('modal-consultant-twitter-checked').checked,
+        twitterFollowers: document.getElementById('modal-consultant-twitter-followers').value.trim(),
+        linkedinChecked: document.getElementById('modal-consultant-linkedin-checked').checked,
+        linkedinFollowers: document.getElementById('modal-consultant-linkedin-followers').value.trim(),
+        tiktokChecked: document.getElementById('modal-consultant-tiktok-checked').checked,
+        tiktokFollowers: document.getElementById('modal-consultant-tiktok-followers').value.trim(),
+        youtubeChecked: document.getElementById('modal-consultant-youtube-checked').checked,
+        youtubeFollowers: document.getElementById('modal-consultant-youtube-followers').value.trim(),
+        whatsappChecked: document.getElementById('modal-consultant-whatsapp-checked').checked,
+        whatsappFollowers: document.getElementById('modal-consultant-whatsapp-followers').value.trim(),
       };
       // Commission rate — sent on both create and edit, since Col
       // confirmed the rate stays editable for the life of the partner. An
@@ -3119,9 +3239,9 @@
         const msgEl = document.getElementById('consultants-message');
         const failed = msgEl && msgEl.classList.contains('error');
         if (failed) {
-          toast.error(msgEl.textContent || 'Failed to refresh resellers.');
+          toast.error(msgEl.textContent || 'Failed to refresh agents.');
         } else {
-          toast.info('Resellers table refreshed.', 2000);
+          toast.info('Agents table refreshed.', 2000);
         }
       } catch (err) {
         toast.error(err.message);
@@ -3187,13 +3307,13 @@
                  and accessible without reading a label. -->
             <td>
               <div class="consultant-actions">
-                <button class="btn-icon" onclick="openModal('consultant', '${c.id}')" title="Edit" aria-label="Edit reseller">✏️</button>
+                <button class="btn-icon" onclick="openModal('consultant', '${c.id}')" title="Edit" aria-label="Edit agent">✏️</button>
                 <button class="btn-icon" onclick="generateConsultantCode('${c.id}', this)" title="Generate/update code" aria-label="Generate or update code">🔑</button>
-                <button class="btn-icon btn-icon-danger" onclick="deleteEntity('consultants', '${c.id}')" title="Delete" aria-label="Delete reseller">🗑️</button>
+                <button class="btn-icon btn-icon-danger" onclick="deleteEntity('consultants', '${c.id}')" title="Delete" aria-label="Delete agent">🗑️</button>
               </div>
             </td>
           </tr>
-        `).join('') : '<tr class="empty-row"><td colspan="10">No resellers found.</td></tr>';
+        `).join('') : '<tr class="empty-row"><td colspan="10">No agents found.</td></tr>';
         
         renderPaginationControls('consultants-pagination', data.total, page, paginationState.consultants.limit, 'loadConsultants');
         setMsg(msgEl, '', false);
@@ -3225,10 +3345,17 @@
 
         if (body) body.innerHTML = data.items.length ? data.items.map(req => {
           const name = escapeHtml([req.first_name, req.surname].filter(Boolean).join(' ')) + (req.business_name ? ` (${escapeHtml(req.business_name)})` : '');
-          const socials = ['facebook', 'instagram', 'tiktok', 'whatsapp', 'telegram', 'other_social']
-            .filter(k => req[k])
-            .map(k => `${k === 'other_social' ? 'Other' : k[0].toUpperCase() + k.slice(1)}: ${escapeHtml(req[k])}`)
-            .join('<br/>') || '—';
+          // Phase 10 — client reference screenshot, 3 Sept 2026 (Col):
+          // socials now carry a follower count per platform (not just a
+          // handle/link, Phase 9's original fields) — shown here as
+          // "Platform: count". Telegram/Other are still plain links, no
+          // follower count collected for those two.
+          const SOCIAL_FOLLOWER_LABELS = { facebook_followers: 'Facebook', instagram_followers: 'Instagram', twitter_followers: 'X/Twitter', linkedin_followers: 'LinkedIn', tiktok_followers: 'TikTok', youtube_followers: 'YouTube', whatsapp_followers: 'WhatsApp' };
+          const socials = [
+            ...Object.entries(SOCIAL_FOLLOWER_LABELS).filter(([k]) => req[k]).map(([k, label]) => `${label}: ${escapeHtml(req[k])}`),
+            req.telegram ? `Telegram: ${escapeHtml(req.telegram)}` : null,
+            req.other_social ? `Other: ${escapeHtml(req.other_social)}` : null,
+          ].filter(Boolean).join('<br/>') || '—';
           const actions = req.status === 'pending'
             ? `<div style="display:flex; gap:6px;">
                  <button class="btn-icon" onclick="approveResellerRequest('${req.id}', '${req.partner_type}')" title="Approve" aria-label="Approve request">✅</button>
@@ -3239,7 +3366,7 @@
           <tr>
             <td>${escapeHtml(new Date(req.created_at).toLocaleString())}</td>
             <td><strong>${name}</strong></td>
-            <td>${escapeHtml(RESELLER_REQUEST_TYPE_LABELS[req.partner_type] || req.partner_type)}${req.address ? `<br/><span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml(req.address)}</span>` : ''}</td>
+            <td>${escapeHtml(RESELLER_REQUEST_TYPE_LABELS[req.partner_type] || req.partner_type)}${[req.address, req.address_line2, req.city, req.country].filter(Boolean).length ? `<br/><span style="font-size:0.72rem; color:#8A6A1F;">${escapeHtml([req.address, req.address_line2, req.city, req.country].filter(Boolean).join(', '))}</span>` : ''}</td>
             <td>${escapeHtml(req.email)}${req.phone ? `<br/>${escapeHtml(req.phone)}` : ''}${req.gcash_number ? `<br/>GCash: ${escapeHtml(req.gcash_number)}` : ''}</td>
             <td style="font-size:0.78rem;">${socials}</td>
             <td><span class="status-pill ${req.status === 'approved' ? 'approved' : (req.status === 'rejected' ? 'rejected' : '')}">${req.status[0].toUpperCase() + req.status.slice(1)}</span></td>
@@ -3319,7 +3446,7 @@
 
         toast.success(data.codeGenerated
           ? `Approved — reseller created with code ${data.code}.`
-          : `Approved — reseller created, but code generation failed: ${data.codeError || 'unknown error'}. Use Generate Code on the Resellers page.`);
+          : `Approved — reseller created, but code generation failed: ${data.codeError || 'unknown error'}. Use Generate Code on the Agents page.`);
         loadResellerRequests();
       } catch (err) {
         toast.error(err.message);
@@ -3889,11 +4016,11 @@
   </script>
   <!-- ── POPUP MODALS ── -->
 
-  <!-- Consultant Modal (displayed to the admin as "Reseller" — see nav-item comment above) -->
+  <!-- Consultant Modal (displayed to the admin as "Agent" — see nav-item comment above) -->
   <div class="modal-overlay" id="consultant-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="consultant-modal-title">Add Reseller</h3>
+        <h3 id="consultant-modal-title">Add Agent<span id="consultant-modal-status-badge" class="modal-status-badge approved" style="display:none;"> - Approved</span></h3>
         <button class="close-modal-btn" type="button" onclick="closeModal('consultant')">&times;</button>
       </div>
       <form id="consultant-form" onsubmit="saveConsultant(event)">
@@ -3936,6 +4063,67 @@
               <option value="radio_station">Radio Station</option>
             </select>
           </div>
+          <!-- Address + Socials/Followers — client request, 3 Sept 2026
+               (Col, reference screenshot of an "Add Agent" form):
+               "standardized information gathering... information that
+               allows us to complete our backend work, payments etc."
+               Matches his screenshot layout: Address 1, Address 2,
+               City/Country, then a checkbox + follower-count per social
+               platform. All optional — an agent may not have every
+               platform, hence the checkbox (only a ticked platform's
+               follower count is saved; see buildSocialFollowerColumns()
+               server-side). -->
+          <div class="fld">
+            <label for="modal-consultant-address1">Address 1</label>
+            <input id="modal-consultant-address1" type="text" placeholder="123 Main St" />
+          </div>
+          <div class="fld">
+            <label for="modal-consultant-address2">Address 2</label>
+            <input id="modal-consultant-address2" type="text" placeholder="Apt, suite, etc. (optional)" />
+          </div>
+          <div class="fld-row">
+            <div class="fld">
+              <label for="modal-consultant-city">City</label>
+              <input id="modal-consultant-city" type="text" placeholder="Auckland" />
+            </div>
+            <div class="fld">
+              <label for="modal-consultant-country">Country</label>
+              <input id="modal-consultant-country" type="text" placeholder="New Zealand" />
+            </div>
+          </div>
+          <div class="fld">
+            <label>Socials and Followers</label>
+            <div class="social-followers-grid">
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-facebook-checked" onchange="toggleSocialFollowerField('facebook')" /> 📘 Facebook</label>
+                <input id="modal-consultant-facebook-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-instagram-checked" onchange="toggleSocialFollowerField('instagram')" /> 📷 Instagram</label>
+                <input id="modal-consultant-instagram-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-twitter-checked" onchange="toggleSocialFollowerField('twitter')" /> ✖️ X / Twitter</label>
+                <input id="modal-consultant-twitter-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-linkedin-checked" onchange="toggleSocialFollowerField('linkedin')" /> 💼 LinkedIn</label>
+                <input id="modal-consultant-linkedin-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-tiktok-checked" onchange="toggleSocialFollowerField('tiktok')" /> 🎵 TikTok</label>
+                <input id="modal-consultant-tiktok-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-youtube-checked" onchange="toggleSocialFollowerField('youtube')" /> ▶️ YouTube</label>
+                <input id="modal-consultant-youtube-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+              <div class="social-follower-item">
+                <label class="social-follower-check"><input type="checkbox" id="modal-consultant-whatsapp-checked" onchange="toggleSocialFollowerField('whatsapp')" /> 💬 WhatsApp</label>
+                <input id="modal-consultant-whatsapp-followers" type="text" placeholder="e.g. 12k" disabled />
+              </div>
+            </div>
+          </div>
           <!-- Commission rate — Phase 8, client request 23 Aug 2026 (Col):
                "Automatic commission calculation (rate x sales) - yes
                please, not the free-text notes field." A real numeric
@@ -3973,8 +4161,10 @@
                (loaded via GET .../code) and can be changed — saving calls
                POST .../generate-code, which now updates the existing code
                in place instead of only ever creating a fresh one. -->
+          <!-- Label styled red to match Col's reference screenshot of an
+               approved agent's record ("CURRENT PROMO CODE" in red). -->
           <div class="fld" id="modal-consultant-code-wrap">
-            <label for="modal-consultant-code">Reseller Code</label>
+            <label for="modal-consultant-code" style="color:#B23A2A;">Current Promo Code</label>
             <!-- Bug fix (second bug-hunt pass), 24 Aug 2026: .fld-row is a
                  fixed 50/50 grid (built for two side-by-side .fld blocks,
                  e.g. Commission Rate + Commission Notes above) — using it
@@ -4017,7 +4207,7 @@
         <input type="hidden" id="promo-id" />
         <div class="modal-body">
           <div class="fld">
-            <label for="modal-promo-consultant">Reseller</label>
+            <label for="modal-promo-consultant">Agent</label>
             <select id="modal-promo-consultant" required><option value="">— select consultant —</option></select>
           </div>
           <div class="fld">
@@ -4107,7 +4297,7 @@
         <input type="hidden" id="territory-id" />
         <div class="modal-body">
           <div class="fld">
-            <label for="modal-territory-consultant">Reseller</label>
+            <label for="modal-territory-consultant">Agent</label>
             <select id="modal-territory-consultant" required><option value="">— select —</option></select>
           </div>
           <div class="fld">
