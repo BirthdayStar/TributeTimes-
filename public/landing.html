@@ -1465,23 +1465,15 @@ body {
       </div>
     </div>
 
+    <!-- Footer country selector removed, 6 Sept 2026 (client request,
+         Col): "cient want remove fotter country selector." The header
+         selector (#header-country-wrap, above) stays as the one place to
+         change country/pricing — it already drives every price display
+         on the page (hero price, local-pricing-card highlight), so
+         removing this second, redundant control changes nothing
+         functional. -->
     <div class="footer-bottom">
       <div>© 2026 The Tribute Times. All rights reserved.</div>
-      <div class="country-select-wrap" id="footer-country-wrap" data-price-labels="true">
-        <select class="country-select-native" id="footer-country-select" aria-hidden="true" tabindex="-1">
-          <option value="New Zealand">New Zealand</option>
-          <option value="United Kingdom">United Kingdom</option>
-          <option value="United States">United States</option>
-          <option value="Australia">Australia</option>
-          <option value="Philippines">Philippines</option>
-        </select>
-        <button type="button" class="country-select-btn" id="footer-country-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select your country to see local pricing">
-          <span class="flag-ico" data-flag-slot></span>
-          <span data-price-slot></span>
-          <svg class="country-select-chevron" width="10" height="6" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z" fill="currentColor"/></svg>
-        </button>
-        <ul class="country-select-list" id="footer-country-list" role="listbox" hidden></ul>
-      </div>
       <div class="footer-bottom-links">
         <a href="/legal/terms">Terms &amp; Conditions</a>
         <a href="/legal/privacy">Privacy Policy</a>
@@ -1574,22 +1566,23 @@ function applyPricingCountry(country) {
     card.classList.toggle('is-local', card.getAttribute('data-country') === country);
   });
 
-  ['header-country-select', 'footer-country-select'].forEach(id => {
-    const select = document.getElementById(id);
-    if (select && select.value !== country) select.value = country;
-  });
+  // Client request, 6 Sept 2026 (Col): footer selector removed — the
+  // header one (below) is now the only country control on the page, so
+  // this only needs to sync itself any more.
+  const select = document.getElementById('header-country-select');
+  if (select && select.value !== country) select.value = country;
 
   updateCountrySelectVisuals(country);
 }
 
-// Custom flag dropdown wiring. The real <select> elements stay in the DOM
-// (visually hidden) and remain the source of truth for .value/'change' —
-// this only builds the flag-based trigger + menu on top of them and keeps
-// it in sync, so detection/manual-sync logic above is untouched.
+// Custom flag dropdown wiring. The real <select> element stays in the DOM
+// (visually hidden) and remains the source of truth for .value/'change' —
+// this only builds the flag-based trigger + menu on top of it, so
+// detection/manual-sync logic above is untouched.
 const COUNTRY_LIST = ['New Zealand', 'United Kingdom', 'United States', 'Australia', 'Philippines'];
 
 function updateCountrySelectVisuals(country) {
-  ['header', 'footer'].forEach(prefix => {
+  ['header'].forEach(prefix => {
     const btn = document.getElementById(`${prefix}-country-btn`);
     if (!btn) return;
     const flagSlot = btn.querySelector('[data-flag-slot]');
@@ -1675,15 +1668,12 @@ function setupCountryDropdown(prefix) {
 
 (function initCountryPricing() {
   setupCountryDropdown('header');
-  setupCountryDropdown('footer');
 
   const initialCountry = detectPricingCountry() || DEFAULT_PRICING_COUNTRY;
   applyPricingCountry(initialCountry);
 
-  ['header-country-select', 'footer-country-select'].forEach(id => {
-    const select = document.getElementById(id);
-    if (select) select.addEventListener('change', () => applyPricingCountry(select.value));
-  });
+  const select = document.getElementById('header-country-select');
+  if (select) select.addEventListener('change', () => applyPricingCountry(select.value));
 })();
 
 // Fetch active radio stations to populate the dropdown
