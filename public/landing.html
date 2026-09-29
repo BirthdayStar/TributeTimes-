@@ -62,13 +62,12 @@ body {
   flex-direction: column;
   text-decoration: none;
 }
-.brand-title {
-  font-family: var(--font-serif);
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+/* .brand-title (text wordmark) replaced by the logo image below, 29
+   Sept 2026 (client request, Col) — see .nav-brand markup's comment. */
+.brand-logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
 }
 .brand-sub {
   font-size: 0.58rem;
@@ -664,139 +663,14 @@ body {
 }
 .partner-login-link:hover { color: var(--text-main); text-decoration: underline; }
 
-/* ════════════════════════════════════════
-   CONTACT STATION MANAGER ENQUIRY
-   ════════════════════════════════════════ */
-.enquiry-section {
-  background: #FFFFFF;
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  padding: 36px;
-  max-width: 680px;
-  margin: 0 auto 90px;
-}
-.enquiry-h3 {
-  font-family: var(--font-serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-main);
-  text-align: center;
-  margin-bottom: 8px;
-}
-.enquiry-sub {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  text-align: center;
-  margin-bottom: 24px;
-}
-.enquiry-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-}
-.form-group label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.form-group input,
-.form-group select,
-.form-group textarea {
-  background: #FFFFFF;
-  border: 1px solid var(--card-border);
-  border-radius: 8px;
-  padding: 12px;
-  color: var(--text-main);
-  font-family: inherit;
-  font-size: 0.9rem;
-  outline: none;
-  width: 100%;
-}
-.form-group select option {
-  background: #FFFFFF;
-  color: var(--text-main);
-}
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #8A9160;
-  background: #F4F0DE;
-}
-.btn-submit {
-  background: var(--accent-red);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: 8px;
-  padding: 14px;
-  font-size: 0.88rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 8px;
-}
-.btn-submit:hover { background: var(--accent-red-hover); }
-.form-response-msg {
-  font-size: 0.85rem;
-  text-align: center;
-  margin-top: 8px;
-  display: none;
-}
-.form-response-msg.success { color: #4C7A3D; }
-.form-response-msg.error { color: #A1442A; }
+/* Contact Station Manager enquiry CSS removed, 29 Sept 2026 (client
+   request, Col): "May as well delete this box as well as I don't see
+   any use for it at all!" — .enquiry-section/.enquiry-h3/.enquiry-sub/
+   .enquiry-form/.form-group/.btn-submit/.form-response-msg were only
+   ever used by that now-deleted section. */
 
-/* ════════════════════════════════════════
-   BOTTOM CTA BANNER
-   ════════════════════════════════════════ */
-.cta-banner {
-  background: linear-gradient(135deg, rgba(232, 217, 174, 0.55) 0%, rgba(244, 240, 222, 0.85) 100%);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  padding: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 90px;
-}
-.cta-banner-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.cta-banner-img {
-  width: 90px;
-  height: 90px;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 1px solid var(--card-border);
-  flex-shrink: 0;
-}
-.cta-banner-text {
-  display: flex;
-  flex-direction: column;
-}
-.cta-banner-h3 {
-  font-family: var(--font-serif);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.2;
-}
-.cta-banner-sub {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
+/* Bottom CTA banner CSS removed, 29 Sept 2026 (client request, Col) —
+   see the removed HTML section's comment above for the full reasoning. */
 
 /* ════════════════════════════════════════
    FOOTER
@@ -1079,8 +953,6 @@ body {
   .occasions-grid { grid-template-columns: repeat(4, 1fr); }
   .testimonials-grid { grid-template-columns: 1fr; }
   .partners-grid { grid-template-columns: 1fr; }
-  .cta-banner { flex-direction: column; text-align: center; }
-  .cta-banner-left { flex-direction: column; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
   .pricing-card { padding: 36px 28px 28px; }
 }
@@ -1102,8 +974,16 @@ body {
 <!-- NAVIGATION HEADER -->
 <header class="container">
   <nav class="navbar">
+    <!-- Client request, 29 Sept 2026 (Col, reference image of a new
+         wordmark + circular seal logo): "can the header be changed to
+         this?" File provided as public/logo (2).png (plain white
+         background, low-res); background removed (white -> transparent
+         via alpha color-keying) and upscaled 3x with a mild sharpening
+         pass for a crisper edge at header display size, saved as
+         public/logo_header.png. Subtitle line kept — only the wordmark
+         itself was asked to change. -->
     <a href="/" class="nav-brand">
-      <span class="brand-title">The Tribute Times</span>
+      <img src="/logo_header.png" alt="The Tribute Times" class="brand-logo-img" />
       <span class="brand-sub">PERSONALISED VINTAGE NEWSPAPER KEEPSAKES</span>
     </a>
     <ul class="nav-links">
@@ -1117,7 +997,13 @@ body {
            a dedicated audience, rather than only living in the CTA
            buttons on the right. -->
       <li><a href="/join" class="nav-link">APPLY TO BE AN AGENT</a></li>
-      <li><a href="#contact" class="nav-link">CONTACT</a></li>
+      <!-- Bug fix, 29 Sept 2026: this used to jump to #contact (the
+           "Contact a Station Manager" section), which Col asked to be
+           deleted entirely ("delete this box as well as I don't see any
+           use for it at all"). That anchor target no longer exists, so
+           pointed CONTACT at the footer's real contact email instead of
+           leaving a dead in-page link. -->
+      <li><a href="mailto:hello@tributetimes.co.nz" class="nav-link">CONTACT</a></li>
     </ul>
     <div class="nav-actions">
       <div class="country-select-wrap" id="header-country-wrap" data-price-labels="false">
@@ -1318,7 +1204,11 @@ body {
           <div class="tier-icon">📜</div>
           <h3 class="tier-title">Digital Edition</h3>
           <p class="tier-description">Perfect for instant gifts, remote sharing, and self-printing.</p>
-          <div class="tier-price-val"><span class="price-currency">NZ$</span>9.95</div>
+          <!-- Price removed, 29 Sept 2026 (client request, Col, screenshot
+               of this exact card): "Errrrrrr, no you havent" — his earlier
+               6 Sept request only removed the bottom CTA banner's price
+               line; this tier card's own price display was a separate,
+               untouched instance. -->
           <ul class="tier-features-list">
             <li class="tier-feature-item"><span class="tier-feature-check">✓</span> High-resolution digital PDF download</li>
             <li class="tier-feature-item"><span class="tier-feature-check">✓</span> Locked A4 single-page template geometry</li>
@@ -1379,51 +1269,15 @@ body {
     </div>
   </section>
 
-  <!-- CONTACT / ENQUIRY SECTION -->
-  <section class="enquiry-section" id="contact">
-    <h3 class="enquiry-h3">Contact a Station Manager</h3>
-    <p class="enquiry-sub">Select an active radio station manager from our network to send an inquiry directly to their inbox.</p>
-    
-    <form class="enquiry-form" onsubmit="submitEnquiry(event)">
-      <div class="form-group">
-        <label for="station-select">Select Radio Station</label>
-        <select id="station-select" required>
-          <option value="">Loading station managers...</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="sender-name">Your Name</label>
-        <input type="text" id="sender-name" placeholder="John Doe" required />
-      </div>
-      <div class="form-group">
-        <label for="sender-email">Your Email Address</label>
-        <input type="email" id="sender-email" placeholder="john@example.com" required />
-      </div>
-      <div class="form-group">
-        <label for="enquiry-message">Your Message</label>
-        <textarea id="enquiry-message" rows="4" placeholder="Type your message to the station manager..." required></textarea>
-      </div>
-      <button type="submit" class="btn-submit" id="enquiry-submit-btn">Send Enquiry</button>
-      <div class="form-response-msg" id="enquiry-response-msg"></div>
-    </form>
-  </section>
-
-  <!-- BOTTOM CTA BANNER -->
-  <section class="cta-banner">
-    <div class="cta-banner-left">
-      <img src="/banner_gift_newspaper.png" alt="Wrapped newspaper gift" class="cta-banner-img" />
-      <div class="cta-banner-text">
-        <h3 class="cta-banner-h3">Make Their Day Unforgettable</h3>
-        <p class="cta-banner-sub">Create a one-of-a-kind newspaper they'll treasure forever.</p>
-      </div>
-    </div>
-    <!-- Client request, 6 Sept 2026 (Col): "remove from landing page the
-         box at the bottom that Digital Edition NZ9.95" — the price
-         line under this CTA button removed; the button itself stays. -->
-    <div style="text-align: center;">
-      <a href="/public" class="btn-primary">CREATE YOUR NEWSPAPER</a>
-    </div>
-  </section>
+  <!-- BOTTOM CTA BANNER removed, 29 Sept 2026 (client request, Col,
+       screenshot of this exact section): "this one which is duplicated
+       multiple times on the front page for some reason unbeknownst to
+       me." The banner itself only ever appeared once in the markup, but
+       the page already has 4 other "create your newspaper" CTA buttons
+       (header, hero, mid-page, pricing card) pushing the identical
+       action — this was the 5th and most redundant, sitting right before
+       the footer, so removed outright rather than trim its price line
+       again (already done once, 6 Sept). -->
 
 </main>
 
@@ -1678,86 +1532,12 @@ function setupCountryDropdown(prefix) {
   if (select) select.addEventListener('change', () => applyPricingCountry(select.value));
 })();
 
-// Fetch active radio stations to populate the dropdown
-async function loadStationsDropdown() {
-  const select = document.getElementById('station-select');
-  try {
-    const response = await fetch('/api/public/stations');
-    if (!response.ok) throw new Error('Failed to load stations');
-    const stations = await response.json();
-    
-    select.innerHTML = '<option value="">-- Choose a Radio Station --</option>';
-    if (stations.length === 0) {
-      select.innerHTML = '<option value="">No active station managers found</option>';
-      return;
-    }
-    
-    stations.forEach(station => {
-      const option = document.createElement('option');
-      option.value = station.id;
-      option.textContent = station.name;
-      select.appendChild(option);
-    });
-  } catch (err) {
-    console.error(err);
-    select.innerHTML = '<option value="">Error loading station managers</option>';
-  }
-}
-
-// Handle sending enquiry
-async function submitEnquiry(event) {
-  event.preventDefault();
-  const submitBtn = document.getElementById('enquiry-submit-btn');
-  const responseMsg = document.getElementById('enquiry-response-msg');
-  
-  const stationId = document.getElementById('station-select').value;
-  const senderName = document.getElementById('sender-name').value.trim();
-  const senderEmail = document.getElementById('sender-email').value.trim();
-  const message = document.getElementById('enquiry-message').value.trim();
-
-  responseMsg.style.display = 'none';
-  responseMsg.className = 'form-response-msg';
-
-  if (!stationId) {
-    responseMsg.textContent = 'Please select a radio station.';
-    responseMsg.className = 'form-response-msg error';
-    responseMsg.style.display = 'block';
-    return;
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Sending...';
-
-  try {
-    const response = await fetch('/api/public/stations/inquiry', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ stationId, senderName, senderEmail, message })
-    });
-    
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to send inquiry.');
-
-    responseMsg.textContent = '✓ Your inquiry has been sent to the station manager!';
-    responseMsg.className = 'form-response-msg success';
-    responseMsg.style.display = 'block';
-
-    // Clear form
-    document.getElementById('sender-name').value = '';
-    document.getElementById('sender-email').value = '';
-    document.getElementById('enquiry-message').value = '';
-    document.getElementById('station-select').value = '';
-  } catch (err) {
-    responseMsg.textContent = err.message;
-    responseMsg.className = 'form-response-msg error';
-    responseMsg.style.display = 'block';
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Send Enquiry';
-  }
-}
+// loadStationsDropdown() and submitEnquiry() removed, 29 Sept 2026
+// (client request, Col, screenshot of the "Contact a Station Manager"
+// box): "May as well delete this box as well as I don't see any use for
+// it at all!" Both functions only ever served that now-deleted form —
+// dead code otherwise, so removed along with it rather than left behind
+// unreferenced.
 
 // Fetch the live keepsake count for the social-proof stat tile
 async function loadKeepsakesCreatedStat() {
@@ -1774,8 +1554,6 @@ async function loadKeepsakesCreatedStat() {
   }
 }
 
-// Initialise page dropdown
-window.addEventListener('DOMContentLoaded', loadStationsDropdown);
 window.addEventListener('DOMContentLoaded', loadKeepsakesCreatedStat);
 </script>
 
