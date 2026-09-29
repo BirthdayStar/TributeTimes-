@@ -263,16 +263,14 @@ body.florist-edition.florist-authenticated #florist-credit-panel { display:block
   margin: 0 auto;
   /* This box is intentionally scrollable (the keepsake is shown at true A4
      size for pinch-zoom reading on mobile — see adjustNewspaperPreviewScale
-     below) — styled here so the scrollbar reads as an intentional part of
-     the page instead of a raw, unstyled system control. */
-  scrollbar-width: thin;
-  scrollbar-color: #B9AE7F #F4EFDD;
+     below) — scrolling still works, the scrollbar itself is just hidden.
+     Client request, 29 Sept 2026 (Col, screenshot): "diable the scroll
+     bar btoh, just scroll not shwo this" — previously styled as a visible
+     themed scrollbar (see git history), now hidden entirely across
+     browsers instead. */
+  scrollbar-width: none;
 }
-#newspaper-container::-webkit-scrollbar { width: 10px; height: 10px; }
-#newspaper-container::-webkit-scrollbar-track { background: #F4EFDD; }
-#newspaper-container::-webkit-scrollbar-thumb { background: #B9AE7F; border-radius: 6px; border: 2px solid #F4EFDD; }
-#newspaper-container::-webkit-scrollbar-thumb:hover { background: #8A6A1F; }
-#newspaper-container::-webkit-scrollbar-corner { background: #F4EFDD; }
+#newspaper-container::-webkit-scrollbar { display: none; }
 /* Below the native A4 preview width (~794px), the generated keepsake HTML's
    own #wrap { justify-content:center } would center a flex-shrink:0 child
    wider than its container, pushing half the overflow into negative scroll

@@ -13,8 +13,9 @@
 // ============================================================
 
 const { titleCase, cleanTruncate, enforceExactYearLead, enforceSportHasScore, enforceLocalIndexLabel, formatDisplayYear } = require('./tribute-times-renderer');
-const { buildStarMapSvg } = require('./src/phase2/star-map');
 const { cornerOrnamentsHtml, KEEPSAKE_FRAME_CSS } = require('./src/phase2/keepsake-frame');
+// buildStarMapSvg import removed, 29 Sept 2026 (client request, Col) —
+// see the Night Sky removal comment where that section used to render.
 
 function getVintageMemorialReflection() {
   return "A life is measured not in years but in the moments that mattered, the people who were loved, and the quiet, lasting mark left behind. Today, on this day, we pause to remember.";
@@ -48,9 +49,12 @@ function renderMemorialNewspaper(data, content, fonts) {
     ? `${yearsLived.toLocaleString()} year${yearsLived === 1 ? '' : 's'} lived`
     : '';
 
-  // ── NIGHT SKY STAR MAP (mathematically calculated, from the date of birth) ──
-  const starMap = buildStarMapSvg({ year, month, day, country, size: 168 });
-  const moonIlluminationPct = `${Math.round(starMap.illuminationFraction * 100)}%`;
+  // Night Sky star map/moon-phase computation removed, 29 Sept 2026
+  // (client request, Col) — the section it fed was removed entirely; see
+  // the removal comment where that section used to render, further down.
+  // yearsLivedStr above is kept — it used to render inside that section
+  // (as .agecount) but is genuinely independent of it, so it needs a new
+  // home rather than being deleted along with the star map.
 
   // ── PRICES TABLE ──
   const pricesHTML = prices.items.map(p => `
@@ -411,7 +415,8 @@ function renderMemorialNewspaper(data, content, fonts) {
   .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-horoscope { max-height: 40mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-sport     { max-height: 22mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 0 auto; }
+  /* .s-starmap removed, 29 Sept 2026 (client request, Col) — see the
+     Night Sky removal comment where that section used to render. */
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -437,15 +442,23 @@ function renderMemorialNewspaper(data, content, fonts) {
   .s-message .msg { font-style: italic; font-size: 9pt; text-align: justify;
     display:-webkit-box; -webkit-line-clamp:8; -webkit-box-orient:vertical; overflow:hidden; }
   .s-message .from { font-size: 8.5pt; }
+  /* "X years lived" — moved here, 29 Sept 2026 (client request, Col), from
+     the now-deleted Night Sky section's .agecount line. Kept visible
+     rather than dropped entirely (a deliberate choice, confirmed with the
+     client rather than assumed) since it's genuinely independent content,
+     not something tied to the star map itself. Styled to match .from
+     (same box, same font stack) rather than reusing the old .agecount
+     rule verbatim, since that rule was sized/spaced for sitting under a
+     graphic in its own section, not inside this message box. */
+  .s-message .years-lived { font-family:'Playfair Display', serif; font-weight: 700; font-size: 9pt; margin-top: 0.5mm; }
 
   .bday { padding: .8mm 0; border-bottom: .15mm dotted #b9b09a; }
   .bday b { font-weight: 600; }
   .bday .desc { text-align: justify; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
-  .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
-  .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
-  .starmap-caption { font-size: 7.3pt; font-style: italic; color: #3d3730; }
-  .agecount { margin-top: 1.5mm; font-family:'Playfair Display', serif; font-weight: 700; font-size: 9.5pt; }
+  /* .starmap-graphic/.starmap-caption/.agecount removed, 29 Sept 2026
+     (client request, Col) — .agecount's content (years lived) moved into
+     .s-message .years-lived above instead of being dropped. */
 
   /* ================= FOOTER ================= */
   .foot {
@@ -519,15 +532,17 @@ function renderMemorialNewspaper(data, content, fonts) {
           ${worldNumbersHTML}
         </table>
       </section>` : ''}
-      <!-- Moved here from Column 3, Phase 5 Step 1 (client request, 21 Aug
-           2026 — "The Night Sky" vacated bottom-right for the Seal of
-           Authenticity). Section itself unchanged — only its position moved. -->
-      <section class="s-starmap">
-        <h3>The Night Sky</h3>
-        <div class="starmap-graphic">${starMap.svg}</div>
-        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
-        ${yearsLivedStr ? `<div class="agecount" data-field="years-lived">${yearsLivedStr}</div>` : ''}
-      </section>
+      <!-- "The Night Sky" section removed entirely, 29 Sept 2026 (client
+           request, Col, screenshot showing it visually clipped against
+           the Seal of Authenticity): "night sky dsign cut over, we not
+           needs that" — confirmed this means remove, not repair. Its
+           "X years lived" line (yearsLivedStr) was kept and moved into
+           the message box below (see .s-message) rather than dropped
+           silently — confirmed with the client, since that content is
+           independent of the star map itself. No other section touched:
+           every section in this column already has flex-grow with no
+           fixed column height, so the remaining sections absorb the
+           freed space on their own. -->
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
@@ -543,6 +558,7 @@ function renderMemorialNewspaper(data, content, fonts) {
           <div class="to" data-field="msg-to">In Memory of ${cleanedRecipientName}</div>
           <div class="msg" data-field="msg-body">&ldquo;${finalMessage}&rdquo;</div>
           <div class="from" data-field="msg-from">&mdash; Forever loved by ${senderName}</div>
+          ${yearsLivedStr ? `<div class="years-lived" data-field="years-lived">${yearsLivedStr}</div>` : ''}
         </div>
       </section>
       <section class="s-birthdays">
