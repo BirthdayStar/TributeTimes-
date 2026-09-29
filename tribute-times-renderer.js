@@ -5,9 +5,10 @@
 // ============================================================
 
 const { getStarSign, getChineseZodiac, getMoonPhase } = require('./tribute-times-ai-prompt');
-const { buildStarMapSvg } = require('./src/phase2/star-map');
-const { daysElapsedToNzToday } = require('./src/phase2/nz-time');
 const { cornerOrnamentsHtml, KEEPSAKE_FRAME_CSS } = require('./src/phase2/keepsake-frame');
+// buildStarMapSvg/daysElapsedToNzToday imports removed, 29 Sept 2026
+// (client request, Col) — see the "Night Sky" removal comment further
+// down for the full reasoning.
 
 function titleCase(value) {
   return String(value || '')
@@ -35,13 +36,11 @@ const SENTENCE_ABBREVIATIONS = new Set([
   'us', 'usa', 'uk', 'un', 'eu', 'dc', 'ussr',
 ]);
 
-// Occasions where the date field genuinely represents, and should be
-// framed as, a birth date being counted to today — see the "days old"
-// counter comment near daysOldStr below for why this exists and why it's
-// deliberately not every occasion that happens to reuse the same date input.
-const BIRTHDAY_FAMILY_OCCASIONS = new Set([
-  'Birthday', '21st Birthday', '30th Birthday', '40th Birthday', '50th Birthday', 'Milestone Birthday', 'New Baby',
-]);
+// BIRTHDAY_FAMILY_OCCASIONS removed, 29 Sept 2026 (client request, Col):
+// only ever fed the "days old" counter that lived inside "The Night Sky"
+// section, which was removed entirely in the same change (see that
+// section's removal comment below, around where it used to render in
+// Column 1) — this set has no other use, so it went with it.
 
 function cleanTruncate(text, maxLength) {
   if (!text) return '';
@@ -265,42 +264,23 @@ function renderNewspaper(data, content, fonts) {
   // is the real local index, not a repeat of the first "Dow Jones" slot.
   const ticker = enforceLocalIndexLabel(rawTicker, localIndexLabel);
 
-  // "You are X days old today" only makes sense where the date field is a
-  // genuine date of birth being counted to today — Birthday, and New Baby
-  // (new_changes.md Step 14: a newborn's age in days is a real, commonly
-  // celebrated thing, unlike counting days since a wedding or graduation).
-  // It was showing unconditionally on every occasion, including Anniversary
-  // and In Loving Memory, where counting days since a wedding date (or
-  // worse, implying someone being memorialised is still alive and aging)
-  // doesn't make sense — those now have their own dedicated counters
-  // ("years married" / "years lived", Steps 12-13).
-  // Uses NZ time for "today," not the server process's own timezone — see
-  // src/phase2/nz-time.js. Same root cause as the "years married"
-  // off-by-one bug: a raw `new Date()` reflects wherever the server
-  // happens to be running, not the customer's actual New Zealand day.
-  //
-  // Found during a full occasion-type sweep (8 Aug 2026, not
-  // client-reported but a genuine gap): the counter only ever checked for
-  // the literal occasion "Birthday," silently excluding the numbered
-  // birthday special editions (21st/30th/40th/50th/Milestone) even though
-  // they are exactly as much a real birthday as plain "Birthday" — same
-  // date field, same meaning, just a different banner. Expanded to cover
-  // the whole birthday family (see BIRTHDAY_FAMILY_OCCASIONS below).
-  // Deliberately NOT expanded to Valentine's Day, Adoption, or
-  // Citizenship — their date field is collected the same way but doesn't
-  // represent the same "count the days since birth" meaning (same
-  // principle as bug #8's fix: a date being technically a birth date
-  // doesn't mean every occasion using it should be framed as one).
-  const daysOldStr = BIRTHDAY_FAMILY_OCCASIONS.has(occasion)
-    ? (() => {
-        const daysOldVal = daysElapsedToNzToday(year, month, day);
-        return `You are ${daysOldVal.toLocaleString()} days old today`;
-      })()
-    : '';
-
-  // ── NIGHT SKY STAR MAP (mathematically calculated, not AI-generated) ──
-  const starMap = buildStarMapSvg({ year, month, day, country, size: 168 });
-  const moonIlluminationPct = `${Math.round(starMap.illuminationFraction * 100)}%`;
+  // "You are X days old today" and the Night Sky star map/moon-phase
+  // caption removed entirely, 29 Sept 2026 (client request, Col,
+  // screenshot showing the section visually clipped against the Seal of
+  // Authenticity): "night sky dsign cut over, we not needs that" —
+  // confirmed explicitly this means remove, not repair ("fix first night
+  // sky wihotu single disturbing other section"). This block previously
+  // computed daysOldStr (a real "days old" counter with its own bug-fix
+  // history — an off-by-one/timezone fix using NZ time, and a coverage
+  // fix extending it to the numbered birthday editions, not just plain
+  // "Birthday" — see BIRTHDAY_FAMILY_OCCASIONS's removal comment above
+  // for that history) plus starMap/moonIlluminationPct (buildStarMapSvg,
+  // src/phase2/star-map.js) for the section's graphic and caption. All
+  // three only ever fed that one now-deleted section, so removed
+  // together. No other section touched — every section in this column
+  // already had flex-grow with no fixed column height, so the remaining
+  // sections absorb the freed space on their own; verified against a
+  // real rendered preview, not just assumed from the CSS.
 
   // ── PRICES TABLE ──
   const pricesHTML = prices.items.map(p => `
@@ -921,7 +901,8 @@ function renderNewspaper(data, content, fonts) {
   .s-weather   { max-height: 16mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-horoscope { max-height: 36mm; margin-top: 3mm; flex: 1 0 auto; }
   .s-sport     { max-height: 28mm; margin-top: 3mm; flex: 1 0 auto; }
-  .s-starmap   { max-height: 50mm; margin-top: 3mm; text-align: center; flex: 1 0 auto; }
+  /* .s-starmap removed, 29 Sept 2026 (client request, Col) — see the
+     Night Sky removal comment near daysOldStr's old location. */
 
   /* tables & lists */
   .datatable { width: 100%; border-collapse: collapse; font-size: 8.2pt; }
@@ -957,20 +938,9 @@ function renderNewspaper(data, content, fonts) {
   .bday b { font-weight: 600; }
   .bday .desc { text-align: justify; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
-  .starmap-graphic { display: flex; justify-content: center; margin: 0.5mm 0 1mm; }
-  .starmap-graphic svg { width: 31mm; height: 31mm; display: block; }
-  /* Bumped 7.3pt -> 9pt, 23 Aug 2026 (client report, real printed PDF:
-     "the star map text can't be read"). 7.3pt was the smallest actual
-     reading-prose text size anywhere on the page — smaller than every
-     other body-copy rule (9pt+ throughout, including the same italic
-     style already proven legible at 9pt in .s-message .msg) and closer
-     in size to the small uppercase LABEL text (7-7.5pt), which reads fine
-     small only because it's all-caps+letter-spaced, not lowercase prose.
-     Matches .s-message .msg's proven-good 9pt italic size rather than
-     inventing a new one. Color also darkened slightly (#3d3730 -> #241f18)
-     for stronger contrast, same reasoning. */
-  .starmap-caption { font-size: 9pt; font-style: italic; color: #241f18; }
-  .agecount { margin-top: 1.5mm; font-family:'Playfair Display', serif; font-weight: 700; font-size: 9.5pt; }
+  /* .starmap-graphic/.starmap-caption/.agecount removed, 29 Sept 2026
+     (client request, Col) — see the Night Sky removal comment near
+     daysOldStr's old location for the full reasoning. */
 
   /* ================= FOOTER ================= */
   .foot {
@@ -1043,16 +1013,17 @@ function renderNewspaper(data, content, fonts) {
           ${worldNumbersHTML}
         </table>
       </section>` : ''}
-      <!-- Moved here from Column 3, Phase 5 Step 1 (client request, 21 Aug
-           2026 — "The Night Sky" needed to vacate the bottom-right corner
-           to make room for the Seal of Authenticity, Step 2). Section
-           itself unchanged — only its position moved. -->
-      <section class="s-starmap">
-        <h3>The Night Sky</h3>
-        <div class="starmap-graphic">${starMap.svg}</div>
-        <div class="starmap-caption" data-field="moon-phase">${astro.moonPhase.name || 'Clear'} Moon &middot; ${moonIlluminationPct} illuminated</div>
-        ${daysOldStr ? `<div class="agecount" data-field="days-old">${daysOldStr}</div>` : ''}
-      </section>
+      <!-- "The Night Sky" section removed entirely, 29 Sept 2026 (client
+           request, Col, screenshot showing it visually clipped against
+           the Seal of Authenticity): "night sky dsign cut over, we not
+           needs that" — confirmed explicitly ("fix first night sky
+           wihotu single disturbing other section") this means remove,
+           not repair. No other section touched: every section in this
+           column already has flex-grow (flex: 1 0 auto or 1 1 auto) with
+           no fixed/explicit column height, so the remaining sections
+           naturally expand to fill the space this one used to occupy —
+           confirmed by testing a rendered PDF/preview after removal, not
+           just assumed from the CSS. -->
     </div>
 
     <!-- ============ COLUMN 2 (CENTRE) ============ -->
