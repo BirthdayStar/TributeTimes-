@@ -343,6 +343,37 @@ body {
   display: block;
   object-fit: cover;
 }
+/* Client request, 29 Sept 2026 (Col): "hero new place in public use thia
+   as a hero image with best appealing like shadow and somethings
+   unique." Real keepsake screenshot, provided as a tight crop with a
+   transparent background (no photo/desk styling baked in) rather than
+   the old full-bleed desk-photo treatment above — so it gets its own
+   card-free presentation: a soft floating drop-shadow that follows the
+   newspaper's own silhouette (not a boxed rectangle shadow, since
+   there's no card background behind it) and a slight tilt for a more
+   dynamic, less flat presentation ("something unique") — subtle enough
+   to read as intentional styling, not a mistake. */
+.hero-img-wrap.hero-img-floating {
+  border-radius: 0;
+  overflow: visible;
+  box-shadow: none;
+  border: none;
+  background: none;
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+.hero-img-floating .hero-img {
+  width: auto;
+  max-width: 92%;
+  height: auto;
+  transform: rotate(-2.5deg);
+  filter: drop-shadow(0 22px 34px rgba(61,65,34,0.30)) drop-shadow(0 6px 10px rgba(61,65,34,0.18));
+  transition: transform 0.35s ease;
+}
+.hero-img-floating:hover .hero-img {
+  transform: rotate(-1deg) scale(1.015);
+}
 
 /* ════════════════════════════════════════
    STATS / COUNTER BAR
@@ -987,16 +1018,22 @@ body {
       <span class="brand-sub">PERSONALISED VINTAGE NEWSPAPER KEEPSAKES</span>
     </a>
     <ul class="nav-links">
+      <!-- Client request, 29 Sept 2026 (Col): "navbar links like text is
+           too long double keep single words" — these used to wrap to two
+           lines at some widths (see earlier screenshots showing "FOR
+           FLORISTS & GIFT / SHOPS" and "APPLY TO BE AN / AGENT"
+           splitting). Shortened to a single word each; href targets
+           unchanged, only the visible label. -->
       <li><a href="/" class="nav-link">HOME</a></li>
-      <li><a href="/florist" class="nav-link">FOR FLORISTS & GIFT SHOPS</a></li>
-      <li><a href="/station" class="nav-link">FOR STATIONS</a></li>
+      <li><a href="/florist" class="nav-link">FLORISTS</a></li>
+      <li><a href="/station" class="nav-link">STATIONS</a></li>
       <!-- Client request, 3 Sept 2026 (Col, reconfirmed after an earlier
            "share the link directly, no on-site link" answer): "From the
            landing page have a button called apply to be an agent here."
            Matches the existing /florist and /station nav-link pattern for
            a dedicated audience, rather than only living in the CTA
            buttons on the right. -->
-      <li><a href="/join" class="nav-link">APPLY TO BE AN AGENT</a></li>
+      <li><a href="/join" class="nav-link">AGENTS</a></li>
       <!-- Bug fix, 29 Sept 2026: this used to jump to #contact (the
            "Contact a Station Manager" section), which Col asked to be
            deleted entirely ("delete this box as well as I don't see any
@@ -1045,8 +1082,8 @@ body {
     </div>
 
     <div class="hero-visual">
-      <div class="hero-img-wrap">
-        <img src="/hero_keepsake_desk.png" alt="The Tribute Times commemorative newspaper laying on a desk" class="hero-img" />
+      <div class="hero-img-wrap hero-img-floating">
+        <img src="/hero_new.png" alt="The Tribute Times personalised vintage newspaper keepsake" class="hero-img" />
       </div>
     </div>
   </section>
