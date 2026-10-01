@@ -884,3 +884,14 @@ Built **both** options, since Col confirmed either is fine and building both mak
 - All temporary verification scripts deleted after use; local server stopped cleanly.
 
 **Status:** ✅ built, live-verified against real production data, committed locally. **Given the active ad-spend urgency, recommend pushing this immediately** rather than holding for a further batch — Jhe-Ann should not launch the ad until this is confirmed live on `tributetimes.co.nz`.
+
+**Pushed to `origin` and `me-origin`, confirmed live and deployed** — verified via a real poll of the live site, and confirmed the real GCash settings endpoint responds correctly on production.
+
+---
+### FINAL ACCURACY FIX (01 Oct 2026) — ₱99 vs ₱100 discrepancy found during final pre-launch verification
+
+Before telling the client this was ready, ran one more real check against the actual live, deployed code — and found a genuine 1-peso mismatch between the ad creative and the real charge: `Math.round(199 × 0.5)` = `Math.round(99.50)` = **₱100**, but the ad explicitly says **"₱99 NGAYON."**
+
+Client was asked how to handle it (fix the rounding vs. just flag the 1-peso gap in the message) and asked to let the agent decide. Chose to fix it: rounding changed from `Math.round()` to `Math.floor()`, so a discount always rounds in the customer's favor and can never exceed what an ad promises — the safer direction when the two could disagree. Re-verified against the real, live `TT50OFF` row: **₱199 → ₱99 exactly**, matching the ad creative precisely. Re-ran the full edge-case suite (5 cases) — all pass. Full server boot test passed again with zero errors. Pushed immediately given the live-launch timing.
+
+**Status:** ✅ fixed, re-verified against live production data, pushed to both remotes.

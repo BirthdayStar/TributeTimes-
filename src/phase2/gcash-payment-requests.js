@@ -608,17 +608,22 @@ async function resolveGcashDiscountCode(supabase, code) {
   return data;
 }
 
-// Applies a resolved discount code to a PHP amount, rounded to the
-// nearest whole peso (no existing PHP rounding convention found
-// elsewhere in this codebase — whole-peso is the simplest, least
-// surprising choice for a price customers see as a round number, e.g.
-// ₱199 × 50% = ₱99.50 → ₱100, not an odd-looking ₱99.50).
+// Applies a resolved discount code to a PHP amount, always rounded DOWN
+// to the nearest whole peso. Bug fix, 1 Oct 2026 (found during final
+// verification of TT50OFF before the live ad launch): rounding to the
+// NEAREST peso meant ₱199 × 50% = ₱99.50 → ₱100, one peso more than the
+// ad creative's literal "₱99 NGAYON" promise — a real mismatch between
+// what the ad says and what the customer is actually charged. Floor
+// guarantees the charged amount can never exceed what an ad promises,
+// which is the safer direction to round when the two could ever
+// disagree (a customer paying 1 peso less than advertised is a non-issue;
+// paying 1 peso more than advertised is a real, avoidable discrepancy).
 function applyPhpDiscount(baseAmountPhp, discountCode) {
   if (!discountCode || !Number.isFinite(baseAmountPhp)) return baseAmountPhp;
 
   if (discountCode.discount_type === 'percent') {
     const pct = Math.min(Math.max(Number(discountCode.discount_value) || 0, 0), 100);
-    return Math.round(baseAmountPhp * (1 - pct / 100));
+    return Math.floor(baseAmountPhp * (1 - pct / 100));
   }
   if (discountCode.discount_type === 'fixed') {
     // `discount_value` for fixed-amount codes is stored in NZD elsewhere
