@@ -150,54 +150,87 @@ For reference/continuity only — this batch was already fully analyzed, impleme
 
 **Client message (1 Oct 2026, Col, plus a reference screenshot):** the current "How It Works" section doesn't reflect what actually happens. He drafted a correct 12-step process, then had a separate Claude session restructure it into 3 grouped sections (Create / Check and buy / Print and give) — his own words: *"Actually got Claude to redo this and he did a better job. Instead of a list of 12 split into 3 areas."* He wants that 3-group version used, and attached a screenshot specifically to show which text should render bold vs. normal weight within it.
 
-**His final approved copy (verbatim, this is the content to use):**
+**Follow-up message, same day, before this step was implemented:** Col sent two more requirements for this same section before any code was written (folded in here rather than as a separate step, since they're additions to this not-yet-built section, not a new request):
+1. **A small icon next to each of the 12 lines**, his own mapping:
+   - ✅ green tick — default/general lines (not otherwise specified below)
+   - ⏳ — the "Click Create" line (step 4)
+   - 🖨️ — the "Print" line (step 9)
+   - 💳 — the payment line (step 7)
+   - ❤️ — the "Present it" line (step 10) **and** the "Who's next?" line (step 12)
+   - 🎁 — the "Come back" line (step 11)
+2. **"The text needs to be large"** — his own stated reason: *"I think this overcomes the issue the lady from the florist association had"* — referring back to real client-reported feedback from a NZ Florist Association contact earlier in this project (*"The landing page is confusing... Florists are very visual and we like to see what we're getting"*). Large, clear text + a visual icon per step is Col's answer to that specific, already-documented complaint — not a new/unrelated request, so treat "readable at a glance" as the actual bar for this section's type sizing, not just "a bit bigger than now."
+
+**This resolves the open "bold vs. normal per-item" question from the original analysis below** — Col's answer wasn't about bold text at all, it's icons instead. Treat the 3 group headers (Create / Check and buy / Print and give) as the only bold text in this section; every numbered line gets its mapped icon instead of inline bold.
+
+**His final approved copy, with icons (verbatim text + Col's icon mapping, this is the content to use):**
 
 > **How It Works**
 >
 > **Create**
-> 1. Enter your special date
-> 2. Enter the recipient's name
-> 3. Enter your personal message
-> 4. Click Create. This can take up to 60 seconds while our system searches the internet for your date.
+> ✅ 1. Enter your special date
+> ✅ 2. Enter the recipient's name
+> ✅ 3. Enter your personal message
+> ⏳ 4. Click Create. This can take up to 60 seconds while our system searches the internet for your date.
 >
 > **Check and buy**
-> 5. Preview your newspaper. A screen image appears, protected with a security overlay.
-> 6. Happy with it? Continue to payment.
-> 7. Make your payment. Use a discount code if you have one.
-> 8. Download your high-resolution PDF.
+> ✅ 5. Preview your newspaper. A screen image appears, protected with a security overlay.
+> ✅ 6. Happy with it? Continue to payment.
+> 💳 7. Make your payment. Use a discount code if you have one.
+> ✅ 8. Download your high-resolution PDF.
 >
 > **Print and give**
-> 9. Print it at home, as often as you like. It's yours! We recommend high-quality paper and a simple frame from your local print shop.
-> 10. Present it to the recipient and wait for the smile. That's your reward for being so thoughtful 😇
-> 11. Come back and leave us a review to receive a second discount offer.
-> 12. Who's next? Who else would you like to put a smile on today?
+> 🖨️ 9. Print it at home, as often as you like. It's yours! We recommend high-quality paper and a simple frame from your local print shop.
+> ❤️ 10. Present it to the recipient and wait for the smile. That's your reward for being so thoughtful 😇
+> 🎁 11. Come back and leave us a review to receive a second discount offer.
+> ❤️ 12. Who's next? Who else would you like to put a smile on today?
 
 **Analysis (verified in code before writing this):**
 - Current section: `<section class="how-it-works">` in `public/landing.html`, heading "SIMPLE TO CREATE" / "How It Works", containing `.steps-grid` — a 3-column CSS grid of 3 simple `.step-card`s (icon circle + title + one-line description each): "Pick a Date," "We Craft It," "You Treasure It." This is a fundamentally different *shape* of content from the replacement — 3 short cards vs. 3 headed groups each containing 3–4 numbered steps (12 items total, with one list item — step 12 — being a closing/emotional line rather than an instruction).
 - **This is a bigger structural change than a text edit**, not a simple copy swap into the existing `.step-card` markup — the existing cards have no room for a 3–4-item numbered sub-list each. New markup/CSS is needed.
-- **Bold/normal text pattern:** Col explicitly attached a screenshot to show which parts are bold. From that screenshot: the 3 group headers ("Create," "Check and buy," "Print and give") are clearly bold section headings, larger than the numbered items beneath them. The numbered items themselves read as normal body-weight text — I did **not** detect a clear per-item "bold lead-in phrase" pattern confidently enough to commit to it from the screenshot alone (e.g. whether "Click Create." or "Preview your newspaper." specifically start bold within their sentence is genuinely hard to tell from a phone-screenshot at that resolution). **This needs a direct confirmation with Col before implementing** — ask him to confirm only the 3 group headers are bold (my working assumption) vs. some other emphasis pattern within individual steps, rather than guess and have to redo it.
+- **Icon + large text, not bold text, is the confirmed visual treatment for individual lines** (see follow-up message above) — group headers stay bold, each numbered line gets its mapped icon plus larger body text than the current `.step-desc` size.
+- **This already has an established emoji-reliability precedent in this exact codebase to watch for**: the social-platform icons in the Agents/admin work earlier in this project were deliberately swapped from emoji to real inline SVGs because Windows' system emoji font was confirmed to silently render some emoji as blank/wrong glyphs. Col's 6 icons here (✅⏳🖨️💳❤️🎁) are common, well-supported emoji (unlike the less-common flag glyphs that actually failed before), so this is lower risk than that prior case — but it still needs a real cross-platform check before calling it done, not an assumption. See Step 3c below.
 - **Does NOT need DB/backend changes** — this is pure landing-page copy/markup/CSS, same category as Steps 1–2.
-- **Open structural question to resolve before implementing** (not asked yet): with 12 items grouped into 3 sections, does Col want this to keep the current 3-column side-by-side grid layout (3 columns, each a tall card with its own mini numbered list), or does a 12-item list read better stacked vertically down the page (3 sections, one after another, full width)? The 3-column grid works well for 3 short cards; it may feel cramped with 3–4 list items packed into each column at normal page width. Recommend asking Col for a quick preference (or showing both) before building, same as any other layout decision this size.
+- **Open structural question to resolve before implementing** (not asked yet): with 12 items grouped into 3 sections, does Col want this to keep the current 3-column side-by-side grid layout (3 columns, each a tall card with its own mini numbered list), or does a 12-item list read better stacked vertically down the page (3 sections, one after another, full width)? The 3-column grid works well for 3 short cards; it may feel cramped with 3–4 list items packed into each column at normal page width, especially now that each line also needs to be visually larger per Col's "text needs to be large" requirement — if anything this makes the stacked/full-width option more likely to be the right call, but still worth confirming rather than assuming. Recommend asking Col for a quick preference (or showing both) before building, same as any other layout decision this size.
 
 **Planned sub-steps (to be written up individually, each with its own Problem/Solution/Test/Bug-hunt, once implementation starts):**
 
-- **Step 3a — confirm open questions with Col before writing any code.**
-  - Exact bold/normal pattern: send Col a direct, specific question — "only the 3 group headers (Create / Check and buy / Print and give) are bold, every numbered item is normal weight — correct?" — rather than re-guess from the screenshot a second time.
-  - Layout shape: 3-column grid (current structure) vs. stacked full-width sections. Show a quick mockup of both if asking isn't enough on its own, same as other layout-sized decisions this session.
-  - **Test for this sub-step:** there's nothing to browser-test here — "done" means Col has given an unambiguous yes/no on both questions in writing, not an implementation detail.
+- **Step 3a — confirm the one remaining open question with Col before writing any code.** (The bold/normal-text question is resolved — icons + large text per line, bold headers only, per his follow-up message above. Only the layout-shape question is still genuinely open.)
+  - Layout shape: 3-column grid (current structure) vs. stacked full-width sections. Given Col's own "text needs to be large" requirement makes 3–4 large-text+icon lines packed into one column at normal page width more likely to feel cramped, lean toward recommending the stacked/full-width option when asking — but still ask, don't just decide. Show a quick mockup of both if asking isn't enough on its own, same as other layout-sized decisions this session.
+  - **Test for this sub-step:** there's nothing to browser-test here — "done" means Col has given an unambiguous answer on the layout question in writing, not an implementation detail.
 
 - **Step 3b — build the new 3-group markup + CSS**, replacing `.steps-grid`/`.step-card` entirely (nothing from the old 3-card version is preserved/merged — confirmed the old content, "Pick a Date"/"We Craft It"/"You Treasure It," is fully superseded by the new copy, not a partial edit).
-  - **Specific things to get right, not just "build it":** heading hierarchy (group headers vs. numbered items need genuinely different HTML elements/weights, not just a CSS class doing visual-only bolding — screen readers and the page's own heading outline should reflect the real structure); the numbered list must render as real ordered-list numbers 1–12 continuing across all 3 groups (not 3 separate 1-4/1-4/1-4 restarts) unless Col's screenshot actually shows restarted numbering per group — check this specifically against his reference image before building, don't assume.
+  - **Specific things to get right, not just "build it":** heading hierarchy (the 3 group headers need a real heading element, not just a bold CSS class — screen readers and the page's own heading outline should reflect the real structure); the numbered list must render as real ordered-list numbers 1–12 continuing across all 3 groups (not 3 separate 1-4/1-4/1-4 restarts) unless Col's screenshot actually shows restarted numbering per group — check this specifically against his reference image before building, don't assume; each line's icon needs an `aria-hidden="true"` (decorative, the numbered text already conveys the meaning) so screen readers don't awkwardly announce "green check mark" before every line; text size must actually satisfy "the text needs to be large" — pick a concrete size, don't just bump it slightly and call it done, and sanity-check it reads clearly at a normal viewing distance on a real screen, not just "technically bigger than before."
   - **Bug hunt for this sub-step:** grep for `.steps-grid`/`.step-card`/`.step-icon-wrap`/`.step-title`/`.step-desc` anywhere else in the file before deleting the old CSS (same check pattern as Step 1); check the `max-width: 992px` and `max-width: 680px` media queries for any existing rule targeting these old classes that will need a new equivalent for the new markup, not just left stale.
 
-- **Step 3c — verify the 😇 emoji (step 10) renders correctly**, given this session already found and fixed a near-identical "emoji renders as a blank/wrong glyph on some platforms" problem once before (the social-platform icons were swapped from emoji to real SVGs for exactly this reason — see the agent-profile work earlier in this project).
-  - **Specific test, not just "check it looks fine":** render the real page in at least two different environments (e.g. this Chrome-based test browser, plus ask Col to check on his own phone/Windows machine specifically) before accepting emoji as final — Windows' system emoji font has previously been confirmed in this codebase to silently fall back to a blank/text glyph for flag emoji; the same risk applies to any emoji, not just flags, so it needs a real check on a real Windows browser, not an assumption that "emoji generally work now."
-  - If it renders wrong anywhere tested: either pick a different Unicode emoji with better cross-platform support, or follow the established precedent in this codebase and use a small inline SVG instead.
+- **Step 3c — verify all 7 icons (✅⏳🖨️💳❤️🎁 + the existing 😇 in step 10's own text) render correctly across platforms**, given this session already found and fixed a near-identical "emoji renders as a blank/wrong glyph on some platforms" problem once before (the social-platform icons were swapped from emoji to real SVGs for exactly this reason — see the agent-profile work earlier in this project). Col's icon set here is more common/widely-supported than the flag glyphs that actually failed before, so lower risk — but "lower risk" still isn't "verified," so this gets the same real check, not a pass based on that assumption.
+  - **Specific test, not just "check it looks fine":** render the real page in at least two different environments (e.g. this Chrome-based test browser, plus ask Col to check on his own phone/Windows machine specifically) before accepting any of the 7 icons as final — Windows' system emoji font has previously been confirmed in this codebase to silently fall back to a blank/text glyph for some emoji; check each of the 7 individually, not just one and assume the rest are fine.
+  - If any renders wrong anywhere tested: either pick a different Unicode emoji with better cross-platform support for that one line, or follow the established precedent in this codebase and use a small inline SVG instead for that icon specifically.
 
 - **Step 3d — full real-browser test + live verification.**
   - Desktop (page's normal build width), the `992px` breakpoint specifically (not just "mobile" — confirm the exact pixel width where the current `.steps-grid` rule changes behavior and test just above/below it), and `680px` and below.
   - Confirm the ordered-list semantics are real (`<ol>`/`<li>`, not divs faked to look like a list) by checking the actual DOM, not just the visual rendering.
+  - Confirm every one of the 12 lines has its correct mapped icon per Col's spec above (✅ x7 default lines, ⏳ step 4, 💳 step 7, 🖨️ step 9, ❤️ steps 10 and 12, 🎁 step 11) — check this against the actual rendered DOM/screenshot line by line, not just "icons are present somewhere."
   - Re-run the same "did this disturb anything else on the page" check used for Steps 1–2 — screenshot the sections immediately before and after this one, confirm no new gap/overlap.
   - After deploy: re-verify against the live URL with the same checks, confirm via a real marker in the live response rather than assuming the deploy succeeded.
 
-**Status:** 📝 documented only, per explicit instruction not to implement yet. Waiting on Col's confirmation of the two open questions (Step 3a) before any code is written.
+**Status:** 📝 documented only, per explicit instruction not to implement yet. Waiting on Col's confirmation of the layout-shape question (Step 3a) before any code is written.
+
+---
+## OPEN QUESTION — Col: "why do we have the bar of flags, what do they do?"
+
+**Col's message (verbatim):** *"I've asked this question before too, why do we have the bar of flags, what do they do? Other than advise price per newspaper in their local currency, it doesn't seem to link to anywhere on the website that I can see."*
+
+**Answer (verified by reading the actual code, not guessed):** Col is correct, and that's the full extent of what it does. Read `applyPricingCountry()` in `public/landing.html` — the function behind `.local-pricing-section` / `#local-price-grid` (the flag strip). It does exactly two things when a flag is selected:
+1. Updates the `.hero-price` text to show that country's price in local currency.
+2. Toggles an `is-local` CSS class on the matching `.local-price-card` to visually highlight it.
+
+That's it — no navigation, no link, no filtering, no connection to checkout or the `/public` flow. It is purely a "see your price in your currency" display widget. Confirmed via grep: no `href`, `onclick` navigation, or checkout-param wiring anywhere in that function or its surrounding markup.
+
+**To relay back to Col:** confirm this is intentional/fine as-is, or ask if he wants it to do more (e.g. actually pass the selected currency/country into the `/public?...` checkout flow). No code changed — this is informational only, pending his reply.
+
+---
+## NOTED — Col: upcoming admin-page cosmetic changes (not started)
+
+**Col's message (verbatim):** *"Once we have co.pleted tge landing page ill give you some changes to tge admin page. Only cosmetic changes. Like text size etc."*
+
+Col has explicitly deferred this himself until the landing page work (Steps 1–3+) is finished. No action needed now — tracked here only so it isn't lost. Do not start until Col sends the actual list of admin-page changes.
