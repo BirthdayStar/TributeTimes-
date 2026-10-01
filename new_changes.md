@@ -10,11 +10,16 @@ This file is the running log for this ongoing batch of client-reported issues/re
 
 For **every single item** Col sends, in order:
 
-1. **Analyze first** — read the actual current code/live site before assuming anything. Confirm the real root cause (reproduce it, don't guess from the screenshot alone).
+1. **Analyze first** — read the actual current code/live site before assuming anything. Confirm the real root cause (reproduce it, don't guess from the screenshot alone). Grep for every class/selector/id touched and confirm what else (if anything) depends on it before deciding it's safe to change.
 2. **Write the step below** — Problem (what's actually wrong, verified), Solution (what will change and why), Isolation notes (what this does and doesn't touch).
 3. **Implement.**
-4. **Find bugs for real** — not just a code read-through. Actually exercise the change.
-5. **Live browser test** — real browser (local first, then production after deploy), not just "looks right in the code."
+4. **Find bugs for real — go looking, don't wait to trip over one.** A code read-through is not enough; this means deliberately trying to break the change, not just confirming it works in the one case you built it for:
+   - **Adjacent/edge cases, not just the happy path** — empty states, the longest realistic piece of content next to the shortest, what happens if a dependent field is missing/null, what the *previous* behavior was and whether anything still expects it (e.g. an old CSS class, a JS selector, a stale comment referencing something now removed).
+   - **Everything the change sits next to** — re-check the sections/elements immediately before and after it in the page flow, not just the thing itself in isolation. A deletion can leave a gap; a restructure can shift something else's spacing/alignment; a new section can collide with an existing one.
+   - **Every viewport that matters** — desktop (the width you built it at), a laptop-ish mid width, and mobile (the project's existing breakpoints: `992px` and `680px` in `public/landing.html` — check whether the change needs its own entry in either `@media` block, don't assume the old responsive rules still apply correctly to new markup).
+   - **Re-derive any number you report, don't eyeball it** — if a test claims "no longer stretched" or "same height" or "aligned," measure it in the browser (`getBoundingClientRect`, computed styles, natural vs. rendered dimensions) and show the actual numbers, the same way the Step 1/2 logo-stretch bug was only caught by measuring rendered-vs-natural aspect ratio instead of trusting how it looked in a screenshot.
+   - **If a test assertion fails, find out why before explaining it away.** Distinguish a real app bug from a flawed test (wrong selector, timing/race condition, stale server) by direct evidence — re-run against a freshly-confirmed-correct server, check the actual DOM/response, don't assume "it's probably just the test."
+5. **Live browser test — real browser automation, not a code read-through dressed up as a test.** Local first (confirm the actual running server is serving the current code — this project has repeatedly hit a stale/wrong server on port 3000; verify the page `<title>` or a known marker before trusting any test result), screenshot the actual visual result and look at it, then re-verify against production after deploy with the same checks (don't assume a local pass means the deploy is correct — confirm via a real marker in the live response, poll rather than guess timing).
 6. **Only then move to the next item.** Do not batch multiple client messages into one step unless Col explicitly says they're one request.
 
 **Do not touch anything not named in the step being worked on.** If a step's fix seems to require touching an unrelated area, stop and confirm with Col before expanding scope — same discipline as every other phase file in this repo.
@@ -82,6 +87,8 @@ For reference/continuity only — this batch was already fully analyzed, impleme
 - No console/page errors
 - Full-page screenshot reviewed: page now flows directly from "How It Works" into "Celebrate Life's Most Meaningful Moments," no gap left behind
 
+**Known gap in this step's testing (flagged honestly, not re-opened unless it matters):** mobile viewport was not explicitly screenshotted for this step — the removed section had no mobile-specific CSS of its own (confirmed: no `.pricing-*`/`.tier-*` class appeared in either `@media` block before deletion), so there's no plausible mobile-only failure mode, but this was inferred from the CSS rather than directly screenshotted the way Step 2 was. Worth a quick mobile check if this area is revisited.
+
 **Status:** ✅ done, tested locally, committed. Not yet pushed/deployed — see commit for exact hash once pushed.
 
 ---
@@ -128,4 +135,69 @@ For reference/continuity only — this batch was already fully analyzed, impleme
 - Screenshot reviewed: clean white full-width banner with the logo centered and prominent, nav row in its own band directly below on the page's normal cream background — matches Col's description exactly
 - Also checked mobile viewport (400px): logo band scales down sensibly via its `max-height: 14vw` cap, nav row's existing mobile behavior (collapses to just country selector + CTA button, text links hidden) is pre-existing and unaffected by this change
 
+**Known gaps in this step's testing (flagged honestly):**
+- Confirmed the country selector dropdown is *present* in the DOM after the restructure, but did not re-click it to confirm the open/close + country-switch *interaction* still works end to end (its JS selectors target ids, not the moved `.nav-brand`/logo markup, so this is low-risk — but "low-risk" isn't the same as "tested," and this was the exact kind of assumption that missed the Step 1/2 logo-stretch bug the first time around).
+- Did not test a genuine mid-width/tablet viewport (e.g. ~900–1000px) between the two confirmed widths (1918px desktop, 400px mobile) — the `max-width: 992px` breakpoint in this file could behave differently there and wasn't directly checked.
+- If this area gets touched again, close both gaps with a real interaction test (click the selector, confirm a different flag renders) and a tablet-width screenshot before calling it done.
+
 **Status:** ✅ done, tested locally, committed. Not yet pushed/deployed.
+
+---
+
+## STEP 3 — Rewrite "How It Works" to match the real 12-step process, grouped into 3 sections
+
+**Status: ANALYSIS ONLY per explicit client instruction — do not implement yet.** Col: *"just anayze and keep this step in new changes not implemnt, divide into multipe steps ifeneded evry stps has own problem soltion testing bugs find browser test."*
+
+**Client message (1 Oct 2026, Col, plus a reference screenshot):** the current "How It Works" section doesn't reflect what actually happens. He drafted a correct 12-step process, then had a separate Claude session restructure it into 3 grouped sections (Create / Check and buy / Print and give) — his own words: *"Actually got Claude to redo this and he did a better job. Instead of a list of 12 split into 3 areas."* He wants that 3-group version used, and attached a screenshot specifically to show which text should render bold vs. normal weight within it.
+
+**His final approved copy (verbatim, this is the content to use):**
+
+> **How It Works**
+>
+> **Create**
+> 1. Enter your special date
+> 2. Enter the recipient's name
+> 3. Enter your personal message
+> 4. Click Create. This can take up to 60 seconds while our system searches the internet for your date.
+>
+> **Check and buy**
+> 5. Preview your newspaper. A screen image appears, protected with a security overlay.
+> 6. Happy with it? Continue to payment.
+> 7. Make your payment. Use a discount code if you have one.
+> 8. Download your high-resolution PDF.
+>
+> **Print and give**
+> 9. Print it at home, as often as you like. It's yours! We recommend high-quality paper and a simple frame from your local print shop.
+> 10. Present it to the recipient and wait for the smile. That's your reward for being so thoughtful 😇
+> 11. Come back and leave us a review to receive a second discount offer.
+> 12. Who's next? Who else would you like to put a smile on today?
+
+**Analysis (verified in code before writing this):**
+- Current section: `<section class="how-it-works">` in `public/landing.html`, heading "SIMPLE TO CREATE" / "How It Works", containing `.steps-grid` — a 3-column CSS grid of 3 simple `.step-card`s (icon circle + title + one-line description each): "Pick a Date," "We Craft It," "You Treasure It." This is a fundamentally different *shape* of content from the replacement — 3 short cards vs. 3 headed groups each containing 3–4 numbered steps (12 items total, with one list item — step 12 — being a closing/emotional line rather than an instruction).
+- **This is a bigger structural change than a text edit**, not a simple copy swap into the existing `.step-card` markup — the existing cards have no room for a 3–4-item numbered sub-list each. New markup/CSS is needed.
+- **Bold/normal text pattern:** Col explicitly attached a screenshot to show which parts are bold. From that screenshot: the 3 group headers ("Create," "Check and buy," "Print and give") are clearly bold section headings, larger than the numbered items beneath them. The numbered items themselves read as normal body-weight text — I did **not** detect a clear per-item "bold lead-in phrase" pattern confidently enough to commit to it from the screenshot alone (e.g. whether "Click Create." or "Preview your newspaper." specifically start bold within their sentence is genuinely hard to tell from a phone-screenshot at that resolution). **This needs a direct confirmation with Col before implementing** — ask him to confirm only the 3 group headers are bold (my working assumption) vs. some other emphasis pattern within individual steps, rather than guess and have to redo it.
+- **Does NOT need DB/backend changes** — this is pure landing-page copy/markup/CSS, same category as Steps 1–2.
+- **Open structural question to resolve before implementing** (not asked yet): with 12 items grouped into 3 sections, does Col want this to keep the current 3-column side-by-side grid layout (3 columns, each a tall card with its own mini numbered list), or does a 12-item list read better stacked vertically down the page (3 sections, one after another, full width)? The 3-column grid works well for 3 short cards; it may feel cramped with 3–4 list items packed into each column at normal page width. Recommend asking Col for a quick preference (or showing both) before building, same as any other layout decision this size.
+
+**Planned sub-steps (to be written up individually, each with its own Problem/Solution/Test/Bug-hunt, once implementation starts):**
+
+- **Step 3a — confirm open questions with Col before writing any code.**
+  - Exact bold/normal pattern: send Col a direct, specific question — "only the 3 group headers (Create / Check and buy / Print and give) are bold, every numbered item is normal weight — correct?" — rather than re-guess from the screenshot a second time.
+  - Layout shape: 3-column grid (current structure) vs. stacked full-width sections. Show a quick mockup of both if asking isn't enough on its own, same as other layout-sized decisions this session.
+  - **Test for this sub-step:** there's nothing to browser-test here — "done" means Col has given an unambiguous yes/no on both questions in writing, not an implementation detail.
+
+- **Step 3b — build the new 3-group markup + CSS**, replacing `.steps-grid`/`.step-card` entirely (nothing from the old 3-card version is preserved/merged — confirmed the old content, "Pick a Date"/"We Craft It"/"You Treasure It," is fully superseded by the new copy, not a partial edit).
+  - **Specific things to get right, not just "build it":** heading hierarchy (group headers vs. numbered items need genuinely different HTML elements/weights, not just a CSS class doing visual-only bolding — screen readers and the page's own heading outline should reflect the real structure); the numbered list must render as real ordered-list numbers 1–12 continuing across all 3 groups (not 3 separate 1-4/1-4/1-4 restarts) unless Col's screenshot actually shows restarted numbering per group — check this specifically against his reference image before building, don't assume.
+  - **Bug hunt for this sub-step:** grep for `.steps-grid`/`.step-card`/`.step-icon-wrap`/`.step-title`/`.step-desc` anywhere else in the file before deleting the old CSS (same check pattern as Step 1); check the `max-width: 992px` and `max-width: 680px` media queries for any existing rule targeting these old classes that will need a new equivalent for the new markup, not just left stale.
+
+- **Step 3c — verify the 😇 emoji (step 10) renders correctly**, given this session already found and fixed a near-identical "emoji renders as a blank/wrong glyph on some platforms" problem once before (the social-platform icons were swapped from emoji to real SVGs for exactly this reason — see the agent-profile work earlier in this project).
+  - **Specific test, not just "check it looks fine":** render the real page in at least two different environments (e.g. this Chrome-based test browser, plus ask Col to check on his own phone/Windows machine specifically) before accepting emoji as final — Windows' system emoji font has previously been confirmed in this codebase to silently fall back to a blank/text glyph for flag emoji; the same risk applies to any emoji, not just flags, so it needs a real check on a real Windows browser, not an assumption that "emoji generally work now."
+  - If it renders wrong anywhere tested: either pick a different Unicode emoji with better cross-platform support, or follow the established precedent in this codebase and use a small inline SVG instead.
+
+- **Step 3d — full real-browser test + live verification.**
+  - Desktop (page's normal build width), the `992px` breakpoint specifically (not just "mobile" — confirm the exact pixel width where the current `.steps-grid` rule changes behavior and test just above/below it), and `680px` and below.
+  - Confirm the ordered-list semantics are real (`<ol>`/`<li>`, not divs faked to look like a list) by checking the actual DOM, not just the visual rendering.
+  - Re-run the same "did this disturb anything else on the page" check used for Steps 1–2 — screenshot the sections immediately before and after this one, confirm no new gap/overlap.
+  - After deploy: re-verify against the live URL with the same checks, confirm via a real marker in the live response rather than assuming the deploy succeeded.
+
+**Status:** 📝 documented only, per explicit instruction not to implement yet. Waiting on Col's confirmation of the two open questions (Step 3a) before any code is written.
