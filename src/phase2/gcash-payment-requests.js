@@ -551,6 +551,108 @@ function validateShippingFields(body) {
   }
 }
 
+// Bug fix, 1 Oct 2026 (urgent client request, Col: a live Facebook ad
+// campaign — Tagalog creative, "50% OFF... ₱99 NGAYON... dati ₱199",
+// code TT50OFF — was about to launch pointing customers at a promo code
+// that structurally could not work). Investigation found the flat PHP
+// price in createGcashPaymentRequest() below (`expectedAmountPhp`) had
+// no discount mechanism at all — `campaign_single_use` codes (the admin
+// "+ Create Codes" system, new_changes.md Step 8) only ever applied to
+// the Stripe/NZD checkout path via resolveCampaignPromoCode() in
+// public-checkout.js, which GCash payments never call. A customer typing
+// TT50OFF into the GCash flow would have paid the full ₱199 with zero
+// indication anything went wrong.
+//
+// This resolves the SAME `promo_codes` table / `campaign_single_use`
+// rows the admin "+ Create Codes" screen already creates (so Col uses
+// one familiar screen for both payment paths, not two separate code
+// systems) but reads `discount_type`/`discount_value` directly instead
+// of requiring a Stripe coupon — GCash payments never touch Stripe at
+// all, so the Stripe-coupon requirement in resolveCampaignPromoCode()
+// would be a dead end here even if it were reachable. Mirrors that
+// function's validation checks (active, used_count, valid_until) but
+// intentionally does NOT require `stripe_coupon_id` to be set, since a
+// code meant for GCash-only use will never have one.
+async function resolveGcashDiscountCode(supabase, code) {
+  const normalized = String(code || '').trim().toUpperCase();
+  if (!normalized) return null;
+
+  const { data, error } = await supabase
+    .from('promo_codes')
+    .select('id, code, used_count, max_uses, active, valid_until, discount_type, discount_value')
+    .ilike('code', normalized)
+    .eq('code_type', 'campaign_single_use')
+    .maybeSingle();
+
+  // Not a campaign code at all (wrong code_type, or genuinely doesn't
+  // exist) — return null quietly rather than error, same principle as
+  // resolveCampaignPromoCode: a typo'd/unrelated code string shouldn't
+  // block the GCash flow, it just means no discount applies.
+  if (error || !data) return null;
+
+  if (!data.active || Number(data.used_count || 0) >= Number(data.max_uses || 1)) {
+    throwStatus(400, 'This promo code has already been used.');
+  }
+  if (data.valid_until && new Date(data.valid_until) < new Date()) {
+    throwStatus(400, 'This promo code has expired.');
+  }
+  if (!data.discount_type || !data.discount_value) {
+    // A campaign code that exists but has no discount configured at all
+    // (shouldn't happen via the admin UI, which requires a discount value
+    // to create one, but guard against a malformed/manually-edited row)
+    // — treat as "no discount," not a hard error, since this code might
+    // validly be a Stripe-only code with no PHP-relevant fields set.
+    return null;
+  }
+
+  return data;
+}
+
+// Applies a resolved discount code to a PHP amount, rounded to the
+// nearest whole peso (no existing PHP rounding convention found
+// elsewhere in this codebase — whole-peso is the simplest, least
+// surprising choice for a price customers see as a round number, e.g.
+// ₱199 × 50% = ₱99.50 → ₱100, not an odd-looking ₱99.50).
+function applyPhpDiscount(baseAmountPhp, discountCode) {
+  if (!discountCode || !Number.isFinite(baseAmountPhp)) return baseAmountPhp;
+
+  if (discountCode.discount_type === 'percent') {
+    const pct = Math.min(Math.max(Number(discountCode.discount_value) || 0, 0), 100);
+    return Math.round(baseAmountPhp * (1 - pct / 100));
+  }
+  if (discountCode.discount_type === 'fixed') {
+    // `discount_value` for fixed-amount codes is stored in NZD elsewhere
+    // in this codebase (admin-fulfilment.js's Stripe coupon creation uses
+    // it directly as NZD cents) — there's no PHP-fixed-amount concept, so
+    // a fixed-type code is intentionally not applied here to avoid
+    // silently treating an NZD figure as a peso figure. Percent-type
+    // codes (TT50OFF's case) are the only kind this function discounts.
+    return baseAmountPhp;
+  }
+  return baseAmountPhp;
+}
+
+// Atomically marks a promo code as consumed (mirrors consumeCampaignPromoCode
+// in public-checkout.js) — called only after the GCash payment request row
+// has been successfully inserted, so a failed insert never burns the code.
+async function consumeGcashDiscountCode(supabase, discountCode, requestId) {
+  if (!discountCode) return;
+  const { error } = await supabase
+    .from('promo_codes')
+    .update({
+      used_count: Number(discountCode.used_count || 0) + 1,
+      used_at: new Date().toISOString(),
+      active: Number(discountCode.used_count || 0) + 1 >= Number(discountCode.max_uses || 1) ? false : true,
+    })
+    .eq('id', discountCode.id)
+    .eq('active', true)
+    .lt('used_count', Number(discountCode.max_uses || 1));
+
+  if (error) {
+    console.error('GCash discount code consume failed:', discountCode.code, error);
+  }
+}
+
 async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, gcashReferenceId, settings }) {
   const senderName = String(gcashSenderName || '').trim();
   const referenceId = String(gcashReferenceId || '').trim();
@@ -570,10 +672,21 @@ async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, g
   // `productTier === 'digital'` in this one function (the public product
   // order path) — florist credits and station frames use the separate
   // `createAccountGcashPaymentRequest` function below and are untouched.
-  const expectedAmountPhp = payload.productTier === 'digital'
+  const baseAmountPhp = payload.productTier === 'digital'
     ? 199
     : settings.phpPerNzd
     ? Number((pricing.totalAmountNzd * settings.phpPerNzd).toFixed(2))
+    : null;
+
+  // Bug fix, 1 Oct 2026 (see resolveGcashDiscountCode above for the full
+  // story — urgent ad-campaign promo code, TT50OFF): the flat PHP price
+  // above had no discount mechanism at all before this. Resolve against
+  // the same promo_codes the admin screen creates, discount the PHP
+  // amount if a valid percent-type code was entered, and consume it only
+  // after the insert below actually succeeds.
+  const gcashDiscountCode = await resolveGcashDiscountCode(supabase, payload.promoCode);
+  const expectedAmountPhp = baseAmountPhp !== null
+    ? applyPhpDiscount(baseAmountPhp, gcashDiscountCode)
     : null;
 
   const insertPayload = {
@@ -625,6 +738,12 @@ async function createGcashPaymentRequest({ supabase, payload, gcashSenderName, g
     }
     throw new Error(`Unable to save GCash payment request: ${error.message}`);
   }
+
+  // Consume the discount code only now that the request row genuinely
+  // exists — a failed insert above (e.g. duplicate reference ID) never
+  // burns the code, matching the same "consume after success" principle
+  // used by the Stripe/NZD path's consumeCampaignPromoCode.
+  await consumeGcashDiscountCode(supabase, gcashDiscountCode, data.id);
 
   return data;
 }

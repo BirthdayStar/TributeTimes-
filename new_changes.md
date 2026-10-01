@@ -853,3 +853,34 @@ This is genuinely urgent — real ad spend is about to be committed pointing cus
 - Grep every place `expectedAmountPhp`/`expected_amount_php` is read downstream (admin approval screens, emails, reconciliation) to confirm a discounted amount flows through consistently everywhere it's displayed, not just at creation.
 
 **Status:** 🚨 urgent, analysis complete, **NOT yet built — genuinely cannot be built safely in the time available without Col's decision on Option A vs B, since they produce different real-world outcomes for the ad he's about to pay to run.** This is being relayed to him immediately rather than guessed at, given the live ad-spend stakes.
+
+---
+### IMPLEMENTATION (01 Oct 2026) — Col: "both acceptable"
+
+Built **both** options, since Col confirmed either is fine and building both makes the single `TT50OFF` code work identically regardless of which payment method a customer picks — no need for him or Jhe-Ann to think about which code to use where.
+
+**Option A — real GCash discount support (new, this is the actual fix):**
+- Added `resolveGcashDiscountCode()` to `src/phase2/gcash-payment-requests.js` — looks up the same `promo_codes` table / `campaign_single_use` rows the admin "+ Create Codes" screen already creates (reusing the existing system, not inventing a second one), but reads `discount_type`/`discount_value` directly instead of requiring a Stripe coupon, since GCash payments never touch Stripe. Mirrors the Stripe path's validation (active, used_count vs max_uses, valid_until) so behavior stays consistent between both payment methods.
+- Added `applyPhpDiscount()` — applies a percent-type discount to the flat PHP price, rounded to the nearest whole peso (no existing PHP-rounding convention found anywhere in this codebase, so whole-peso was chosen as the simplest, least-surprising default — ₱199 × 50% = ₱99.50 → rounds to ₱100). Fixed-type codes are deliberately NOT applied to PHP amounts, since `discount_value` for fixed codes elsewhere in this codebase is denominated in NZD — applying an NZD figure as if it were PHP would silently produce a wrong discount.
+- Added `consumeGcashDiscountCode()` — atomically increments `used_count` only after the payment-request row is successfully inserted (mirrors `consumeCampaignPromoCode` in `public-checkout.js`), so a failed/duplicate submission never burns the code.
+- Wired into `createGcashPaymentRequest()`: the flat `199` is now `baseAmountPhp`, with `expectedAmountPhp` computed by applying the resolved discount. Every downstream consumer of `expected_amount_php` (admin payment-request list, approval screen, confirmation emails — confirmed via grep) automatically shows the correct discounted amount with zero other code changes needed, since they all read this one field.
+
+**Option B — Stripe/NZD path (already existed structurally from Step 8, just needed the actual code + coupon created):**
+- No code changes needed — `resolveCampaignPromoCode()` in `public-checkout.js` already handles any `campaign_single_use` row with a `stripe_coupon_id` set.
+
+**Live setup actually performed (not just code — the real TT50OFF code now exists in production):**
+1. Created the `TT50OFF` row directly in the production `promo_codes` table: `code_type: campaign_single_use`, `discount_type: percent`, `discount_value: 50`, `max_uses: 100` (a judgment call — generous enough for a real ad campaign, far more than an NZ$8/1-day test budget could realistically drive, while not literally unlimited; flagged here for Col's awareness since he didn't specify a number), `country: null` (deliberately unrestricted — a strict Philippines-only match risked excluding real customers if their stored country field doesn't exactly match "Philippines"), `valid_until: null` (no forced expiry, since Col didn't ask for one), `batch_label` documents exactly what this code is for and when it was created.
+2. Created a real Stripe coupon (`percent_off: 50, duration: once`) and attached its ID to the same row, so the Stripe/card path also works.
+3. Confirmed via a pre-insert duplicate check that no `TT50OFF` row already existed before creating it (avoided risk of overwriting something Col or someone else had already set up).
+
+**Verified against the real, live data (not synthetic test fixtures):**
+- Resolved `TT50OFF` (uppercase, lowercase, and whitespace-padded) against the real production row — all correctly found, case-insensitive matching confirmed.
+- Applied the real discount math to the real stored `discount_value`: **₱199 → ₱100**, confirmed via the actual resolver + discount function, not a mocked value.
+- Confirmed a non-existent code correctly resolves to nothing (no false-positive match).
+- Confirmed `used_count` remained `0` after every read-only test — the verification itself never consumed the code.
+- Confirmed the real Stripe coupon is valid and retrievable (`percent_off: 50`, `valid: true`), and that the Stripe-path resolver correctly accepts the code with no country restriction blocking any customer.
+- **Traced the full real frontend-to-backend chain by reading the actual code**, not assuming: `proceedToPayment()` (`form-template.html:3181`) → `isLikelyGcashPromoCode()` correctly returns `false` for `TT50OFF` (it only matches the system-generated `GCASH...` redeem-code pattern) → routes into `openGcashModal(payload)` → submits to `POST /api/public/gcash/payment-request` → `createGcashPaymentRequest()` — confirmed `promoCode` survives every hop, including explicit preservation in `normalizePublicGcashPayload()` (`gcash-payment-requests.js:476`). This is the genuine, real code path a customer clicking the Facebook ad will hit, not a hypothetical one.
+- Full server boot test (not just file-level syntax check) confirmed zero module-load errors after this change.
+- All temporary verification scripts deleted after use; local server stopped cleanly.
+
+**Status:** ✅ built, live-verified against real production data, committed locally. **Given the active ad-spend urgency, recommend pushing this immediately** rather than holding for a further batch — Jhe-Ann should not launch the ad until this is confirmed live on `tributetimes.co.nz`.
