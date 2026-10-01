@@ -377,16 +377,62 @@ This hides the entire `<ul class="nav-links">` (HOME / FLORISTS / STATIONS / AGE
 **Isolation notes:** 6a only touches the image file `public/logo_header.png` — no HTML/CSS change needed unless the image's own aspect ratio changes (it shouldn't, same 1600×531 canvas). 6b only touches the `@media (max-width: 680px)` block in `public/landing.html` (lines ~878-887) — confirm no other rule in that same media query depends on `.nav-links` staying hidden (e.g. spacing/margin rules elsewhere assuming it's absent).
 
 **Test case:**
-- 6a: load the live site on an actual phone (or Chrome device-emulation at common widths: 360px, 390px, 428px) and visually confirm "THE TRIBUTE" and "TIMES" now read as the same point size — compare cap-height pixel measurement of each word directly in a screenshot tool, not just eyeballing.
-- 6a: confirm the logo still isn't stretched/distorted post-edit — same verification method as Step 2 (measure rendered width/height ratio via `getBoundingClientRect()`, compare to the new PNG's `naturalWidth`/`naturalHeight` ratio, confirm they match).
+- 6a: load the live site on an actual phone (or Chrome device-emulation at common widths: 360px, 390px, 428px) and visually confirm "THE TRIBUTE" and "TIMES" now read as the same point size — measure cap-height in pixels for each word directly from a full-resolution screenshot (crop and compare pixel heights, not eyeball "looks closer now").
+- 6a: confirm the logo still isn't stretched/distorted post-edit — same verification method as Step 2 (measure rendered width/height ratio via `getBoundingClientRect()`, compare to the new PNG's `naturalWidth`/`naturalHeight` ratio, confirm they match to at least 2 decimal places, not just "looks about right").
+- 6a: specifically re-check the seal graphic (circular emblem between the two text blocks) wasn't accidentally shifted, resized, or had its own text ("THE TRIBUTE TIMES SEAL OF AUTHENTICITY") blurred as a side effect of editing the text around it — crop and compare the seal region pixel-for-pixel against the current image before/after.
 - 6b: at ≤680px, confirm all 5 nav links (HOME/FLORISTS/STATIONS/AGENTS/CONTACT) are visible and tappable between the logo band and the country-selector/CREATE YOURS row, matching the gap Col circled.
-- 6b: confirm each link's tap target is large enough for a real thumb (not a tiny 10px-tall text link) and that tapping each one navigates correctly (`/`, `/florist`, `/station`, `/join`, `mailto:hello@tributetimes.co.nz`).
-- 6b: re-check `680px` boundary specifically (just above/below it) and also the `992px` breakpoint to confirm nothing regresses at the tablet width where `.nav-links` is still visible today.
+- 6b: confirm each link's tap target meets a real minimum touch size (44×44px per standard mobile accessibility guidance, not just "visually present") and that tapping each one navigates correctly (`/`, `/florist`, `/station`, `/join`, `mailto:hello@tributetimes.co.nz`) — test by actual tap on a touch device/emulator, not just a mouse click, since touch target size bugs don't show up with a mouse.
+- 6b: re-check `680px` boundary specifically (just above/below it, e.g. 679px vs 681px) and also the `992px` breakpoint to confirm nothing regresses at the tablet width where `.nav-links` is already visible today — a CSS change at one breakpoint can silently leak into or break an adjacent one if selectors aren't scoped carefully.
+- 6b: test with the country selector's dropdown actually open (not just closed/idle) to confirm the reinstated nav links don't overlap or get overlapped by the open dropdown at narrow widths — these two UI elements are close together in the circled gap.
 
 **Bug hunt:**
-- 6a: after re-editing the PNG, diff file size/dimensions against the current `469862`-byte, `1600×531` original (noted in a prior deploy log this session) to catch an accidental resize/recompress that degrades quality elsewhere in the image (the seal graphic, "TIMES" itself).
-- 6b: grep for any other place `.nav-links` or `.navbar` is referenced (JS event listeners, other media queries) to confirm re-enabling it at mobile doesn't trigger unrelated behavior (e.g. a resize listener that assumes nav-links is always hidden below 680px).
-- 6b: screenshot the full mobile header band (logo + reinstated nav + country selector + CREATE YOURS) together to confirm total vertical height is still reasonable — 5 stacked/wrapped nav items plus everything else already in that column could push the "CREATE YOURS" button far down the page on short phone screens; check this doesn't create a new usability problem while fixing the old one.
-- After deploy: re-verify against the live URL on a real or emulated mobile viewport, not just desktop dev tools at a resized window — confirm via the same method Col used (an actual phone browser screenshot) since that's how he caught this.
+- 6a: after re-editing the PNG, diff file size/dimensions against the current `469862`-byte, `1600×531` original (confirmed via the Step 2 deploy log) to catch an accidental resize/recompress that degrades quality elsewhere in the image (the seal graphic, "TIMES" itself) — a naive "scale up THE TRIBUTE only" edit in a raster tool can introduce visible resampling artifacts around just that text while leaving the rest untouched, which would be an obvious giveaway on zoom.
+- 6a: confirm the edited PNG's background stays transparent (RGBA, confirmed on the current file) — a re-export through some tools silently flattens transparency to a white or black background, which would show as a visible box around the logo on the actual cream-colored header band.
+- 6b: grep for any other place `.nav-links` or `.navbar` is referenced (JS event listeners, inline styles, other media queries) to confirm re-enabling it at mobile doesn't trigger unrelated behavior (e.g. a resize listener elsewhere in the file that assumes `.nav-links` is always hidden below 680px and skips some initialization because of it).
+- 6b: screenshot the full mobile header band (logo + reinstated nav + country selector + CREATE YOURS) together to confirm total vertical height is still reasonable — 5 stacked/wrapped nav items plus everything else already in that column could push the "CREATE YOURS" button far down the page on short phone screens (test against a genuinely short viewport like iPhone SE's 667px height, not just a tall modern phone); check this doesn't create a new usability problem while fixing the old one.
+- 6b: confirm the reinstated `.nav-links` doesn't break the existing `.navbar { flex-direction: column }` rule at this breakpoint (`landing.html:879`) — i.e. the links need their own internal layout (row-wrap or stacked) within that column, not just inherited flex behavior that might squash or misalign them.
+- After deploy: re-verify against the live URL on a real or emulated mobile viewport, not just desktop dev tools at a resized window — confirm via the same method Col used (an actual phone browser screenshot) since that's how he caught the original bug.
 
 **Status:** 📝 documented, not yet implemented. Needs Col's confirmation on: (1) does he have original logo design files for 6a, or should the existing PNG be edited directly, (2) which mobile-nav treatment he wants for 6b (inline/wrap, scroll, or hamburger menu) before building either half of this step. Also worth telling him plainly: 6b is a pre-existing gap, not something Step 2 introduced.
+
+---
+## STEP 7 — Hero section: remove "Printed on Premium Paper" feature item and the price line
+
+**Client message:** Screenshot of the hero section ("Give the Gift of History" heading, 3 feature items, "CREATE YOUR NEWSPAPER" button, price line below). Red marks cross out the 3rd feature item ("Printed on Premium Paper") entirely and the price line ("From NZ$9.95") entirely. No separate text message accompanied this screenshot — the crossed-out marks are the full instruction.
+
+**Analysis (code-verified, not guessed):** This is the first `<section class="hero-section">` in `public/landing.html:956-977`. The 3 feature items are `.hero-feature-item` divs (`lines 963-965`):
+1. `📜 Authentic Vintage Style` — **not marked, keep**
+2. `📄 One-Page Newspaper` — **not marked, keep**
+3. `📦 Printed on Premium Paper` — **crossed out, delete**
+
+Below that, `<div class="hero-price">From NZ$9.95</div>` (`line 969`) — **crossed out, delete**.
+
+**Important — this exact `.hero-price` class is NOT unique to this section.** Grep confirms a second, separate hero-style section further down the page (`public/landing.html:1106`, "A Newspaper That Tells Their Story" section) also has its own `<div class="hero-price">From NZ$9.95</div>`. Both are driven by the same shared JS function `applyPricingCountry()` (`public/landing.html:1318-1324`):
+```js
+document.querySelectorAll('.hero-price').forEach(el => {
+  el.textContent = `From ${pricing.display}`;
+});
+```
+This function updates **every** `.hero-price` element on the page whenever the country selector changes — it has no concept of "which section." **This means simply deleting the `<div class="hero-price">` markup in this one hero section is safe and self-contained** (the `querySelectorAll` loop will just find one fewer element, no error) — but it's worth flagging to Col that his screenshot only shows the top hero section, and the second "A Newspaper That Tells Their Story" section further down has an identical price line that is NOT shown/marked in this screenshot. **Does he want the price line removed from both places, or only the one he screenshotted?** Don't assume — ask, since deleting only one creates visible inconsistency (price shown once on the page but not twice) which may or may not be what he wants.
+
+**Problem:** The 3rd feature claim ("Printed on Premium Paper") may be inaccurate or no longer relevant given the broader context already uncovered in this project — Step 4 and the florist-association feedback both point toward the product being positioned as a self-print-at-home digital product, not something physically printed and shipped by the company. "Printed on Premium Paper" could be read as implying the company prints and sends it, which may be exactly the kind of confusing claim Col is now cleaning up across the whole page (consistent with Step 4's similar fix). The price line's removal reason isn't stated but may relate to wanting to simplify the hero's call-to-action, or ties into the broader pricing-display questions already raised in Step 5's open question about the flag bar.
+
+**Solution:**
+1. Delete the `.hero-feature-item` div for "Printed on Premium Paper" (`public/landing.html:965`) — leaves exactly 2 feature items in `.hero-features`.
+2. Delete `<div class="hero-price">From NZ$9.95</div>` (`public/landing.html:969`) from this section only, pending Col's confirmation on whether the second occurrence (`line 1106`) should also go.
+3. No CSS change needed for the feature-item removal: confirmed `.hero-features` (`public/landing.html:292-297`) is `display: flex; flex-wrap: wrap; gap: 20px;` — not a fixed-column grid like the stats bar was in Step 4. Removing 1 of 3 items naturally reflows with no layout fix required. (This is a direct contrast with Step 4, where the grid DID need `repeat(4,1fr)` changed to `repeat(2,1fr)` — worth not repeating that grid-fix step here since it doesn't apply.)
+
+**Isolation notes:** `.hero-feature-item` and `.hero-price` are both reused elsewhere on the page (second hero-style section further down, `lines 1098-1106`) — any edit must target the specific `<div>` instances in the first hero section only (by surrounding context/line number), not a blanket find-and-replace on the class name, or it will silently also affect the second section.
+
+**Test case:**
+- Desktop and mobile: confirm the first hero section shows exactly 2 feature items ("Authentic Vintage Style", "One-Page Newspaper") and no price line below the "CREATE YOUR NEWSPAPER" button.
+- Confirm the second "A Newspaper That Tells Their Story" section further down the page is untouched (still shows its own checklist and its own price line) — unless Col confirms he wants that one changed too, in which case update this test case accordingly.
+- Confirm the country-selector price-update JS (`applyPricingCountry`) still runs without error after this section's `.hero-price` div is removed — open browser console, change country, confirm no JS errors logged (the `querySelectorAll('.hero-price')` loop should just silently find one fewer match).
+- `992px` and `680px` breakpoints: confirm the 2 remaining feature items display cleanly with no leftover spacing artifact from the removed 3rd item.
+
+**Bug hunt:**
+- Grep `.hero-feature-item` and `.hero-price` across the whole file before editing to confirm exact count/locations (expect 3 `.hero-feature-item` in this section + however many in the second section; 2 total `.hero-price` instances) so the edit touches only the intended lines.
+- Screenshot the hero's visual/image column (`.hero-visual`, `.hero-img` — the newspaper mockup image on the right) to confirm its vertical alignment doesn't look obviously off-balance now that the left column (text) is shorter by 2 removed lines — may need a visual check even if no code change is required, since asymmetry can look unintentional.
+- After deploy: re-verify against the live URL that both intended changes (feature item gone, price line gone) are present and the untouched second section is confirmed unaffected.
+
+**Status:** 📝 documented, not yet implemented. **Needs one clarification from Col before building:** does the price-line removal apply only to this top hero section (as screenshotted), or also to the second, identical price line further down the page in the "A Newspaper That Tells Their Story" section? Don't guess — the screenshot doesn't show that section, so scope is genuinely ambiguous.
