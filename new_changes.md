@@ -234,3 +234,39 @@ That's it — no navigation, no link, no filtering, no connection to checkout or
 **Col's message (verbatim):** *"Once we have co.pleted tge landing page ill give you some changes to tge admin page. Only cosmetic changes. Like text size etc."*
 
 Col has explicitly deferred this himself until the landing page work (Steps 1–3+) is finished. No action needed now — tracked here only so it isn't lost. Do not start until Col sends the actual list of admin-page changes.
+
+---
+## STEP 4 — Stats bar: remove 2 of 4 boxes, reword the remaining "Digital & Print" label
+
+**Client message:** Screenshot of the stats bar (the 4-box row below the hero: "72 Keepsakes Created", "100% One-Page Geometry Locked", "NZ Delivery / Printed & Dispatched Locally", "Digital & Print / Instant PDF or Postal Delivery"). Red marks cross out the 2nd box ("100% One-Page Geometry Locked") and 3rd box ("NZ Delivery / Printed & Dispatched Locally") entirely, and strike through the label text of the 4th box. Col's instruction: *"Please change this info box. Make text line read 'instant pdf delivery, print at home'"*.
+
+**Analysis (code read, not guessed):** This is `<section class="stats-bar">` in `public/landing.html:980-1009` — 4 `.stat-item` children in a CSS grid (`.stats-bar { grid-template-columns: repeat(4, 1fr); }`, `public/landing.html:401`). Each item is icon + `.stat-value`/`.stat-label` pair:
+1. `✨` 72 (dynamic, `id="keepsakes-created-value"`) — "Keepsakes Created" — **keep, untouched**
+2. `📰` "100%" — "One-Page Geometry Locked" — **crossed out, delete entirely**
+3. `🇳🇿` "NZ Delivery" — "Printed & Dispatched Locally" — **crossed out, delete entirely**
+4. `⚡` "Digital & Print" — "Instant PDF or Postal Delivery" — **keep the box, change the label text only**
+
+**Problem:** Two of four boxes are no longer accurate/wanted (likely because "Printed & Dispatched Locally" / postal delivery no longer matches how the product actually works — it's self-print-at-home, not a printed/posted item — which is also why box 4's label is being corrected to say "print at home" instead of implying postal delivery). Leaving them in contradicts the corrected messaging on box 4.
+
+**Solution:**
+1. Delete stat-item 2 (`100%` / `One-Page Geometry Locked`, lines ~988–994) and stat-item 3 (`NZ Delivery` / `Printed & Dispatched Locally`, lines ~995–1001) entirely — markup only, nothing else references these two boxes elsewhere (confirm via grep before deleting).
+2. Change stat-item 4's `.stat-value` text from "Digital & Print" — Col didn't cross out the value line, only the label line, so leave "Digital & Print" as-is unless he says otherwise.
+3. Change stat-item 4's `.stat-label` text from "Instant PDF or Postal Delivery" to **"Instant PDF delivery, print at home"** — exact client wording, lowercase as given (confirm with Col if he wants it capitalized to match the site's existing title-case label style, e.g. "Instant PDF Delivery, Print At Home" — the other 3 labels are title case: "Keepsakes Created", "One-Page Geometry Locked", "Printed & Dispatched Locally" — so going with title case to match existing pattern is the safer default, but flag this to Col rather than silently deciding).
+4. Fix the grid: `.stats-bar` is `grid-template-columns: repeat(4, 1fr)`. With only 2 items left, this must become `repeat(2, 1fr)` (desktop) or the two remaining boxes will be squashed into half the row with empty space on the right. Check the two responsive overrides too: `@media (max-width: 992px)` currently sets `repeat(2, 1fr)` (line 870) — with 2 items total this becomes redundant but harmless; `@media (max-width: 680px)` sets `repeat(1, 1fr)` (line 883) — stays correct for 2 items stacking on mobile.
+
+**Isolation notes:** this only touches `<section class="stats-bar">` and its own CSS rule plus the 2 responsive overrides of that same selector — no other section references `.stat-item`/`.stat-value`/`.stat-label` classes (confirm via grep before editing). The dynamic `id="keepsakes-created-value"` counter (box 1) has a JS binding elsewhere in the file/a script tag — confirm that binding is untouched since box 1 is not being removed.
+
+**"one more same with image add also"** — Col's own message also said he'd send "one more same [change] with image" — meaning expect a **second, related screenshot/request** for this same stats-bar area (or similar), not yet received. Do not treat Step 4 as fully scoped until that follow-up arrives; check with Col or wait for the next message before marking this done if it's visibly incomplete relative to what he described.
+
+**Test case:**
+- Desktop: confirm exactly 2 stat boxes render ("Keepsakes Created" with live count, and "Digital & Print" with new label text), evenly spaced, no leftover empty grid cells.
+- Confirm label text reads exactly "Instant PDF delivery, print at home" (or the title-cased variant, whichever Col confirms) — character-for-character, not paraphrased.
+- `992px` and `680px` breakpoints: confirm no visual regression now that there are 2 items instead of 4 (recheck both `repeat(2,1fr)` and `repeat(1,1fr)` rules render correctly with only 2 children).
+- Confirm the "72 Keepsakes Created" live-count counter still animates/loads correctly — its `id` and any JS referencing it must be unaffected by deleting its sibling boxes.
+
+**Bug hunt:**
+- Grep for `.stat-item`, `.stat-value`, `.stat-label`, `.stat-icon`, `.stats-bar` across the whole file to confirm no other section shares/depends on these classes before deleting markup.
+- Screenshot the hero section immediately above and the "LOCAL PRICING STRIP" section immediately below to confirm no spacing/overlap regression from shrinking this section's height.
+- Verify in the real rendered DOM (not just visual) that exactly 2 `.stat-item` elements remain — not 4 with 2 hidden via CSS (that would be a lazy fix, not a real deletion, and would leave dead markup).
+
+**Status:** 📝 documented, not yet implemented. Needs 2 confirmations from Col before/while building: (1) exact casing for the new label text, (2) what the "one more same with image" follow-up refers to, since it may change scope.
