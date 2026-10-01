@@ -299,7 +299,7 @@ h1 {
           </div>
 
           <button class="btn-submit" type="submit" id="submit-btn">Submit Application</button>
-          <div class="msg" id="form-msg"></div>
+          <div class="msg" id="form-msg" role="alert" aria-live="polite"></div>
         </form>
       </div>
 
@@ -335,10 +335,13 @@ h1 {
     const form = document.getElementById('signup-form');
     const msgEl = document.getElementById('form-msg');
     const submitBtn = document.getElementById('submit-btn');
+    const submitBtnDefaultText = submitBtn.textContent;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy', 'true');
+      submitBtn.textContent = 'Submitting…';
       msgEl.style.display = 'none';
       msgEl.className = 'msg';
 
@@ -379,6 +382,8 @@ h1 {
         msgEl.classList.add('error');
         msgEl.style.display = 'block';
         submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+        submitBtn.textContent = submitBtnDefaultText;
       }
     });
   </script>
