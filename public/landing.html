@@ -331,13 +331,6 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(138, 106, 31, 0.45);
 }
-.hero-price {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 10px;
-  font-weight: 600;
-}
-
 .hero-visual {
   position: relative;
   width: 100%;
@@ -1345,12 +1338,12 @@ function detectPricingCountry() {
 // keeps both dropdowns in sync with each other regardless of which one
 // (or auto-detection) triggered the change.
 function applyPricingCountry(country) {
+  // `pricing` itself is only used to validate `country` is a real supported
+  // value below — the .hero-price text-update this function used to also
+  // do was removed along with the last .hero-price element on the page
+  // (client request, 1 Oct 2026, Col — see new_changes.md Step 7).
   const pricing = COUNTRY_PRICING[country];
   if (!pricing) return;
-
-  document.querySelectorAll('.hero-price').forEach(el => {
-    el.textContent = `From ${pricing.display}`;
-  });
 
   document.querySelectorAll('.local-price-card').forEach(card => {
     card.classList.toggle('is-local', card.getAttribute('data-country') === country);

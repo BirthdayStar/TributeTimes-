@@ -724,3 +724,25 @@ Ran a genuinely exhaustive second pass — every `sendEmail()` call site across 
 - All test scripts/generated HTML/screenshots deleted after use (`ls __*` confirmed empty); local server stopped cleanly, port released.
 
 **Status:** ✅ 3 real bugs fixed, premium branded template built and applied to all 8 customer-facing emails, thoroughly verified. Committed locally. **Not pushed.** One architectural gap flagged but not built (no Stripe webhook / no server-side payment-confirmation backstop) — that's a bigger decision than a bug-hunt pass should make unilaterally, surfaced for Col's call rather than guessed at.
+
+---
+## FULL DEEP AUDIT — all 9 steps (01 Oct 2026, Col: "one more time deep audit of all steps")
+
+Independent, skeptical re-read of every step's actual current file content (not a re-check of prior notes) — specifically hunting for cross-step interaction bugs, leftover dead code, syntax errors, and security issues across the whole batch.
+
+**Found 1 real issue — minor, cosmetic, zero functional impact:**
+- `public/landing.html` still had the `.hero-price` CSS rule (unused — every `.hero-price` element was removed from the markup across both occurrences back in Step 7/its follow-up) and a dead `document.querySelectorAll('.hero-price').forEach(...)` loop in `applyPricingCountry()` (a harmless no-op on an empty NodeList, but dead code referencing a class that no longer exists in the DOM). **Fixed**: deleted both. Verified via a real browser check that the CSS rule is genuinely gone from the computed stylesheet, and that the country selector + flag-card highlighting (the rest of `applyPricingCountry()`) still works correctly end-to-end after the removal.
+
+**Everything else independently re-verified as correct, no changes needed:**
+- Steps 1, 2: clean removal/restructure, no orphaned markup.
+- Step 3: confirmed using native `<ol start="N">` + `list-style:decimal` + `::marker` (not a custom counter — the bug found and fixed earlier in this batch stayed fixed), 12 items across 3 groups, correct icons.
+- Step 4: exactly 2 stat boxes, correct grid, correct label text. No spacing conflict with Step 3's layout (independent sections, no shared/conflicting selectors).
+- Step 5: filter present and scoped correctly, no collision with Step 8's separate `campaign_single_use` endpoint.
+- Step 6b: mobile nav correctly reinstated.
+- Step 7: both `.hero-price` instances confirmed removed from markup (the CSS/JS leftover above was the only remaining trace, now cleaned up).
+- Step 8: `maxUses` safely clamped server-side (`Math.max(Number(req.body?.maxUses) || 1, 1)` — can't be abused via non-numeric/negative/zero input), admin UI field correctly wired end-to-end.
+- Step 9: all 3 bug fixes hold up (try/catch wrapping, order param actually used, atomic claim in the dormant spend-alert code). `wrapBrandedEmail()` confirmed called correctly by all 8 claimed customer templates with no leftover unbranded HTML in any of them; internal admin-only alerts correctly left unbranded (not part of the customer-facing scope Col asked for). Logo URL construction has a safe fallback chain. All interpolated values across every template pass through `escapeHtml` — no unescaped user input found anywhere in the new/modified code.
+- `node -c` syntax-checked clean on all 3 modified backend files (again, independently, not just trusting the earlier check).
+- No security issues found — `maxUses` has no hard upper bound, but this is admin-only (behind `authAdmin`), not a public-facing input, so not a real vulnerability, just a noted design choice.
+
+**Status:** ✅ audit complete, 1 cosmetic leftover found and fixed, verified via real browser test. Committed locally. **Not pushed.**
