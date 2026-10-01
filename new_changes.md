@@ -444,3 +444,61 @@ This function updates **every** `.hero-price` element on the page whenever the c
 - After deploy: re-verify against the live URL that both intended changes (feature item gone, price line gone) are present and the untouched second section is confirmed unaffected — screenshot both sections side by side on the live site, not just locally, since Col's screenshots have consistently come from the live `tributetimes.co.nz` domain, not a local dev server.
 
 **Status:** 📝 documented, not yet implemented. **Needs one clarification from Col before building:** does the price-line removal apply only to this top hero section (as screenshotted), or also to the second, identical price line further down the page in the "A Newspaper That Tells Their Story" section? Don't guess — the screenshot doesn't show that section, so scope is genuinely ambiguous. His follow-up question about country-based pricing has been answered above (yes, it does vary by country) — worth confirming he still wants it removed now that he knows that, before deleting a working localization feature.
+
+---
+## STEP 8 — URGENT: promo code redemption failed at real checkout + confusing admin UI for creating a simple 100%-off code
+
+**Client messages (verbatim, 01 Oct, 4:31–4:33):**
+> "Okay so just made a purchase and tried to use a code but thw code didn't work what did I do wrong?"
+>
+> "Nope I can't figure this out so you tell me how you set it up please. I want to create a promo code CDMFREE. I want it to be never ending and it offers 100% discount so free. Please explain how I set that up. 1. Create a sales rep or ondividual???? 2. Where how discount is set up. If I can't do this I can't expect jheann to do it!"
+>
+> "This is sp utterly confusing muhummad. How did we end up here?"
+
+This is the most urgent item in this batch — a real money-path failure during an actual purchase attempt, plus the site owner himself being unable to complete a basic admin task. Treated as its own step, investigated with the same rigor as Step 5 (full code read, not guessed), building directly on Step 5's `promo_codes`/`code_type` findings.
+
+**Analysis (code-verified via full read of `public/admin.html`, `src/phase2/admin-fulfilment.js`, `src/phase2/public-checkout.js`, `src/phase2/attribution.js` — not guessed):**
+
+**1. There are two completely separate, confusingly similar "promo code" systems in the admin panel, and Col almost certainly used the wrong one.**
+- **Campaign/Batch codes** ("+ Create Codes" button, `admin.html:1590`, `POST /api/admin/campaign-codes/batch`, `admin-fulfilment.js:1166-1231`) — creates `code_type: 'campaign_single_use'`. **No consultant/agent required.** Has a real discount-percentage field and an optional expiry field. **This is the only flow that can create a real checkout discount code.**
+- **Consultant-quota codes** (part of the "Agent"/sales-consultant modal, `admin-fulfilment.js:1017`) — creates `code_type: 'consultant_demo'`. **Requires an existing consultant record** (`if (!consultantId) throw new Error('Consultant is required for a promo code.')`). **Has no discount-percentage field and no expiry field at all** — it only grants a monthly quota of free demo keepsakes, not a checkout discount.
+
+This exactly explains Col's confusion: *"1. Create a sales rep or individual????"* — he found the consultant-based codes screen first (which does ask for an Agent), tried to use it for a simple always-free code, and correctly concluded it doesn't fit his need (because it genuinely can't — it has no discount field). The UI itself has a note distinguishing the two (`admin.html:1595`: *"This is separate from the reusable, consultant-quota Promo Codes above"*), but that's easy to miss for a non-technical user skimming the page, especially layered on top of the Step 5 filtering bug that already makes this part of the admin panel look broken/confusing.
+
+**2. The correct recipe for his exact request (CDMFREE, never expires, 100% off) — confirmed buildable with the existing UI, no code change needed for this part:**
+- Go to the **"+ Create Codes"** button (campaign codes, NOT the Agent/consultant screen).
+- Label: anything descriptive (e.g. "CDMFREE promo").
+- Code: `CDMFREE` (single code, not a batch).
+- Discount type: **Percentage off**.
+- Discount value: **100**. Confirmed server-side: validation only rejects values **above** 100 (`admin-fulfilment.js:1179`) — exactly 100 is accepted, there is no lower cap like 50%.
+- **Leave "Valid Until" blank.** Confirmed: an empty field is stored as `null`, and the checkout expiry check only rejects when a date actually exists (`public-checkout.js:407`) — `null` genuinely means "never expires," not a bug or a trick.
+- Leave Country blank unless he wants it restricted to one country.
+
+**3. Why Col's real checkout redemption likely failed — full list of causes, since he didn't specify which code he tried or what error appeared:**
+- He typed a `consultant_demo`-type code (if he'd already created one via the Agent screen while exploring) — confirmed these are **never recognized as a discount at checkout at all**. The checkout code path (`resolveCampaignPromoCode`, `public-checkout.js:384-418`) only looks at `campaign_single_use` codes; a consultant-type code gets silently ignored for discount purposes (it only affects attribution tracking, which explicitly swallows unrecognized codes so checkout proceeds anyway — just with **zero discount applied**, no visible error). **This is the single most likely explanation** given his own stated confusion about the two systems.
+- The code was already used once (campaign codes are single-use by design — `max_uses` is hardcoded to `1` for every code created via the batch flow, `admin-fulfilment.js:1200`).
+- The code had an expiry date already in the past.
+- The code was restricted to a specific country that didn't match his test purchase.
+- The code simply didn't exist / was mistyped (a typo wouldn't error loudly — it's silently treated as "not a valid campaign code").
+- A missing Stripe coupon link on that specific code row (a data-setup issue, not a code bug) — surfaces as "no discount is attached, please contact support."
+
+**Not knowable from code alone — needs to be asked:** which exact code Col tried to redeem, and what (if anything) the checkout page displayed when it failed. Without that, the list above is the full set of possibilities, not a single diagnosed cause.
+
+**Problem:** Two structurally different "promo code" concepts share overlapping UI space with similar names ("Promo Codes" appears to label both), no discount field exists on the wrong one, and nothing in the UI itself proactively tells a user "use this screen, not that one" for a simple discount code — confirmed by Col independently reaching the wrong screen and getting stuck exactly as the code structure would predict.
+
+**Solution (two parts — one is an immediate answer, one is a real UX fix needing Col's go-ahead):**
+1. **Immediate, no-code-change part:** give Col the exact recipe above so he can create CDMFREE right now without waiting on any development work.
+2. **Real fix (not yet built, needs Col's go-ahead since it's a UI/UX change to the admin panel, not cosmetic copy):** make the two systems harder to confuse — e.g. rename "Promo Codes" (consultant-quota) to something that doesn't share the word "Promo" with the discount-code system (e.g. "Agent Demo Quotas"), move the "+ Create Codes" campaign button to a more prominent position, or add a short inline explainer directly on the consultant-codes screen pointing to the correct screen for discount codes. This connects directly to the Step 5 filtering bug (same underlying screen-confusion problem) — worth considering fixing both together in one pass rather than as two disconnected patches.
+
+**Test case (for the real UX fix, once Col confirms scope):**
+- A non-technical user (ideally Col himself, or someone unfamiliar with the two systems) can find and use the correct "+ Create Codes" flow for a simple discount code without first landing on the consultant screen, timed/observed directly rather than assumed fixed.
+- Confirm the renamed/clarified labels don't break any other reference to "Promo Codes" elsewhere in the admin UI (grep the literal string before renaming).
+- Re-test the CDMFREE recipe end-to-end live: create the code via the UI exactly as instructed, then run one real test checkout using it, confirm 100% discount applies and the order completes at $0, confirm `used_count` does NOT increment if `max_uses` logic would normally make it single-use (Col said "never ending," which here just means no expiry date — separately confirm with him whether he also wants it reusable/multi-use, since the campaign flow hardcodes `max_uses=1` per code; a literal "never ending" 100%-off code may need `max_uses` set higher than 1 or an entirely unlimited-use flag, which may not exist yet in this flow and would need checking before promising it works for repeated use).
+
+**Bug hunt:**
+- Grep every place "Promo Code" / "Promo Codes" text appears in `admin.html` to map the full scope of the naming collision before proposing a rename.
+- Directly test: create a `campaign_single_use` code with `discount value = 100` via the real admin UI (not just reading the validation code) and confirm the resulting Stripe coupon/checkout flow actually applies a full 100% discount end-to-end, rather than trusting the server-side validation alone — a 100% value passing validation doesn't guarantee the downstream Stripe coupon creation handles 100% correctly (some payment APIs have edge cases at exactly 100%, e.g. $0 orders needing different handling than discounted-but-nonzero orders).
+- Confirm whether `max_uses=1` (hardcoded for all campaign codes) conflicts with Col's literal "never ending" requirement — if he expects CDMFREE to be reusable by many customers repeatedly, the current flow can't do that as-is without a code change (a batch of many single-use codes is not the same as one infinitely-reusable code) — this needs clarifying with him directly, don't assume "never ending" only means "no expiry."
+- Re-check the Step 5 finding in light of this: the Promo Codes Directory filtering bug makes BOTH problems (Step 5's reporting confusion and Step 8's code-creation confusion) stem from the same root UX issue — two code systems sharing one page without clear separation. Worth flagging to Col as one combined fix rather than two separate asks, to avoid doing UI work twice.
+
+**Status:** 🚨 urgent, analysis complete, **not yet relayed to Col, not yet implemented.** The immediate how-to answer (CDMFREE recipe) can be given to Col right now with zero code changes. The deeper UX fix (clarifying the two systems) needs his go-ahead, and the real checkout failure needs one follow-up question (which code did he try, what error showed) before it can be fully diagnosed rather than listed as possibilities. Also needs clarification on whether "never ending" means just "no expiry" (buildable today) or "reusable by multiple customers" (may need a flow change, since campaign codes are hardcoded single-use).
