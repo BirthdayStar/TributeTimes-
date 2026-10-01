@@ -1186,7 +1186,24 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       // regardless of intent. Defaults to 1 (unchanged behavior for every
       // existing/other code-creation flow); only differs when explicitly
       // requested. See new_changes.md Step 8.
-      const maxUses = Math.max(Number(req.body?.maxUses) || 1, 1);
+      //
+      // Bug fix, 1 Oct 2026 (found during a live deep-audit pass): the
+      // original `Math.max(Number(x) || 1, 1)` had no upper bound and no
+      // integer coercion. `Number("5e10")` is a valid, truthy, finite
+      // number (50 billion) that would sail straight through — a stray
+      // digit or scientific-notation paste in the admin form could create
+      // an effectively-infinite-use code with no sanity cap. `Infinity`
+      // itself is also truthy and finite-looking to `||`, but fails
+      // `Number.isFinite()`, which this now explicitly checks before
+      // falling back to 1. `Math.floor` enforces max_uses is always a real
+      // integer (the DB column is a count, not a decimal). Capped at
+      // 100,000 — far beyond any real campaign's realistic use, but low
+      // enough to make a typo/paste error obviously wrong rather than
+      // silently "unlimited."
+      const rawMaxUses = Number(req.body?.maxUses);
+      const maxUses = Number.isFinite(rawMaxUses)
+        ? Math.min(Math.max(Math.floor(rawMaxUses), 1), 100000)
+        : 1;
 
       if (!label) throwStatus(400, 'A label for this batch/campaign is required.');
       if (!discountValue || discountValue <= 0) throwStatus(400, 'A discount amount greater than zero is required.');

@@ -746,3 +746,28 @@ Independent, skeptical re-read of every step's actual current file content (not 
 - No security issues found — `maxUses` has no hard upper bound, but this is admin-only (behind `authAdmin`), not a public-facing input, so not a real vulnerability, just a noted design choice.
 
 **Status:** ✅ audit complete, 1 cosmetic leftover found and fixed, verified via real browser test. Committed locally. **Not pushed.**
+
+---
+## THIRD DEEP AUDIT — adversarial, live-tested (01 Oct 2026, Col: "one more deep audit and check everythings is fixed")
+
+This pass deliberately went further than the first two: instead of re-reading code, actively tried to break things — adversarial edge-case inputs, a live database re-query, live browser rendering, and rendering every email template with deliberately missing/empty data.
+
+**Found and fixed 1 real bug — not caught by either prior pass:**
+
+`src/phase2/admin-fulfilment.js` — the `maxUses` validation from Step 8 (`Math.max(Number(req.body?.maxUses) || 1, 1)`) had two real gaps, found by tracing specific adversarial inputs by hand:
+- **No upper bound.** `Number("5e10")` (scientific notation — e.g. a stray digit or spreadsheet-paste artifact) is a valid, truthy, finite JS number (50 billion) that would sail straight through and get written to the database as `max_uses: 50000000000` — an effectively-infinite-use promo code with zero server-side sanity check.
+- **No integer coercion.** A decimal like `1.5` would be written directly as `max_uses: 1.5` — nonsensical for a counter column, with nothing in the code enforcing it stays a whole number.
+- `Infinity` specifically was also a real risk: it's truthy and passes a naive `Number.isFinite`-less check, but JavaScript's `JSON.stringify` has no `Infinity` literal — this could have serialized to `null` or caused unpredictable behavior depending on the Supabase client, not just an oversized-but-valid number.
+
+**Fixed:** rewrote the validation to explicitly check `Number.isFinite()` before accepting the value (so `Infinity`/`-Infinity`/`NaN` all safely fall back to `1`, never reach the database), apply `Math.floor()` to guarantee an integer, and cap the result at `100,000` — far beyond any realistic campaign size, but low enough that a typo is obviously wrong rather than silently "unlimited." Also added a matching `max="100000"` to the admin UI's "Max Uses" input field so the form itself guides the admin, not just a silent server-side clamp.
+
+**Verified with 17 explicit test cases** covering every edge case found plus the ones already known to work (whitespace-padded strings, zero, negative, non-numeric, null, NaN, decimals, exactly-at-the-cap, just-under-the-cap) — all 17 pass, and confirmed via `JSON.stringify` that every single case now produces a clean, sane number, never `null`/`Infinity`/broken.
+
+**Everything else actively re-tested live, not just re-read:**
+- **Live browser test** (Puppeteer, real Chrome, local server): "How It Works" numbering re-confirmed exactly 1→12 with zero gaps/duplicates at all 3 breakpoints (1280px/992px/680px), and — going further than before — checked for ANY console warning, not just errors. Zero warnings or errors found across all 3 loads.
+- **Live, current production database query** (read-only, temp script deleted after use): re-confirmed Step 5's `consultant_demo` filter against today's live data — count is still exactly `17`, matches the filtered-query result exactly. (Total `promo_codes` row count has dropped from the earlier check, 528 → 428, almost certainly unrelated database cleanup happening independently — not something this session's changes could cause, and the filter itself remains provably correct against current data either way.)
+- **Rendered all 9 customer email templates again, this time deliberately with missing/empty fields** (e.g. `buildPostedOrderCustomerEmail({})` with zero data, `buildSecondPurchaseDiscountEmail` with no customer name) — checked programmatically for any literal `"undefined"`/`"null"` string leaking into the rendered HTML, any unclosed `<div>`/`<p>`/`<table>`/`<tr>`/`<td>`/`<img>` tag, and that the logo URL always resolves to a valid absolute URL. All 12 cases (9 normal + 3 deliberately-broken-input) came back completely clean.
+- **Exhaustive CSS orphan check** across `landing.html`'s full `<style>` block (109 classes extracted and individually checked against markup/JS usage) — found 5 genuinely orphaned classes (`.testi-card`, `.testi-stars`, `.testi-quote`, `.testi-author`, `.testi-location`), confirmed via `git log -S` to have been introduced in a commit from **21 July 2026**, well before this session's work began in October — this is **pre-existing dead CSS, not something this session's changes caused or should unilaterally remove** without Col's awareness, since it's outside the scope of what he asked for this session. Flagged here for his information, not touched. (The earlier list of "orphaned" `pricing-*`/`tier-*`/`enquiry-*`/`form-*` classes turned out to be a false positive in the detection method — those strings only appear in a code *comment* documenting Step 1's earlier deletion, not in any live CSS rule.)
+- All 3 modified backend files syntax-checked clean one final time.
+
+**Status:** ✅ third audit complete. 1 real bug found (maxUses validation gap) and fixed with explicit edge-case test coverage. Everything else re-verified live and holds up. 1 pre-existing, out-of-scope dead-CSS finding noted for Col's awareness, not acted on. Committed locally. **Not pushed.**
