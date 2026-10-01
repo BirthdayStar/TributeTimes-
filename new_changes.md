@@ -507,3 +507,33 @@ This exactly explains Col's confusion: *"1. Create a sales rep or individual????
 - Re-check the Step 5 finding in light of this: the Promo Codes Directory filtering bug makes BOTH problems (Step 5's reporting confusion and Step 8's code-creation confusion) stem from the same root UX issue — two code systems sharing one page without clear separation. Worth flagging to Col as one combined fix rather than two separate asks, to avoid doing UI work twice.
 
 **Status:** 🚨 urgent, analysis complete, **not yet relayed to Col, not yet implemented.** The immediate how-to answer (CDMFREE recipe) can be given to Col right now with zero code changes. The deeper UX fix (clarifying the two systems) needs his go-ahead, and the real checkout failure needs one follow-up question (which code did he try, what error showed) before it can be fully diagnosed rather than listed as possibilities. Also needs clarification on whether "never ending" means just "no expiry" (buildable today) or "reusable by multiple customers" (may need a flow change, since campaign codes are hardcoded single-use).
+
+---
+### UPDATE (01 Oct, 5:41) — Col has now answered the open "never ending" question, and it resolves to the HARD case
+
+**Col's follow-up (verbatim):** *"Note no discount on this purchase. [P]urchase couldn't get it to work. Set up a new account for me and wanted to use code CDMFREE which would be a 100% discount. And I want it to be widely used. I need you to show me how to do this step by step as I can't sign anyone up until I know it works."*
+
+Two things confirmed directly by Col, closing prior open questions from this step:
+1. **He actually attempted this live** — tried to redeem CDMFREE on a real purchase, got "no discount on this purchase." This confirms the checkout-failure half of this step is not hypothetical; it happened with this exact code.
+2. **"Widely used" explicitly confirms the harder interpretation** of "never ending" — he does NOT mean "no expiry date," he means **one code, reusable by many different customers/signups.** This is now unambiguous, not a guess.
+
+**This changes the Solution: the existing admin UI genuinely cannot do this, full stop — not a configuration gap, a hardcoded limitation.** Re-confirmed by reading `src/phase2/admin-fulfilment.js:1166-1231` (`POST /api/admin/campaign-codes/batch`) directly:
+```js
+const rows = codesToCreate.map(code => ({
+  ...
+  max_uses: 1,     // admin-fulfilment.js:1200 — hardcoded, not read from req.body at all
+  ...
+}));
+```
+There is no `maxUses`/`max_uses` field read from the request anywhere in this handler — every code created via the only UI flow that can set a discount is unconditionally single-use. **This means Col's exact request literally cannot be fulfilled by "using the UI correctly" — he didn't do anything wrong, the feature doesn't exist yet.** This reframes "how do I do this step by step" from a how-to question into a real feature request.
+
+**Why his live attempt showed "no discount":** given `max_uses: 1` is hardcoded, if CDMFREE was created and then tested even once before (by Col or anyone, including an earlier attempt in this same session of his), the code would already be fully consumed (`used_count: 1 >= max_uses: 1`) and `active` would have been auto-set to `false` by `consumeCampaignPromoCode` (`public-checkout.js:427`). Any attempt after that first use would correctly show "no discount" / an error — not a bug, exactly the designed single-use behavior working as built, just not as Col expects for a code he intends to be reusable. **Needs confirming with Col: did he create CDMFREE and test it more than once?** If yes, this fully explains the "didn't work" report on its own, with no other bug needed.
+
+**Real fix required (backend code change, not just admin configuration):**
+1. Add a `maxUses` field to the `POST /api/admin/campaign-codes/batch` request body, defaulting to `1` for backward compatibility with existing single-use campaigns, but allowing an admin to specify a higher number or an explicit "unlimited" value.
+2. Add a corresponding input field to the "+ Create Codes" modal in `admin.html` (e.g. "Max uses" with an "Unlimited" checkbox/option) — needs a real UI addition, not just a backend field no one can reach.
+3. Decide how "unlimited" is represented in the schema — e.g. `max_uses: null` meaning no cap, with `resolveCampaignPromoCode`'s check (`public-checkout.js:404`) updated from `used_count >= max_uses` to treat `null`/`0` as never-blocking. This needs a deliberate, explicit design decision (not an implicit "just set it to 999999"), since `max_uses || 1` already appears as a fallback elsewhere in the same file (`public-checkout.js:404`, `:427`) — changing the semantics of `max_uses` must account for every place that reads it, not just the creation endpoint.
+
+**This needs Col's explicit go-ahead before building** — it's a real backend schema/logic change (how `max_uses` is interpreted sitewide), higher-risk than anything shipped so far in this batch, and directly touches the live payment/discount path.
+
+**Context from Col's same message batch, not a code issue but important to carry forward honestly:** Col also wrote (01 Oct, 7:47): *"I'm a little overwhelmed, that I've spent all this money and it actually appears is still not a fully working site... I now seems i will [h]ave to spend even more to have another company check the site for me."* He also drew a clear boundary: *"For the page designs I've asked for that are not corrections of previous work, I will sort you out payment for."* This should be read plainly and reported back honestly rather than glossed over — Col is stressed and reasonably questioning whether the site works. The accurate, honest response is: several real functional gaps have been found this session (Step 5's reporting bug, Step 8's single-use limitation), but they are now identified, scoped, and fixable — not evidence of a fundamentally broken site. He should be told what's actually broken (precisely, as documented here) vs. what's working correctly but was confusing to find (Step 5/8's UX issue), so he can make an informed decision rather than operating on general anxiety alone.
