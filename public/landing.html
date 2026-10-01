@@ -460,51 +460,52 @@ body {
   color: var(--text-main);
 }
 
-.steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
+.how-it-works-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
   margin-bottom: 90px;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
 }
-.step-card {
+.how-group {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 16px;
-  padding: 36px 28px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: all 0.2s;
+  padding: 32px 36px;
 }
-.step-card:hover {
-  background: #F4F0DE;
-  transform: translateY(-4px);
-  border-color: #8A9160;
-}
-.step-icon-wrap {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #F4F0DE;
-  border: 1px solid var(--card-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  margin-bottom: 24px;
-}
-.step-title {
+.how-group-title {
   font-family: var(--font-serif);
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
-.step-desc {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  line-height: 1.6;
+.how-steps-list {
+  list-style: decimal;
+  list-style-position: outside;
+  padding-left: 1.6em;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.how-step {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+.how-step::marker {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--accent-red);
+}
+.how-step-icon {
+  font-size: 1.3rem;
+  display: inline-block;
+  margin-right: 10px;
+  vertical-align: -0.2em;
+  line-height: 1.3;
 }
 
 /* ════════════════════════════════════════
@@ -868,7 +869,7 @@ body {
   .feature-section { grid-template-columns: 1fr; gap: 40px; text-align: center; }
   .feature-content { align-items: center; }
   .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-  .steps-grid { grid-template-columns: 1fr; }
+  .how-group { padding: 28px 24px; }
   .occasions-grid { grid-template-columns: repeat(4, 1fr); }
   .testimonials-grid { grid-template-columns: 1fr; }
   .partners-grid { grid-template-columns: 1fr; }
@@ -881,6 +882,8 @@ body {
   .nav-actions { justify-content: center; }
   .hero-h1 { font-size: 2.1rem; }
   .stats-bar { grid-template-columns: 1fr; }
+  .how-group { padding: 22px 18px; }
+  .how-step { font-size: 1.05rem; gap: 10px; }
   .occasions-grid { grid-template-columns: repeat(2, 1fr); }
   .footer-grid { grid-template-columns: 1fr; }
   .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
@@ -1050,23 +1053,45 @@ body {
       <h2 class="section-h2">How It Works</h2>
     </div>
 
-    <div class="steps-grid">
-      <div class="step-card">
-        <div class="step-icon-wrap">📅</div>
-        <h3 class="step-title">Pick a Date</h3>
-        <p class="step-desc">Choose the exact date you want to celebrate.</p>
+    <!-- Client request, 1 Oct 2026 (Col): replaced the old 3-card "Pick a
+         Date / We Craft It / You Treasure It" summary with his real 12-step
+         process, grouped into 3 sections. Icon mapping and "text needs to
+         be large" requirement are his own, given to overcome confusion
+         reported by a NZ Florist Association contact ("Florists are very
+         visual and we like to see what we're getting"). See new_changes.md
+         Step 3 for the full analysis. Layout chosen: stacked full-width
+         groups rather than the old 3-column grid, since 3-4 large-text
+         lines per group would be cramped side-by-side at normal page width —
+         flagged to Col as a judgment call pending his confirmation. -->
+    <div class="how-it-works-groups">
+      <div class="how-group">
+        <h3 class="how-group-title">Create</h3>
+        <ol class="how-steps-list">
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Enter your special date</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Enter the recipient's name</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Enter your personal message</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">⏳</span> Click Create. This can take up to 60 seconds while our system searches the internet for your date.</li>
+        </ol>
       </div>
 
-      <div class="step-card">
-        <div class="step-icon-wrap">📝</div>
-        <h3 class="step-title">We Craft It</h3>
-        <p class="step-desc">We research and design your unique front page.</p>
+      <div class="how-group">
+        <h3 class="how-group-title">Check and buy</h3>
+        <ol class="how-steps-list" start="5">
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Preview your newspaper. A screen image appears, protected with a security overlay.</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Happy with it? Continue to payment.</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">💳</span> Make your payment. Use a discount code if you have one.</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">✅</span> Download your high-resolution PDF.</li>
+        </ol>
       </div>
 
-      <div class="step-card">
-        <div class="step-icon-wrap">🎁</div>
-        <h3 class="step-title">You Treasure It</h3>
-        <p class="step-desc">A timeless keepsake printed and delivered with care.</p>
+      <div class="how-group">
+        <h3 class="how-group-title">Print and give</h3>
+        <ol class="how-steps-list" start="9">
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">🖨️</span> Print it at home, as often as you like. It's yours! We recommend high-quality paper and a simple frame from your local print shop.</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">❤️</span> Present it to the recipient and wait for the smile. That's your reward for being so thoughtful 😇</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">🎁</span> Come back and leave us a review to receive a second discount offer.</li>
+          <li class="how-step"><span class="how-step-icon" aria-hidden="true">❤️</span> Who's next? Who else would you like to put a smile on today?</li>
+        </ol>
       </div>
     </div>
   </section>

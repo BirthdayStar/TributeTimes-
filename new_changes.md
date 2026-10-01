@@ -146,7 +146,9 @@ For reference/continuity only — this batch was already fully analyzed, impleme
 
 ## STEP 3 — Rewrite "How It Works" to match the real 12-step process, grouped into 3 sections
 
-**Status: ANALYSIS ONLY per explicit client instruction — do not implement yet.** Col: *"just anayze and keep this step in new changes not implemnt, divide into multipe steps ifeneded evry stps has own problem soltion testing bugs find browser test."*
+**Status update (01 Oct 2026): implemented and browser-tested, overriding the original "analysis only" hold at explicit instruction from the dev-side user** (not Col directly — Col's own original instruction below was to wait; this override was a deliberate call made with the user to unblock the batch rather than leave every step stuck on open questions). The layout-shape question (3-column grid vs. stacked) was resolved by choosing **stacked, full-width sections** — the "text needs to be large" requirement made a 3-column grid with 3-4 large-text lines per column impractical at normal page width, so stacked was the lower-risk default. This is a judgment call, not confirmed by Col directly — flag the built result to him for approval same as any other default used in this batch.
+
+**Original client instruction (now superseded by the above):** Col: *"just anayze and keep this step in new changes not implemnt, divide into multipe steps ifeneded evry stps has own problem soltion testing bugs find browser test."*
 
 **Client message (1 Oct 2026, Col, plus a reference screenshot):** the current "How It Works" section doesn't reflect what actually happens. He drafted a correct 12-step process, then had a separate Claude session restructure it into 3 grouped sections (Create / Check and buy / Print and give) — his own words: *"Actually got Claude to redo this and he did a better job. Instead of a list of 12 split into 3 areas."* He wants that 3-group version used, and attached a screenshot specifically to show which text should render bold vs. normal weight within it.
 
@@ -213,7 +215,31 @@ For reference/continuity only — this batch was already fully analyzed, impleme
   - Re-run the same "did this disturb anything else on the page" check used for Steps 1–2 — screenshot the sections immediately before and after this one, confirm no new gap/overlap.
   - After deploy: re-verify against the live URL with the same checks, confirm via a real marker in the live response rather than assuming the deploy succeeded.
 
-**Status:** 📝 documented only, per explicit instruction not to implement yet. Waiting on Col's confirmation of the layout-shape question (Step 3a) before any code is written.
+---
+### IMPLEMENTATION + BROWSER TEST RESULTS (01 Oct 2026)
+
+**Build summary:** Replaced `.steps-grid`/`.step-card` (the old 3-card "Pick a Date / We Craft It / You Treasure It" summary, `public/landing.html`) with `.how-it-works-groups` → 3 `.how-group` sections (Create / Check and buy / Print and give), each a real `<h3>` heading + real `<ol start="N">` ordered list of `.how-step` `<li>` items, each with an `aria-hidden="true"` `.how-step-icon` span matching Col's exact per-line mapping. Deleted all old CSS (`.steps-grid`, `.step-card`, `.step-card:hover`, `.step-icon-wrap`, `.step-title`, `.step-desc`) and the stale `.steps-grid` rule in the `992px` media query (replaced with a `.how-group` padding adjustment); added a new `.how-step`/`.how-group` mobile rule at `680px`.
+
+**Real bug found and fixed during testing (not just a code review — an actual rendered-output bug caught by screenshotting the result, exactly as the process requires):**
+- First implementation used `.how-step::before { content: counter(list-item) "." }` with `counter-reset: how-step list-item` on `.how-steps-list`, intending to combine a flex layout (icon + number + text side by side) with real list-item numbering.
+- **Screenshotting the actual rendered page showed every single line numbered "0."** — not a hypothetical risk, an actually-broken build caught by looking at the real output rather than trusting the CSS logic.
+- Root cause: `counter-reset: how-step list-item` on the `<ol>` reset the implicit browser `list-item` counter to 0 at that scope, overriding `<ol start="N">`'s native numbering. Removing the `counter-reset` alone wasn't enough — a second issue emerged where `display: flex` on each `.how-step` broke the browser's implicit per-`<li>` list-item counting (confirmed via a second screenshot still showing wrong numbers: 0/0/0/0 then 4/4/4/4 then 8/8/8/8, i.e. only incrementing once per list, not per item).
+- **Fix:** removed all custom counter logic entirely. Switched to native `list-style: decimal` on `.how-steps-list` with `::marker` for styling (font, color) and the icon rendered as an `inline-block` span before the text rather than inside a flex row — this lets the browser's native, guaranteed-correct `<ol>`/`<li>`/`start` numbering do the work with zero custom counter code. Re-screenshotted and confirmed 1→12 renders correctly across all 3 groups.
+
+**Verification actually performed (via Puppeteer + Chrome, local server on port 3000, confirmed correct title served before trusting any result):**
+- ✅ Old classes (`.steps-grid`, `.step-card`) confirmed fully removed from the live DOM (`0, 0` via `querySelectorAll`).
+- ✅ All 3 groups confirmed present with correct titles, real `<ol>` tags, correct `start` attributes (`null`/`"5"`/`"9"`), 4 items each.
+- ✅ Numbering visually confirmed correct 1→12 continuing across all 3 groups (desktop, `992px`, `680px`) — via direct screenshot inspection, not just DOM/CSS inference, after finding and fixing the bug above.
+- ✅ Icon sequence confirmed exactly matches Col's spec via direct DOM text content check: `✅✅✅⏳✅✅💳✅🖨️❤️🎁❤️` — character-for-character correct for all 12 lines.
+- ✅ All 12 icons confirmed `aria-hidden="true"`.
+- ✅ Text size: `18.4px` desktop, `16.8px` at `680px` — both a meaningful size increase over the old `.step-desc`'s `0.88rem` (~14px), addressing "text needs to be large."
+- ✅ Visually confirmed all 7 distinct emoji (✅⏳💳🖨️❤️🎁😇) render as real glyphs with no blank/tofu boxes in this Windows/Chrome test environment (Segoe UI Emoji font confirmed present on this machine) — satisfies the "test in this environment" portion of the cross-platform check; **Col checking on his own phone and Windows machine directly is still a separate, real-world confirmation outside this session's control, worth asking him to do.**
+- ✅ Adjacent sections screenshotted before (local-pricing-section / flag strip) and after (occasions-section) — both confirmed fully intact, no layout disruption, no gap/overlap introduced.
+- ✅ All test scripts and screenshots deleted after use, confirmed via `ls __*.js __*.png` returning nothing; local test server process stopped and port 3000 confirmed free afterward.
+
+**Known gap, stated honestly:** this is local-only verification. Not yet pushed or deployed (per the standing "verified 1000%" hold on pushing from earlier in this batch — Steps 1/2/3 all remain committed locally, not pushed to `origin`/`me-origin`). Live-URL re-verification after deploy (listed in the original Step 3d plan) has not happened yet and can't happen until this is actually pushed.
+
+**Status:** ✅ built, locally browser-tested, bug found and fixed during testing, committed locally. **Not yet pushed/deployed** — same hold as Steps 1 and 2. Still needs: (1) Col's confirmation of the stacked-layout judgment call, (2) Col to check emoji rendering on his own actual phone/Windows device, (3) live re-verification once pushed.
 
 ---
 ## OPEN QUESTION — Col: "why do we have the bar of flags, what do they do?"
