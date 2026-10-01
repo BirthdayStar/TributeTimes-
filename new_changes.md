@@ -298,23 +298,52 @@ This is a genuine functional/financial-reporting question, not a cosmetic reques
 
 4. **The "0" Col saw is a column-metric mismatch, not a redemption-tracking bug.** `used_count` IS correctly tracked: `public-checkout.js:390` reads it, `:404` checks it against `max_uses` before allowing redemption, `:424-431` atomically increments it (`UPDATE … WHERE used_count < max_uses`) only on a real successful checkout — this write path is sound. But the Promo Codes Directory's 4th column ("Used This Month") is wired to `freeDemosUsedThisMonth` (`admin-fulfilment.js:956`), computed only from `keepsakes.is_free_demo` rows — a metric that only makes sense for `consultant_demo` codes. For campaign/GCASH code types it will always show 0, because those purchases never create `is_free_demo` keepsakes. **The real `used_count`/`max_uses` numbers exist correctly and are visible on the Campaign Codes screen** (`admin.html:3679`), just not on the screen Col is looking at.
 
-**Net finding:** Col's instinct that "something isn't right" is correct, but the actual issue is **a display/filtering bug, not a financial/money-tracking bug.** No evidence found of lost revenue, missed redemptions, or silently-wrong counts in the underlying `used_count` logic — that logic is atomic and correctly guarded. The bug is that one admin screen shows the wrong code types with a metric that doesn't apply to them, creating the appearance that "nothing is tracked."
+**Net finding:** Col's instinct that "something isn't right" is correct, but the actual issue is **a display/filtering bug, not a financial/money-tracking bug.** The bug is that one admin screen shows the wrong code types with a metric that doesn't apply to them, creating the appearance that "nothing is tracked."
 
-**Genuinely unconfirmed by static code reading (flagged honestly, not guessed past):** whether `used_count` could still silently drift under some concurrent/edge-case scenario not visible from reading the code — this would need either a live DB query (`SELECT code, used_count, max_uses, code_type FROM promo_codes ORDER BY created_at DESC`) or a live checkout test to fully rule out. Recommend running that query against production before telling Col "the money-tracking is 100% fine" — right now the honest claim is "the write path looks correct and atomic, and the specific screen you're looking at is the wrong one."
+---
+### LIVE VERIFICATION — actually run against production, not just read from code (2026-10-01)
+
+Static code reading left one honest gap: whether `used_count` could silently drift under some edge case not visible from reading the code alone. Rather than leave that as a documented "should check," a real read-only query was run directly against the production Supabase `promo_codes` table (via a temporary `__verify_promo_codes.js` script using the real `SUPABASE_URL`/`SUPABASE_SECRET_KEY` from `.env`, deleted immediately after, confirmed via `ls __*.js` returning nothing). Full `promo_codes` table queried, 528 total rows.
+
+**Ground-truth results:**
+```
+Counts by code_type: { "campaign_single_use": 510, "consultant_demo": 17, "gcash_paid_access": 1 }
+
+THANKYOU-D0842ECD  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-09-30
+THANKYOU-0D9FCF08  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-31
+THANKYOU-ADA138F7  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-23
+THANKYOU-355C0649  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-23
+THANKYOU-0034F6D7  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-23
+THANKYOU-5866A300  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-23
+THANKYOU-62A0CB4B  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-23
+THANKYOU-3E76B77F  | used=0/1 | batch=Second Purchase Discount (Auto) | created=2026-08-13
+GCASHB3FCD9C6      | used=1/1 | type=gcash_paid_access
+TEST21             | used=1/1 | batch=Test
+TEST20             | used=1/1 | batch=test code
+WELCOME20          | used=1/1 | batch=First Purchase Bonus Code
+```
+
+**This settles the open question decisively:**
+1. **`used_count` tracking is confirmed working, not theoretical.** 4 real rows across the whole table (`GCASHB3FCD9C6`, `TEST21`, `TEST20`, `WELCOME20`) show `used=1/1` — proof the increment logic actually fires on redemption in production, not just "looks correct in the code."
+2. **A new, more specific finding Col should know:** **all 8 THANKYOU-\* codes currently in the table show `used=0/1` — not one of them has ever been redeemed**, spanning creation dates from 2026-08-13 to 2026-09-30 (6+ weeks for the oldest). That's not a tracking bug — the mechanism clearly works (see point 1) — but it IS a real business observation: the "second purchase / buy again" discount codes are being issued correctly but customers aren't using them yet. Whether that's expected (codes are new / customers haven't had time) or worth investigating (e.g. is the code actually being emailed/shown to the customer after purchase? check `email-service.js`'s usage of these codes) is a separate, genuine question worth raising with Col — not something to silently note and move past.
+3. **Confirms the `code_type` split is real and matches the screenshot exactly**: all 8 THANKYOU rows + TEST20/TEST21/WELCOME20 are `campaign_single_use`; GCASHB3FCD9C6 is `gcash_paid_access`. Zero are `consultant_demo` — meaning literally none of the 9 rows Col saw in the Agent-based "Promo Codes Directory" belong in that table at all. This is not a borderline edge case, it's a complete type mismatch for every single visible row.
 
 **Proposed fix (not yet built — this needs Col's go-ahead since it touches a real API endpoint, not just copy):**
 1. Add a `code_type` filter to `GET /api/admin/promo-codes` (`admin-fulfilment.js:928-934`) so it only returns `consultant_demo` rows — stop campaign/GCASH/auto codes from leaking into the agent-based table.
 2. Point Col at the existing Campaign Codes screen to see real usage counts for THANKYOU-*/GCASH*/TEST*/WELCOME20 codes right now, without needing any code change.
 3. Optionally rename "Used This Month" or scope it per-screen so it's never misleading for code types it doesn't apply to.
+4. **New, from the live data**: separately check with Col whether the 0% redemption rate on THANKYOU-* codes is expected or itself worth investigating (e.g. confirm the code is actually surfaced to the customer post-purchase — check `email-service.js` for whether/how the code is emailed, and check it isn't buried somewhere the customer never sees).
 
 **Test case (once Col confirms this should be fixed):**
-- After adding the `code_type` filter: confirm `GET /api/admin/promo-codes` response no longer includes any `THANKYOU-*`/`GCASH*`/`TEST*`/`WELCOME20` rows — only real consultant-referral codes remain, each with a real assigned agent or legitimately `Unassigned` if genuinely not yet assigned.
-- Confirm the Campaign Codes screen still correctly lists all 9 of these rows with accurate `used_count`/`max_uses` values — cross-check at least one THANKYOU code against a real order record to confirm `used_count` increments correctly end-to-end (create a test order, confirm the code appears with `used_count: 0`, redeem it, confirm it becomes `used_count: 1`).
+- After adding the `code_type` filter: confirm `GET /api/admin/promo-codes` response no longer includes any `THANKYOU-*`/`GCASH*`/`TEST*`/`WELCOME20` rows — only `consultant_demo` rows remain (17 real rows per the live count above), each with a real assigned agent or legitimately `Unassigned` if genuinely not yet assigned.
+- Confirm the Campaign Codes screen still correctly lists all 510 `campaign_single_use` + 1 `gcash_paid_access` rows with accurate `used_count`/`max_uses` values matching the live query above exactly (spot-check at least the 12 rows from the screenshot).
+- Re-run the same read-only verification query after the fix ships to confirm the live counts are unchanged by the filter change (a filter should never alter underlying data — if counts differ, something else broke).
 - Confirm no other admin screen or report depends on `/api/admin/promo-codes` returning all code types (grep every caller of this endpoint before narrowing it) — this is a shared endpoint, so narrowing its filter could silently break something else in admin.html that wasn't part of this screenshot.
 
 **Bug hunt:**
 - Grep every call site of `GET /api/admin/promo-codes` in `admin.html` (not just the Promo Codes Directory table) to confirm nothing else reads this same endpoint expecting the unfiltered full list.
-- Run the live DB query above (`SELECT code, used_count, max_uses, code_type ...`) against production/staging to get ground truth before claiming the financial side is fine — static code reading confirmed the write path looks correct, but only a live check can fully confirm no drift.
-- Live-test a real THANKYOU code redemption end-to-end (or the closest safe equivalent) to directly observe `used_count` incrementing, rather than trusting the code read alone.
+- ~~Run the live DB query against production to get ground truth~~ — **done above**, no longer an open gap.
+- Live-test a real THANKYOU code redemption end-to-end (or the closest safe equivalent) to directly observe `used_count` incrementing in real time, as an extra confirmation beyond the static "4 rows already show used=1/1" evidence.
+- Follow up on the 0%-redemption finding above as its own mini-investigation: confirm the THANKYOU code is actually delivered to the customer (email/on-screen) after a real purchase — if it's generated but never shown to anyone, that's a real, separate bug worth surfacing to Col even though it's outside the original filtering-bug scope.
 
-**Status:** 📝 documented, analysis complete. **Not yet relayed to Col, not yet implemented.** This needs Col's explicit go-ahead before touching `admin-fulfilment.js` (a real backend API change, higher risk than the landing-page CSS/copy steps) — report the findings to him first: codes are real and correctly tracked, but one admin screen has a filtering bug that makes it look broken.
+**Status:** 📝 documented, analysis complete, **live-verified against production data (2026-10-01, read-only, test script deleted after use).** Not yet relayed to Col, not yet implemented. This needs Col's explicit go-ahead before touching `admin-fulfilment.js` (a real backend API change, higher risk than the landing-page CSS/copy steps) — report the findings to him: codes are real and correctly tracked (proven, not assumed), the admin screen has a filtering bug, and a new finding worth raising separately — none of the THANKYOU codes have been redeemed yet.
