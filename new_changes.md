@@ -796,3 +796,16 @@ Client sent a detailed, project-agnostic UX audit prompt with strict invariants:
 **Process note:** this audit initially ran in an isolated git worktree that branched from a stale point in history (before this session's Steps 1-9 began) — its only real code change (the `join.html` fix above) was independently re-applied directly onto the current `main` by hand, re-diffed to confirm it matched exactly, and re-verified live from scratch rather than trusting the worktree's own untested claim. The worktree was then cleaned up.
 
 **Status:** ✅ audit complete. 1 real, safe UX gap found and fixed (`join.html`), live-verified in a real browser. 2 findings reported but deliberately not changed, consistent with the audit's own "don't over-correct, don't touch what's already working" rules. Committed locally. **Not pushed.**
+
+---
+### FOLLOW-UP (01 Oct 2026) — fixed the `station.html` gap too, live-tested
+
+Client confirmed to proceed with the one remaining reported-but-not-fixed finding from the whole-app UX audit: `station.html`'s 7 status/error message containers (`#auth-msg`, `#dj-msg`, `#settings-msg`, `#subscription-msg`, `#frame-msg`, `#station-gcash-msg`, `#modal-password-error`) lacked `aria-live`/`role="alert"`, same gap already fixed and verified on `join.html`.
+
+**Checked each one's visibility mechanism individually before touching anything** (the reason this was deferred in the first pass) — 6 use the shared `.hidden { display: none !important; }` class, toggled via plain `classList.add/remove('hidden')`; the 7th (`modal-password-error`) uses an inline `style="display:none"` instead. Both are simple, direct visibility toggles with no complex state logic — safe to add static `role`/`aria-live` attributes to the markup alone, no JS changes needed or made.
+
+**Applied the identical fix to all 7**, confirmed via grep the exact count matches (`7`).
+
+**Live-tested, not just read:** started the real local server, loaded `station.html` in an actual browser, confirmed via direct DOM read that all 7 elements have `role="alert"` and `aria-live="polite"`, and confirmed `auth-msg` still correctly starts hidden on page load (the attribute addition didn't accidentally change initial visibility). Then ran a real negative-path test — attempted an actual login with a nonexistent email/wrong password against the real login endpoint (a safe, read-only test: this rejects and creates nothing) — confirmed the error message correctly un-hides, displays the real server error text ("Invalid email or password"), and `role="alert"` stays correctly attached throughout the state change from hidden to visible. Zero console errors caused by this change (one unrelated 404 resource warning present, not connected to this edit).
+
+**Status:** ✅ fixed and live-verified. Both UX-audit findings for this page are now closed. Committed locally. **Not pushed.**

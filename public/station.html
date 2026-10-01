@@ -450,7 +450,7 @@
         </div>
       </div>
       <button class="btn pay-btn" style="width:100%; margin-top:8px;" onclick="login()">Sign In</button>
-      <div class="msg hidden" id="auth-msg"></div>
+      <div class="msg hidden" id="auth-msg" role="alert" aria-live="polite"></div>
     </div>
 
     <!-- Main Dashboard -->
@@ -515,7 +515,7 @@
           </div>
         </div>
         <button class="btn" onclick="createDJ(this)">+ Add DJ</button>
-        <div class="msg hidden" id="dj-msg"></div>
+        <div class="msg hidden" id="dj-msg" role="alert" aria-live="polite"></div>
       </div>
 
       <!-- Station Settings -->
@@ -536,7 +536,7 @@
           </div>
         </div>
         <button class="btn" onclick="saveSettings(this)">Save Settings</button>
-        <div class="msg hidden" id="settings-msg"></div>
+        <div class="msg hidden" id="settings-msg" role="alert" aria-live="polite"></div>
       </div>
 
       <!-- Billing -->
@@ -574,7 +574,7 @@
         <div class="purchase-note" id="subscription-price-note">Selected plan total: NZ$49.00.</div>
         <button class="btn" id="subscription-pay-btn" onclick="startSubscriptionPayment()">Start Payment</button>
         <button class="btn btn-secondary" style="margin-left:8px;" onclick="openBillingPortal(this)">Manage Stripe Billing</button>
-        <div class="msg hidden" id="subscription-msg"></div>
+        <div class="msg hidden" id="subscription-msg" role="alert" aria-live="polite"></div>
       </div>
 
       <div class="card">
@@ -618,7 +618,7 @@
         </div>
         <div class="purchase-note" id="frame-price-note">Frame order total: NZ$138.00 including GST.</div>
         <button class="btn" id="frame-pay-btn" onclick="startFramePayment()">Order Frames</button>
-        <div class="msg hidden" id="frame-msg"></div>
+        <div class="msg hidden" id="frame-msg" role="alert" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -664,7 +664,7 @@
           <input type="text" id="station-gcash-reference-id" placeholder="Reference number from GCash receipt" required />
         </div>
         <button class="btn" id="station-gcash-submit-btn" type="submit">Submit Payment Proof</button>
-        <div class="msg hidden" id="station-gcash-msg"></div>
+        <div class="msg hidden" id="station-gcash-msg" role="alert" aria-live="polite"></div>
       </form>
     </div>
   </div>
@@ -1242,7 +1242,7 @@
           <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#54592F; margin-bottom:4px;">New Password</label>
           <input type="password" id="modal-new-password" required style="width:100%; padding:10px; border:1px solid #DED9BE; border-radius:6px; font-size:0.9rem; background:#fff; color:#3D4122;" />
         </div>
-        <div id="modal-password-error" style="color:#A1442A; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;"></div>
+        <div id="modal-password-error" style="color:#A1442A; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;" role="alert" aria-live="polite"></div>
         <div id="modal-password-success" style="color:#4C7A3D; font-size:0.8rem; margin-bottom:12px; display:none; text-align:left;">Password changed successfully!</div>
         <div style="display:flex; gap:10px; justify-content:flex-end;">
           <button type="button" onclick="closePasswordModal()" style="padding:10px 16px; border:1px solid #DED9BE; border-radius:6px; background:#fff; color:#54592F; font-weight:600; cursor:pointer;">Cancel</button>
