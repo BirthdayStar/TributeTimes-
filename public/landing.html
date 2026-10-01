@@ -878,7 +878,14 @@ body {
 
 @media (max-width: 680px) {
   .navbar { flex-direction: column; gap: 16px; text-align: center; }
-  .nav-links { display: none; }
+  /* Client request, 1 Oct 2026 (Col, mobile screenshot, red marks on the
+     empty gap): nav links were hidden entirely below 680px with no
+     alternative menu ever built — confirmed pre-existing, not something
+     Step 2 introduced. Reinstated as a wrapped row between the logo and
+     the country selector/CTA, matching the existing .nav-links flex style
+     rather than introducing a new hamburger-menu pattern. See
+     new_changes.md Step 6b. */
+  .nav-links { justify-content: center; flex-wrap: wrap; gap: 16px 24px; }
   .nav-actions { justify-content: center; }
   .hero-h1 { font-size: 2.1rem; }
   .stats-bar { grid-template-columns: 1fr; }
@@ -962,14 +969,19 @@ body {
       <h1 class="hero-h1">Give the Gift of History</h1>
       <p class="hero-desc">Create a custom front-page newspaper featuring the top global events, local news, weather, and more from the exact day your recipient was born.</p>
 
+      <!-- Client request, 1 Oct 2026 (Col, screenshot with red marks):
+           removed "Printed on Premium Paper" feature item and the price
+           line from this top hero section specifically — his screenshot
+           only showed this section, a second identical price line further
+           down the page ("A Newspaper That Tells Their Story") was left
+           untouched since it wasn't part of what he marked. See
+           new_changes.md Step 7. -->
       <div class="hero-features">
         <div class="hero-feature-item"><span class="hero-feature-icon">📜</span> Authentic Vintage Style</div>
         <div class="hero-feature-item"><span class="hero-feature-icon">📄</span> One-Page Newspaper</div>
-        <div class="hero-feature-item"><span class="hero-feature-icon">📦</span> Printed on Premium Paper</div>
       </div>
 
       <a href="/public" class="btn-primary">CREATE YOUR NEWSPAPER</a>
-      <div class="hero-price">From NZ$9.95</div>
     </div>
 
     <div class="hero-visual">

@@ -6,7 +6,15 @@ const { PHASE2_CONFIG } = require('./config');
 const DEFAULT_FROM = PHASE2_CONFIG.resendFromEmail || 'The Tribute Times <hello@tributetimes.co.nz>';
 
 async function sendEmail({ to, cc, subject, html, text, attachments = [], replyTo }) {
-  if (!process.env.RESEND_API_KEY) return false;
+  // Bug fix, 1 Oct 2026 (found while investigating Col's "0 of 8 thank-you
+  // codes ever redeemed" report, new_changes.md Step 9): a missing/blank
+  // RESEND_API_KEY used to return false here with zero logging — every
+  // caller only awaits this and checks for a *thrown* error, so a missing
+  // key meant every email silently vanished with no trace anywhere. Now
+  // throws loudly so a misconfigured key is never silent again.
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set — email not sent.');
+  }
 
   const payload = {
     from: DEFAULT_FROM,

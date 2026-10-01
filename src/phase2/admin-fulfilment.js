@@ -935,9 +935,16 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         const start = (page - 1) * limit;
         const end = start + limit - 1;
 
+        // Client request, 1 Oct 2026 (Col, screenshot): this screen is the
+        // consultant/agent-referral codes directory — it was showing every
+        // promo_codes row regardless of type, so campaign/GCash/auto-generated
+        // codes (which never have an agent) leaked in alongside real agent
+        // codes, making the whole screen look broken. Scoped to the one type
+        // this screen is actually for; see new_changes.md Step 5.
         const { data, count, error } = await supabase
           .from('promo_codes')
           .select('*, sales_consultants(id, name, email)', { count: 'exact' })
+          .eq('code_type', 'consultant_demo')
           .order('created_at', { ascending: false })
           .range(start, end);
 
@@ -1173,6 +1180,13 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
       const singleCode = String(req.body?.code || '').trim().toUpperCase();
       const codePrefix = String(req.body?.codePrefix || '').trim();
       const validUntil = req.body?.validUntil ? new Date(req.body.validUntil).toISOString() : null;
+      // Client request, 1 Oct 2026 (Col): wanted a code ("CDMFREE") reusable
+      // by many customers, not just non-expiring. max_uses used to be
+      // hardcoded to 1 with no way to change it — every code was single-use
+      // regardless of intent. Defaults to 1 (unchanged behavior for every
+      // existing/other code-creation flow); only differs when explicitly
+      // requested. See new_changes.md Step 8.
+      const maxUses = Math.max(Number(req.body?.maxUses) || 1, 1);
 
       if (!label) throwStatus(400, 'A label for this batch/campaign is required.');
       if (!discountValue || discountValue <= 0) throwStatus(400, 'A discount amount greater than zero is required.');
@@ -1197,7 +1211,7 @@ function registerAdminFulfilmentRoutes(app, { supabase, sendEmail, stripe }) {
         code_type: 'campaign_single_use',
         active: true,
         monthly_free_demo_limit: 0,
-        max_uses: 1,
+        max_uses: maxUses,
         used_count: 0,
         discount_type: discountType,
         discount_value: discountValue,

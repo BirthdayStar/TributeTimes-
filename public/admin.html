@@ -3594,6 +3594,7 @@
         discountValue: Number(document.getElementById('modal-campaign-discount-value').value || 0),
         country: document.getElementById('modal-campaign-country').value.trim(),
         validUntil: document.getElementById('modal-campaign-valid-until').value || null,
+        maxUses: Number(document.getElementById('modal-campaign-max-uses').value || 1),
       };
       try {
         const r = await apiFetch('/api/admin/campaign-codes/batch', {
@@ -4350,9 +4351,19 @@
               <input id="modal-campaign-country" type="text" placeholder="e.g. Philippines" />
             </div>
             <div class="fld">
-              <label for="modal-campaign-valid-until">Valid Until</label>
+              <label for="modal-campaign-valid-until">Valid Until <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);">(optional — leave blank for never expires)</span></label>
               <input id="modal-campaign-valid-until" type="date" />
             </div>
+          </div>
+          <!-- Client request, 1 Oct 2026 (Col): wanted a code ("CDMFREE")
+               reusable by many customers, not just non-expiring — the
+               server used to hardcode every code to single-use with no way
+               to change it from here. Defaults to 1 so every existing
+               workflow (single-use batch codes) is unaffected. See
+               new_changes.md Step 8. -->
+          <div class="fld">
+            <label for="modal-campaign-max-uses">Max Uses <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);">(how many different customers can redeem this code — default 1 = single-use)</span></label>
+            <input id="modal-campaign-max-uses" type="number" min="1" value="1" />
           </div>
         </div>
         <div class="modal-footer">
