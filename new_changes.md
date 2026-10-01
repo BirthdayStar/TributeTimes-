@@ -809,3 +809,47 @@ Client confirmed to proceed with the one remaining reported-but-not-fixed findin
 **Live-tested, not just read:** started the real local server, loaded `station.html` in an actual browser, confirmed via direct DOM read that all 7 elements have `role="alert"` and `aria-live="polite"`, and confirmed `auth-msg` still correctly starts hidden on page load (the attribute addition didn't accidentally change initial visibility). Then ran a real negative-path test — attempted an actual login with a nonexistent email/wrong password against the real login endpoint (a safe, read-only test: this rejects and creates nothing) — confirmed the error message correctly un-hides, displays the real server error text ("Invalid email or password"), and `role="alert"` stays correctly attached throughout the state change from hidden to visible. Zero console errors caused by this change (one unrelated 404 resource warning present, not connected to this edit).
 
 **Status:** ✅ fixed and live-verified. Both UX-audit findings for this page are now closed. Committed locally. **Not pushed.**
+
+---
+## STEP 10 — 🚨 URGENT: TT50OFF promo code for a live Facebook ad campaign (Philippines, ₱99/₱199)
+
+**Client message:** Screenshot of a Tagalog-language Facebook ad creative — "NGAYONG ARAW LANG! 50% OFF... ₱99 NGAYON... dati ₱199" (today only, 50% off, ₱99 now, was ₱199), with promo code `TT50OFF` printed directly on the ad. Accompanying message gives instructions for Jhe-Ann to launch the ad (Facebook Ads Manager steps, NZ$8 budget, 1 day) and asks directly: *"I want to run this ad so need a promo code that works set up. Can you do that? Promo code is TT50OFF. 50% off retail 199peso price meaning a 99 or 100peso purchase. Can you set this up for me please consider it urgent please."*
+
+This is genuinely urgent — real ad spend is about to be committed pointing customers at a specific promo code. Analyzed before building anything, per the process, since getting this wrong would mean the ad drives paying intent at a code that silently does nothing.
+
+**Analysis (code-verified via full investigation of `gcash-payment-requests.js`, `public-checkout.js`, `form-template.html`, `admin-fulfilment.js`, `constants.js` — not guessed):**
+
+**Critical finding: ₱199/₱99 Philippines pricing and the admin's "+ Create Codes" discount-code system are two completely separate, non-interacting mechanisms. Creating TT50OFF via the normal admin campaign-codes screen would NOT work for this ad.**
+
+1. **The ₱199 price is a hardcoded flat number, not a currency conversion.** `gcash-payment-requests.js:573-574`: `const expectedAmountPhp = payload.productTier === 'digital' ? 199 : ...` — confirmed via the code's own inline comment this is a deliberate flat PHP price, unrelated to the $9.95 NZD digital-tier price (`constants.js:12-13`). There is no exchange-rate math connecting them.
+
+2. **The GCash payment flow and the Stripe/NZD discount-code system never touch each other.** The admin "+ Create Codes" screen (Step 8's work) creates `code_type: 'campaign_single_use'` rows, redeemed only by `resolveCampaignPromoCode()` in `public-checkout.js` — which is the **Stripe/card checkout path**, pricing in NZD. But choosing GCash as the payment method (`form-template.html:3186`) routes straight into a separate flat-₱199 modal and **never calls `resolveCampaignPromoCode` at all**. The two systems are structurally disconnected.
+
+3. **There is no discount mechanism anywhere in the GCash flow today.** Confirmed by reading `createGcashPaymentRequest()` in full: nothing in it reads a promo code to adjust the ₱199 price. The only promo-code concept that exists in the GCash flow (`gcash_paid_access`) is a **post-purchase redemption code generated after an admin manually approves a payment** — a completely different concept (unlocking content after paying in full) from a pre-checkout discount code. It has no `discountType`/`discountValue` fields at all; it structurally cannot represent "50% off."
+
+4. **What this means concretely:** if Jhe-Ann launches the ad as planned and a customer selects GCash (the natural choice, since the ad explicitly says "₱99" and is Tagalog-language, clearly targeting GCash/Philippines customers) and types `TT50OFF`, **nothing happens** — the code is never even read by that path. The ₱199 flat price charges in full. The ad would be spending real money driving traffic to a broken promise.
+
+**Problem:** Col's request ("set up a promo code that works") cannot be fulfilled by configuration alone — the underlying capability (a discount applied to the GCash flat-PHP price) does not exist in the codebase yet. This is a real, small backend feature gap, not a setup task, discovered just in time before ad spend began.
+
+**Solution — two real options, needs Col's immediate decision, not a unilateral pick given the time pressure:**
+
+**Option A — build real GCash discount support (the correct fix, matches what the ad literally promises):**
+- Add a `promoCode` check to `createGcashPaymentRequest()` in `gcash-payment-requests.js` that, when a valid `campaign_single_use`-style discount code is present, computes `expectedAmountPhp` as a discounted value instead of the flat `199` (e.g. `199 * (1 - discountValue/100)`, rounded to a whole peso — ₱199 × 50% = ₱99.50, rounds to ₱99 or ₱100, needs Col's preference since no existing rounding convention exists in this codebase for PHP amounts).
+- This needs a genuine PHP-denominated discount code (not the NZD/Stripe-coupon-based `campaign_single_use` system Step 8 built) — likely a new, minimal code path rather than reusing the Stripe-coupon-dependent system, since GCash payments aren't processed through Stripe at all.
+- Real code change, needs testing before the ad goes live — not instant, but the only option that makes the ad's actual promise true.
+
+**Option B — redirect the ad/checkout to the Stripe/NZD path instead (fast, but changes what the ad promises):**
+- Configure TT50OFF as a normal `campaign_single_use` code (50% off, no country restriction recommended since the `country` field match is case-sensitive-ish and Filipino customers may not reliably have country set to "Philippines" at checkout) via the existing admin screen — this is buildable in minutes.
+- **But this only works if the customer pays by card, not GCash** — meaning the ad's "₱99 GCash" framing would be false; a Filipino customer without a card, or who prefers GCash (likely the majority of this specific audience, which is presumably why GCash support exists at all), still could not get the discount.
+
+**Recommendation to relay to Col immediately, given the time-sensitivity:** before Jhe-Ann publishes the ad, confirm — is GCash payment actually required for launch, or would card-only be acceptable for this specific promotion? If GCash is required (likely, given the ad creative is explicitly GCash-peso-priced), Option A needs to be built and tested first, which takes real time — the ad should not launch today if so. If card-only is acceptable, Option B can be configured in minutes.
+
+**Test case (once Col confirms which option):**
+- Option A: create a test GCash payment request with the discount code, confirm `expectedAmountPhp` computes to the correct discounted value, confirm a request WITHOUT the code still charges the full ₱199 (no regression), confirm the discount code can't be reused beyond its intended single/limited use.
+- Option B: create TT50OFF via the admin UI, run one real test Stripe checkout with it, confirm 50% off applies correctly, explicitly confirm to Col that this does NOT work for GCash payers so he can decide whether to adjust the ad copy/audience.
+
+**Bug hunt:**
+- If Option A is built: confirm no other GCash payment-request creation path (e.g. frames, subscriptions — `gcash-payment-requests.js` handles multiple `payment_context` types per earlier Step 8 investigation) accidentally also picks up the discount logic where it shouldn't.
+- Grep every place `expectedAmountPhp`/`expected_amount_php` is read downstream (admin approval screens, emails, reconciliation) to confirm a discounted amount flows through consistently everywhere it's displayed, not just at creation.
+
+**Status:** 🚨 urgent, analysis complete, **NOT yet built — genuinely cannot be built safely in the time available without Col's decision on Option A vs B, since they produce different real-world outcomes for the ad he's about to pay to run.** This is being relayed to him immediately rather than guessed at, given the live ad-spend stakes.
