@@ -48,37 +48,48 @@ body {
 }
 
 /* ════════════════════════════════════════
-   HEADER & NAVBAR
+   HEADER LOGO BANNER + NAVBAR
    ════════════════════════════════════════ */
+/* Client request, 1 Oct 2026 (Col): "the 'tribute logo times' image
+   would be stretched across the whole page so that become the website
+   header. The menu would sit immediate below that." Full-width band
+   (deliberately NOT inside .container, which caps width at 1180px —
+   that's the whole mechanism for "full width" here), own background so
+   it reads as a distinct banner, logo centered and kept at its real
+   aspect ratio inside it (Col confirmed "keep logo same" when asked
+   whether the image itself should be distorted — see new_changes.md
+   Step 2). Same "flex column + default align-items:stretch" bug class
+   that caused the earlier logo-stretch bug is avoided here by never
+   putting the image inside a flex column at all — this is a single
+   centered flex row with one child. */
+.header-logo-band {
+  width: 100%;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: center;
+  padding: 28px 24px;
+}
+.header-logo-link {
+  display: flex;
+  text-decoration: none;
+}
+.header-logo-img {
+  /* Larger than the old in-nav-row size (80px) since this now has a
+     whole dedicated banner row to itself, capped so it doesn't dominate
+     at very wide viewports. width stays auto — never distorts. */
+  height: 120px;
+  max-height: 14vw;
+  width: auto;
+  display: block;
+}
+
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 0;
+  padding: 20px 0;
   border-bottom: 1px solid rgba(61, 65, 34, 0.12);
-}
-/* Simplified, 29 Sept 2026 (client request, Col): "remove line
-   personalised and logo align with nav links." Used to be a flex COLUMN
-   wrapping the logo image + a subtitle line underneath — that column
-   layout was also the root cause of an earlier stretch bug (its default
-   align-items: stretch silently overrode the image's own width: auto,
-   confirmed by measuring the live rendered element: 352px wide for a
-   34px-tall/~3:1-ratio image, a real ~3.4x horizontal stretch). Now just
-   a plain link wrapping the image — .navbar's own align-items: center
-   (above) handles vertically centering it against the nav-links row, no
-   special-casing needed here any more. */
-.nav-brand {
-  display: flex;
-  text-decoration: none;
-}
-.brand-logo-img {
-  /* Sized up, 29 Sept 2026 (client request, Col): "sigjty inrease llogo
-     size" — Col fine-tuned the final value himself directly in-browser
-     (34px -> 80px) after checking it live locally. width stays auto —
-     safe now that .nav-brand isn't a stretching flex column any more. */
-  height: 80px;
-  width: auto;
-  display: block;
 }
 
 .nav-links {
@@ -879,22 +890,21 @@ body {
 <body>
 
 <!-- NAVIGATION HEADER -->
+<!-- Client request, 1 Oct 2026 (Col, screenshot with the logo+nav row
+     circled): "I meant the 'tribute logo times' image would be stretched
+     across the whole page so that become the website header. The menu
+     would sit immediate below that." Confirmed with Col before building:
+     the logo IMAGE itself stays undistorted (he said "keep logo same")
+     — what spans full width is this band's background/container, not
+     the image file stretched out of its real aspect ratio. See
+     new_changes.md Step 2 for the full analysis. -->
+<div class="header-logo-band">
+  <a href="/" class="header-logo-link">
+    <img src="/logo_header.png" alt="The Tribute Times" class="header-logo-img" />
+  </a>
+</div>
 <header class="container">
   <nav class="navbar">
-    <!-- Client request, 29 Sept 2026 (Col, reference image of a new
-         wordmark + circular seal logo): "can the header be changed to
-         this?" File provided as public/logo (2).png (plain white
-         background, low-res); background removed (white -> transparent
-         via alpha color-keying) and upscaled 3x with a mild sharpening
-         pass for a crisper edge at header display size, saved as
-         public/logo_header.png. Subtitle line removed, 29 Sept 2026
-         (client request, Col): "remove line personalised" — the
-         .nav-brand link is now just the logo image, which also lets it
-         align naturally with the nav-links row instead of sitting in its
-         own two-line stack (see .nav-brand's simplified CSS below). -->
-    <a href="/" class="nav-brand">
-      <img src="/logo_header.png" alt="The Tribute Times" class="brand-logo-img" />
-    </a>
     <ul class="nav-links">
       <!-- Client request, 29 Sept 2026 (Col): "navbar links like text is
            too long double keep single words" — these used to wrap to two

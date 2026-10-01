@@ -83,3 +83,49 @@ For reference/continuity only — this batch was already fully analyzed, impleme
 - Full-page screenshot reviewed: page now flows directly from "How It Works" into "Celebrate Life's Most Meaningful Moments," no gap left behind
 
 **Status:** ✅ done, tested locally, committed. Not yet pushed/deployed — see commit for exact hash once pushed.
+
+---
+
+## STEP 2 — Restructure the header: full-width logo banner, nav menu in its own row below
+
+**Client message (1 Oct 2026, Col, screenshot with red circle around the current logo+nav row):** *"I meant the 'tribute logo times' image would be stretched across the whole page so that become the website header. The menu would sit immediate below that. Does that make sense. Please ask if you don't understand."*
+
+**Clarification asked and answered:** the literal reading ("stretched across the whole page") would mean distorting the actual logo image file edge-to-edge — badly blurring/warping a compact text+seal+text lockup that was never designed as a wide banner graphic. Asked Col directly whether he wanted the image itself distorted, or just its containing header band to span full width with the logo staying undistorted inside it. **His answer: keep the logo image itself undistorted ("keep logo same") — find whichever approach fulfils the actual intent (a prominent full-width header banner with the nav below it) without the distortion problem.**
+
+**Analysis (verified in code before writing this):**
+- Current structure: `<header class="container"><nav class="navbar">...</nav></header>` — a single row containing the logo (left), nav links (center), and country-selector + CTA button (right), all side-by-side.
+- `.container` (the class on `<header>`) is `max-width: 1180px; margin: 0 auto; padding: 0 24px` — this is why the header currently sits in a centered, width-capped column rather than spanning the page edge-to-edge. This is the actual mechanism to change to get a "full width" header.
+- The logo image itself (`public/logo_header.png`) is a horizontal lockup (text—seal—text, ~3:1 aspect ratio) sized for sitting compactly in a single nav row, currently rendered at `height: 80px`. It is not a wide banner-shaped asset — stretching it to span ~1400px+ of viewport width while keeping it at a normal height would require either (a) distorting its aspect ratio (what Col confirmed he does NOT want), or (b) scaling it up hugely to fill the width at its real ratio, which would make it enormous and push the nav far down the page.
+- **Resolution:** split the current single `<header>` row into two: Row 1 is a genuinely full-width band (no `.container` max-width constraint) with its own background, containing just the logo — centered, at a sensible size, not distorted or stretched. Row 2 is the existing nav menu (links, country selector, CREATE YOURS button), kept at the normal `.container` width to match the rest of the page's content width, sitting directly below Row 1. This satisfies "the logo image would become the website header" (its own full-width band, the first thing a visitor sees) and "the menu would sit immediately below that" literally, without distorting the actual image file.
+
+**Problem:** the current header is a single compact row; Col wants the logo elevated into its own prominent full-width header band, with navigation as a clearly separate row beneath it.
+
+**Solution:**
+1. Split `<header class="container"><nav class="navbar">` into two sibling elements: a new full-width `<div class="header-logo-band">` (own background color/padding, no `.container` width cap) containing the centered logo, followed by `<header class="container"><nav class="navbar">` (nav links + country selector + CTA button only, logo removed from this row).
+2. New CSS for `.header-logo-band` — full viewport width, centered content, a background color/texture consistent with the site's palette (not a plain color clash), enough vertical padding that it reads as a real banner, not just a slightly taller strip.
+3. Logo size inside the band: larger than the current 80px (since it now has a whole dedicated row to itself) but capped at a sensible max so it doesn't dominate the page at wide viewports — same `width: auto` discipline as before so it never distorts.
+4. `.navbar`'s CSS stays otherwise the same (flex row, space-between) minus the logo/`.nav-brand` piece, which moves to the new band.
+
+**Isolation notes:** this only touches the `<header>` markup/CSS at the very top of `public/landing.html` — no other section, no JS behavior (country selector / CTA button logic unchanged, just relocated within the same page), no other page (`/florist`, `/station`, `/join`, `/public` etc. have their own separate headers, confirmed not shared markup with landing.html).
+
+**Test case:**
+- Real browser, local: confirm the logo sits in its own full-width band, centered, undistorted (natural aspect ratio preserved — measure rendered width/height ratio against the image's natural ratio, same method used to catch the earlier stretch bug).
+- Confirm the nav menu (HOME/FLORISTS/STATIONS/AGENTS/CONTACT, country selector, CREATE YOURS button) renders immediately below the logo band, not overlapping or with an awkward gap.
+- Confirm responsive behavior at mobile width still works sensibly (nav already collapses to a column at `max-width: 680px` — confirm the new two-row structure doesn't break that).
+- Confirm no console/page errors.
+- Screenshot both the full header and a zoomed crop of just the logo band for visual review before calling this done.
+
+**🐛 Bug hunt:** re-check the "flex column + align-items stretch" bug class (the same root cause as the earlier logo-stretch bug) doesn't reappear in the new band's container — explicitly verify the logo's rendered aspect ratio matches its natural ratio after the restructure, don't just eyeball it. Result: avoided by construction — `.header-logo-band` is a single-child flex row (not a column), so there's nothing for `align-items: stretch` to distort in the cross-axis the way the old bug happened; confirmed anyway by measuring rendered vs. natural ratio directly (see test results).
+
+**Test results (real browser, local, 1 Oct 2026) — 9/9 passed:**
+- Logo band genuinely spans full page width (measured: 1918px band = 1918px body, no `.container` cap)
+- Logo image loads correctly
+- Logo rendered aspect ratio (361.6/120 = 3.013) matches its natural ratio (1600/531 = 3.013) exactly — confirmed NOT distorted
+- Nav menu sits directly below the logo band with zero gap and zero overlap
+- Old `.nav-brand`/`.brand-logo-img` classes fully removed from the DOM
+- All 5 nav links, the CREATE YOURS button, and the country selector all still present and correctly labelled
+- No console/page errors
+- Screenshot reviewed: clean white full-width banner with the logo centered and prominent, nav row in its own band directly below on the page's normal cream background — matches Col's description exactly
+- Also checked mobile viewport (400px): logo band scales down sensibly via its `max-height: 14vw` cap, nav row's existing mobile behavior (collapses to just country selector + CTA button, text links hidden) is pre-existing and unaffected by this change
+
+**Status:** ✅ done, tested locally, committed. Not yet pushed/deployed.
