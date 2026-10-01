@@ -299,7 +299,23 @@ Col has explicitly deferred this himself until the landing page work (Steps 1–
 - Check for a flash-of-wrong-content on load: since box 1's value is fetched async, confirm the 2-box grid doesn't render with visibly mismatched heights for the ~0.1-0.5s before the fetch resolves (box 1 showing `—` placeholder vs box 4's static text) — not a blocker, but note it if it looks jarring.
 - After deploy: re-check the live `/api/public/stats` response actually returns a `keepsakesCreated` field with the expected shape — don't assume the API still matches what the front-end expects just because the front-end code wasn't touched.
 
-**Status:** 📝 documented, not yet implemented. Needs 2 confirmations from Col before/while building: (1) exact casing for the new label text, (2) what the "one more same with image" follow-up refers to, since it may change scope.
+---
+### IMPLEMENTATION + BROWSER TEST RESULTS (01 Oct 2026)
+
+**Scope decision (per "only do what client wants"):** built only the unambiguous part — deleting the 2 crossed-out boxes and rewording the label. Used Col's **exact literal text** ("Instant PDF delivery, print at home") rather than guessing a title-cased variant, since that's what he actually typed, not an assumption. The "one more same with image" follow-up has still not arrived — this build does not attempt to guess what that refers to; it's limited strictly to what Col's screenshot and text instruction actually showed.
+
+**Build summary:** Deleted stat-items 2 (`100%` / `One-Page Geometry Locked`) and 3 (`NZ Delivery` / `Printed & Dispatched Locally`) entirely from `public/landing.html`. Changed stat-item 4's label text verbatim to Col's wording. Changed `.stats-bar`'s `grid-template-columns` from `repeat(4, 1fr)` to `repeat(2, 1fr)` for the 2 remaining items. Left the `992px` and `680px` responsive overrides as-is (both already correct for a 2-item row — `992px` still sets a real `gap` value change, `680px`'s `1fr` is right for mobile stacking either way).
+
+**Verification actually performed (Puppeteer + Chrome, local server on port 3000, confirmed correct title served before trusting any result):**
+- ✅ `document.querySelectorAll('.stat-item').length` === `2` — confirmed real deletion, not a `display:none` hide (same check specified in the bug hunt above).
+- ✅ Box 1's live counter confirmed still working end-to-end: loaded as `73` (a real number from `/api/public/stats`, not stuck on the `—` placeholder) — confirms the off-by-one deletion risk flagged above did NOT occur; `id="keepsakes-created-value"` and its surrounding markup are intact.
+- ✅ Label text confirmed character-for-character via DOM text content: `"Instant PDF delivery, print at home"` — exact match, no paraphrasing.
+- ✅ Desktop, `992px`, and `680px` all screenshotted and visually confirmed clean — 2 boxes evenly spaced side-by-side at desktop/tablet, correctly stacked at mobile, no leftover grid gaps or spacing artifacts.
+- ✅ Country selector changed (New Zealand → United Kingdom) with zero console/page errors — confirms `applyPricingCountry()`'s `querySelectorAll('.hero-price')` loop (unrelated to this section, but on the same page) continues to run cleanly; screenshotted the local-pricing-section afterward and confirmed the UK flag card correctly highlighted, proving the broader page's shared JS wasn't disturbed by this edit.
+- ✅ Adjacent sections (hero section above, local-pricing-section below) screenshotted and confirmed unaffected.
+- ✅ All test scripts/screenshots deleted after use (`ls __*.js __*.png` confirmed empty); local server process stopped, port 3000 confirmed released afterward.
+
+**Status:** ✅ built, locally browser-tested, committed locally. **Not pushed** (per standing instruction — build and verify, don't push). Still open: Col's "one more same with image" follow-up hasn't arrived — if it turns out to apply to this same section, it'll need a follow-up edit, not a redo.
 
 ---
 ## STEP 5 — Admin panel: "Promo Codes Directory" shows wrong/mixed data, Col suspects financial reporting is broken
