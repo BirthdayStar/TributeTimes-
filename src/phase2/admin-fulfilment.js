@@ -3246,13 +3246,23 @@ async function updateOrderStatus({ supabase, sendEmail, order, nextStatus, admin
   }
 
   let emailSent = false;
+  // Bug fix, 1 Oct 2026 (found during the email deep audit, new_changes.md
+  // Step 9): this sendEmail() was the only one in the codebase not wrapped
+  // in try/catch — a Resend failure here would throw out of this whole
+  // function, meaning the fulfilment_events audit-trail insert below would
+  // never run even though the order status update above had already
+  // succeeded, leaving a confusing gap with no record of the attempt.
   if (nextStatus === 'posted' && currentStatus !== 'posted' && sendEmail && updatedOrder.customer_email) {
-    await sendEmail({
-      to: updatedOrder.customer_email,
-      subject: `Your Tribute Times keepsake has been posted - ${updatedOrder.order_number}`,
-      html: buildPostedOrderCustomerEmail(updatedOrder),
-    });
-    emailSent = true;
+    try {
+      await sendEmail({
+        to: updatedOrder.customer_email,
+        subject: `Your Tribute Times keepsake has been posted - ${updatedOrder.order_number}`,
+        html: buildPostedOrderCustomerEmail(updatedOrder),
+      });
+      emailSent = true;
+    } catch (emailError) {
+      console.error('Posted-order customer email failed:', emailError);
+    }
   }
 
   await supabase.from('fulfilment_events').insert({

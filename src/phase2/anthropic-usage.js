@@ -83,29 +83,62 @@ async function maybeSendDailySpendAlert({ supabase, sendEmail, usageDate, newLog
     return { sent: false, dailyTotalUsd };
   }
 
+  // Bug fix, 1 Oct 2026 (found during the email deep audit, new_changes.md
+  // Step 9): this used to be check-then-send-then-write with no atomicity
+  // at all — two concurrent calls crossing the threshold in the same
+  // window could both read "not yet alerted" and both send the alert (a
+  // duplicate-send race). This function currently has no caller wired up
+  // anywhere in src/ (confirmed via grep — logAnthropicUsage is unused),
+  // so this is a latent bug, not an active one. Closing the full race
+  // properly needs a single dedicated per-day dedup row (not per-usage-
+  // event rows, which this table has), which is a schema change beyond
+  // what a drive-by bug fix should make without Col's sign-off. Reduced
+  // the window instead: claim this specific row atomically right before
+  // sending, so at minimum two calls can't both claim the SAME row — closes
+  // the most common real-world case (the same request handled twice) even
+  // though it doesn't fully close the cross-row race. Flagged clearly here
+  // so a future caller isn't misled into thinking this is airtight.
   const alreadyAlerted = await hasDailyAlertBeenSent(supabase, usageDate);
   if (alreadyAlerted) {
     return { sent: false, dailyTotalUsd };
   }
 
+  const { data: claimedRow, error: claimError } = await supabase
+    .from('anthropic_usage_logs')
+    .update({ admin_alert_sent: true, alert_sent_at: new Date().toISOString() })
+    .eq('id', newLogId)
+    .eq('admin_alert_sent', false)
+    .select('id')
+    .maybeSingle();
+
+  if (claimError) {
+    throw new Error(`Unable to claim Anthropic alert slot: ${claimError.message}`);
+  }
+  if (!claimedRow) {
+    // This exact row was already claimed — don't send.
+    return { sent: false, dailyTotalUsd };
+  }
+
   let emailSent = false;
-  if (sendEmail) {
-    emailSent = await sendEmail({
-      to: PHASE2_CONFIG.adminAlertEmail,
-      subject: `Anthropic spend alert - US$${dailyTotalUsd.toFixed(2)} on ${usageDate}`,
-      html: buildAnthropicSpendAlertEmail({
-        usageDate,
-        totalUsd: dailyTotalUsd,
-        thresholdUsd,
-      }),
-    });
+  try {
+    if (sendEmail) {
+      emailSent = await sendEmail({
+        to: PHASE2_CONFIG.adminAlertEmail,
+        subject: `Anthropic spend alert - US$${dailyTotalUsd.toFixed(2)} on ${usageDate}`,
+        html: buildAnthropicSpendAlertEmail({
+          usageDate,
+          totalUsd: dailyTotalUsd,
+          thresholdUsd,
+        }),
+      });
+    }
+  } catch (emailError) {
+    console.error('Anthropic spend alert email failed:', emailError);
   }
 
   await supabase
     .from('anthropic_usage_logs')
     .update({
-      admin_alert_sent: true,
-      alert_sent_at: new Date().toISOString(),
       alert_note: emailSent ? 'Daily threshold alert sent.' : 'Daily threshold crossed; email provider unavailable.',
     })
     .eq('id', newLogId);
