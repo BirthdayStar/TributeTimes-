@@ -537,3 +537,41 @@ There is no `maxUses`/`max_uses` field read from the request anywhere in this ha
 **This needs Col's explicit go-ahead before building** — it's a real backend schema/logic change (how `max_uses` is interpreted sitewide), higher-risk than anything shipped so far in this batch, and directly touches the live payment/discount path.
 
 **Context from Col's same message batch, not a code issue but important to carry forward honestly:** Col also wrote (01 Oct, 7:47): *"I'm a little overwhelmed, that I've spent all this money and it actually appears is still not a fully working site... I now seems i will [h]ave to spend even more to have another company check the site for me."* He also drew a clear boundary: *"For the page designs I've asked for that are not corrections of previous work, I will sort you out payment for."* This should be read plainly and reported back honestly rather than glossed over — Col is stressed and reasonably questioning whether the site works. The accurate, honest response is: several real functional gaps have been found this session (Step 5's reporting bug, Step 8's single-use limitation), but they are now identified, scoped, and fixable — not evidence of a fundamentally broken site. He should be told what's actually broken (precisely, as documented here) vs. what's working correctly but was confusing to find (Step 5/8's UX issue), so he can make an informed decision rather than operating on general anxiety alone.
+
+---
+## STEP 9 — Can the receipt email and the discount-offer email be combined?
+
+**Client message:** *"The receipt was first, the pdf file second and the discount offer last. Can the first and third emails be combined?"* — Col is describing the sequence of communications he received after a test purchase and asking whether the 1st (receipt) and 3rd (discount offer) can be merged into one email.
+
+**Analysis (code-verified via full read of `public-checkout.js`, `email-service.js`, `admin-fulfilment.js`, `gcash-payment-requests.js`, `pdf-routes.js` — not guessed):**
+
+**What Col is describing doesn't map cleanly onto 3 app-sent emails — it's actually 2 emails + 1 webpage, from 2 different systems:**
+
+1. **"The receipt" (email #1):** No code anywhere in this app sends a customer-facing receipt/order-confirmation email — confirmed via exhaustive grep across every `src/phase2/*.js` file for receipt/confirmation-style subjects. The Stripe Checkout Session is created with no `receipt_email` field (`public-checkout.js:93-118`). **This email is almost certainly Stripe's own automatic payment receipt**, sent directly by Stripe itself (a Dashboard-level "Email customers automatically" setting), not by this codebase at all. This can't be confirmed from code alone — it depends on a Stripe Dashboard toggle, not visible in this repo.
+
+2. **"The PDF file" (what Col is counting as email #2) is very likely NOT an email.** The only PDF generated at checkout time is attached to an **internal** admin notification email (`public-checkout.js:818-839`, subject "New public order paid", sent to the business's own `adminAlertEmail` — Col would only see this if he's cc'd/bcc'd on admin alerts, or if he's confusing it with something else). The customer instead receives a `downloadPdfUrl` embedded in the checkout-success page response (`public-checkout.js:916`, served via `/api/public/orders/:orderId/download-pdf`) — i.e. **a download link on a webpage right after payment, not a separate email.** Worth confirming directly with Col: did he actually receive a 2nd *email* with a PDF, or did he mean the success page where he could download the PDF? This matters because it changes what "combine" would even mean.
+
+3. **"The discount offer" (email #3)** is real and fully within this codebase: `public-checkout.js:866-889`, subject "A thank-you discount for your next Tribute Times keepsake" — this is the Step 5/8-discussed THANKYOU-code email, triggered from `handlePublicCheckoutSuccess` after the order is confirmed paid.
+
+**Can #1 and #3 be combined? Answer: not as currently architected, and not without giving up Stripe's automatic receipt.**
+- Stripe's receipt (if that's what #1 is) is triggered internally by Stripe at the moment of charge — **this codebase has no hook into that email's content or timing**, so there's no shared code path to merge it with the discount email.
+- **Two real options, genuinely different trade-offs — needs Col's decision, not a unilateral pick:**
+  1. **Turn off Stripe's automatic receipt** (a Stripe Dashboard setting, not a code change) and fold receipt-style content (amount paid, order number, what was purchased) into the existing discount email (`public-checkout.js:875-889`) — this genuinely produces one combined "receipt + thank-you" email, fully controllable by this codebase. Trade-off: loses Stripe's receipt, which is instant/reliable and handles tax-invoice-style formatting Stripe does automatically; the combined email would need all of that content added manually.
+  2. **Leave Stripe's receipt as-is** and just clarify with Col that what he's calling "3 emails" may really be 2 emails + 1 webpage once the PDF step is correctly identified — in which case there may be nothing to "combine" at all, just a miscount of what's actually happening.
+
+**Problem:** Can't give Col a definitive yes/no without two clarifications — (a) is "the receipt" actually a separate email he received, or could it be something else (worth asking him to forward/screenshot the actual email headers/subject lines), and (b) was "the PDF file" step literally an email in his inbox, or a page in his browser right after paying. Answering confidently either way right now would be guessing past a real gap.
+
+**Solution (pending Col's answers):**
+- If #1 is confirmed to be Stripe's automatic receipt: present him the two options above and let him choose, since option 1 has a real trade-off (losing Stripe's reliable auto-receipt) that's his call to make, not a default to assume.
+- If #1 turns out to be something else entirely (e.g. a different email this investigation didn't find because it's triggered from a code path not yet identified): re-investigate with the actual subject line/timestamp Col can provide, rather than continuing to guess.
+
+**Test case (once scope is confirmed):**
+- If building the combined-email option: trigger a full real test checkout, confirm exactly one customer-facing email arrives containing both receipt-style details (amount, order number, item) and the discount code/offer, with no duplicate/leftover second email.
+- Confirm Stripe's automatic receipt is actually disabled in the Dashboard (not just assumed) if that's the chosen path — a code change alone can't control this, it's a Stripe account-level setting.
+- Confirm the PDF download link/page still works correctly and is clearly signposted to the customer regardless of what happens to the two emails — this shouldn't be collateral damage of an email-consolidation change.
+
+**Bug hunt:**
+- Grep `adminAlertEmail` configuration to confirm whether Col (the business owner) is actually on that distribution list — if so, "the PDF file" email he's describing might genuinely be the internal admin email, meaning he's seeing something that was never meant to be a customer-facing step, which is its own separate thing worth flagging (should the business owner be seeing internal order-alert emails mixed in with what he perceives as the customer journey?).
+- If Stripe's receipt setting is found to be controllable and gets toggled, re-confirm no other part of the app depends on that receipt being sent (e.g. any support/dispute-handling process that currently points customers to "check your Stripe receipt email").
+
+**Status:** 📝 documented, analysis complete, **not yet implemented.** Needs 2 clarifications from Col before any decision can be made: (1) confirm whether "the receipt" is Stripe's automatic email or something else, (2) confirm whether "the PDF file" step was literally a 2nd email or the download page shown right after checkout. Answering now would be guessing past a real gap in what's knowable from code alone.
